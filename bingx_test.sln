@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "bingx_test", "bingx_test.csproj", "{711E18DC-AC84-4613-A6EB-BBA40664785E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{711E18DC-AC84-4613-A6EB-BBA40664785E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{711E18DC-AC84-4613-A6EB-BBA40664785E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{711E18DC-AC84-4613-A6EB-BBA40664785E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{711E18DC-AC84-4613-A6EB-BBA40664785E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DBA420EE-B371-49A1-BAC4-9E66D03398C9}
+	EndGlobalSection
+EndGlobal
