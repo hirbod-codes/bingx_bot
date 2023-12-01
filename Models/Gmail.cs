@@ -11,4 +11,5 @@ public class Gmail
     public DateTime? MailDateTime { get; set; }
     public List<string> Attachments { get; set; } = new();
     public string Id { get; set; } = null!;
+    public string ETag { get; set; } = null!;
 }

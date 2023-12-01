@@ -1,56 +1,43 @@
-using System.Net;
-namespace bingx_test;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Text;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
-using System.Threading;
-using System.Net.Http.Json;
+using Google.Apis.Util.Store;
+
+namespace bingx_test.GmailApi;
 
 public class GmailApiHelper
 {
-    public GmailService Service
-    {
-        get
-        {
-            if (_service != null)
-                return _service;
-            else
-            {
-                _service = GetService();
-                return _service;
-            }
-        }
-        private set { _service = value; }
-    }
-    private GmailService? _service;
-
+    public GmailService Service { get; private set; }
     public string[] Scopes { get; } = Array.Empty<string>();
     public string ClientSecret { get; } = null!;
     public string ClientId { get; } = null!;
     public string SignalProviderEmail { get; }
+    public string DataStoreFolderAddress { get; }
     public string AccessToken { get; private set; } = null!;
     public string RefreshToken { get; private set; } = null!;
 
-    public GmailApiHelper(string clientId, string clientSecret, string[] scopes, string signalProviderEmail)
+    public GmailApiHelper(string clientId, string clientSecret, string[] scopes, string signalProviderEmail, string dataStoreFolderAddress)
     {
         ClientId = clientId;
         ClientSecret = clientSecret;
         Scopes = scopes;
         SignalProviderEmail = signalProviderEmail;
+        DataStoreFolderAddress = dataStoreFolderAddress;
+        Service = GetService();
     }
 
     public GmailService GetService()
     {
-        Task<UserCredential> credentialTask = GoogleWebAuthorizationBroker.AuthorizeAsync(new ClientSecrets() { ClientSecret = ClientSecret, ClientId = ClientId }, Scopes, "user", CancellationToken.None);
+        new FileDataStore(DataStoreFolderAddress).ClearAsync().Wait();
 
+        Task<UserCredential> credentialTask = GoogleWebAuthorizationBroker.AuthorizeAsync(new ClientSecrets() { ClientSecret = ClientSecret, ClientId = ClientId }, Scopes, "user", CancellationToken.None, new FileDataStore(DataStoreFolderAddress));
         credentialTask.Wait();
-
         UserCredential credential = credentialTask.Result;
 
         AccessToken = credential.Token.AccessToken.ToString();
@@ -174,6 +161,8 @@ public class GmailApiHelper
             return;
         }
 
+        // string response = await Service.Users.Messages.BatchDelete(new BatchDeleteMessagesRequest() { Ids = Ids }, ownerGmail).ExecuteAsync();
+
         HttpClient httpClient = new();
         httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + AccessToken);
 
@@ -198,7 +187,6 @@ public class GmailApiHelper
         ListRequest.IncludeSpamTrash = false;
         if (filterByEmail != null)
             ListRequest.Q = $"from:{filterByEmail}";
-        // ListRequest.Q = $"from:noreply@tradingview.com is:unread";
 
         //GET ALL EMAILS
         ListMessagesResponse ListResponse = ListRequest.Execute();
@@ -210,14 +198,14 @@ public class GmailApiHelper
         }
 
         //LOOP THROUGH EACH EMAIL AND GET WHAT FIELDS I WANT
-        foreach (Message Msg in ListResponse.Messages)
+        foreach (Message message in ListResponse.Messages)
         {
             //MESSAGE MARKS AS READ AFTER READING MESSAGE
-            MsgMarkAsRead(ownerGmail, Msg.Id);
+            MsgMarkAsRead(ownerGmail, message.Id);
 
-            UsersResource.MessagesResource.GetRequest Message = Service.Users.Messages.Get(ownerGmail, Msg.Id);
+            UsersResource.MessagesResource.GetRequest Message = Service.Users.Messages.Get(ownerGmail, message.Id);
             Console.WriteLine("\n-----------------NEW MAIL----------------------");
-            Console.WriteLine("STEP-1: Message ID:" + Msg.Id);
+            Console.WriteLine("STEP-1: Message ID:" + message.Id);
 
             //MAKE ANOTHER REQUEST FOR THAT EMAIL ID...
             Message MsgContent = Message.Execute();
@@ -259,8 +247,9 @@ public class GmailApiHelper
                 {
                     From = FromAddress,
                     Body = ReadableText,
-                    Id = Msg.Id,
-                    To = ownerGmail
+                    Id = message.Id,
+                    To = ownerGmail,
+                    ETag = message.ETag
                 };
                 if (DateTime.TryParse(Date, out DateTime dt))
                     Gmail.MailDateTime = dt;

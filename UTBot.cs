@@ -1,45 +1,61 @@
-using System.Net.Http.Headers;
-using System.Text;
-using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
-using Google.Apis.Gmail.v1.Data;
-using Google.Apis.Services;
+using Microsoft.Extensions.Configuration;
+using bingx_test.BingxApi;
+using bingx_test.GmailApi;
+using bingx_test.Exceptions;
 
 namespace bingx_test;
 
 public class UTBot
 {
-    public UTBot(Trade trade, Market market, int timeFrame, GmailApiHelper gmailAPIHelper, string ownerGmail, float margin, int leverage, float tpPercentage, float slPercentage)
+    public UTBot(IConfigurationSection bingxApi, IConfigurationSection gmailApi)
     {
-        Trade = trade;
-        Market = market;
-        TimeFrame = timeFrame;
-        GmailApiHelper = gmailAPIHelper;
-        OwnerGmail = ownerGmail;
-        Margin = margin;
-        Leverage = leverage;
-        TpPercentage = tpPercentage;
-        SlPercentage = slPercentage;
+        BingxApi = bingxApi;
+        GmailApi = gmailApi;
+
+        Trade = new Trade(bingxApi["BaseUrl"]!, bingxApi["ApiKey"]!, bingxApi["ApiSecret"]!, bingxApi["Symbol"]!);
+        Market = new Market(bingxApi["BaseUrl"]!, bingxApi["ApiKey"]!, bingxApi["ApiSecret"]!, bingxApi["Symbol"]!);
+        TimeFrame = int.Parse(bingxApi["TimeFrame"]!);
+        Margin = float.Parse(bingxApi["Margin"]!);
+        Leverage = int.Parse(bingxApi["Leverage"]!);
+        TpPercentage = !string.IsNullOrEmpty(bingxApi["TpPercentage"]) ? float.Parse(bingxApi["TpPercentage"]!) : null;
+        SlPercentage = float.Parse(bingxApi["SlPercentage"]!);
+
+        GmailApiHelperForLong = new(gmailApi["LongProvider:ClientId"]!, gmailApi["LongProvider:ClientSecret"]!, new string[] { GmailService.Scope.MailGoogleCom }, gmailApi["LongProvider:SignalProviderEmail"]!, gmailApi["LongProvider:DataStoreFolderAddress"]!);
+        LongOwnerGmail = gmailApi["LongProvider:Gmail"]!;
+        GmailApiHelperForShort = new(gmailApi["ShortProvider:ClientId"]!, gmailApi["ShortProvider:ClientSecret"]!, new string[] { GmailService.Scope.MailGoogleCom }, gmailApi["ShortProvider:SignalProviderEmail"]!, gmailApi["LongProvider:DataStoreFolderAddress"]!);
+        ShortOwnerGmail = gmailApi["ShortProvider:Gmail"]!;
     }
 
-    private string OwnerGmail { get; }
+    public IConfigurationSection BingxApi { get; }
+    public IConfigurationSection GmailApi { get; }
+
     public Trade Trade { get; }
     public Market Market { get; }
     public int TimeFrame { get; }
-    public GmailApiHelper GmailApiHelper { get; }
-    public string PreviousEmailSignalId { get; private set; } = string.Empty;
     public float Margin { get; }
     public int Leverage { get; }
     public float LastPrice { get; private set; }
-
-    public float TpPercentage { get; } = 3.8f;
+    public float? TpPercentage { get; } = null;
     public float SlPercentage { get; private set; } = 10f;
+
+    public string PreviousEmailLongSignalId { get; private set; } = string.Empty;
+    public string PreviousEmailShortSignalId { get; private set; } = string.Empty;
+
+    public GmailApiHelper GmailApiHelperForLong { get; }
+    private string LongOwnerGmail { get; }
+    public GmailApiHelper GmailApiHelperForShort { get; }
+    private string ShortOwnerGmail { get; }
+
+    private long CurrentOpenOrderId { get; set; }
+    private bool? IsCurrentOpenOrderLong { get; set; } = null;
 
     public async Task Run()
     {
-        System.Console.WriteLine();
+        System.Console.WriteLine("Starting...");
 
-        dynamic previousOrderId = 0;
+        await GmailApiHelperForLong.DeleteAllEmails(GmailApi["LongProvider:Gmail"]!, GmailApi["LongProvider:SignalProviderEmail"]!);
+        await GmailApiHelperForShort.DeleteAllEmails(GmailApi["ShortProvider:Gmail"]!, GmailApi["ShortProvider:SignalProviderEmail"]!);
 
         try
         {
@@ -55,34 +71,40 @@ public class UTBot
 
                     await Utilities.NotifyListeners();
 
+                    // 2 seconds delay to ensure the alert has reached gmail's severs
+                    await Task.Delay(millisecondsDelay: 3000);
+
+                    HttpResponseMessage response;
+
                     bool? signal = null;
                     try { signal = CheckSignal(); }
                     catch (SignalCheckException)
                     {
-                        if (previousOrderId != 0)
+                        if (CurrentOpenOrderId != 0)
                         {
-                            await Trade.CloseOrder(previousOrderId);
+                            response = await Trade.CloseOpenPositions();
+                            await Utilities.HandleBingxResponse(response);
                             throw;
                         }
                     }
 
                     if (signal != null)
                     {
-                        HttpResponseMessage response;
-
-                        if (previousOrderId != 0)
+                        if (CurrentOpenOrderId != 0)
                         {
-                            await Trade.CloseOrder(previousOrderId);
-                            previousOrderId = 0;
+                            response = await Trade.CloseOpenPositions();
+                            await Utilities.HandleBingxResponse(response);
+                            CurrentOpenOrderId = 0;
                         }
 
                         LastPrice = await Market.GetLastPrice(Trade.Symbol, TimeFrame);
-                        System.Console.WriteLine($"last price => {LastPrice}");
 
                         bool isLong = (bool)signal;
-                        response = await Trade.OpenMarketOrder(isLong, (float)(Margin * Leverage / LastPrice), Trade.GetTp(isLong, TpPercentage, LastPrice, Leverage), Trade.GetSl(isLong, SlPercentage, LastPrice, Leverage));
+                        response = await Trade.OpenMarketOrder(isLong, (float)(Margin * Leverage / LastPrice), TpPercentage != null ? Trade.CalculateTp(isLong, (float)TpPercentage, LastPrice, Leverage) : null, Trade.CalculateSl(isLong, SlPercentage, LastPrice, Leverage));
+                        response.EnsureSuccessStatusCode();
 
-                        previousOrderId = (await Utilities.HandleResponse(response))["data"]!["order"]!["orderId"]!.GetValue<long>();
+                        CurrentOpenOrderId = (await Utilities.HandleBingxResponse(response))["data"]!["order"]!["orderId"]!.GetValue<long>();
+                        IsCurrentOpenOrderLong = signal;
                     }
                 }
 
@@ -95,24 +117,24 @@ public class UTBot
         }
         catch (FormatException)
         {
-            await Trade.CloseOrders();
+            await Trade.CloseOpenPositions();
             throw;
         }
         catch (LastPriceException)
         {
-            if (previousOrderId != 0)
-                await Trade.CloseOrder(previousOrderId);
+            if (CurrentOpenOrderId != 0)
+                await Trade.CloseOrder(CurrentOpenOrderId);
             throw;
         }
         catch (OpenOrderException)
         {
-            if (previousOrderId != 0)
-                await Trade.CloseOrder(previousOrderId);
+            if (CurrentOpenOrderId != 0)
+                await Trade.CloseOrder(CurrentOpenOrderId);
             throw;
         }
         catch (CloseOrderException)
         {
-            await Trade.CloseOrders();
+            await Trade.CloseOpenPositions();
             throw;
         }
         catch (CloseOrdersException)
@@ -123,35 +145,79 @@ public class UTBot
 
     public bool? CheckSignal()
     {
-        System.Console.WriteLine("\n\nChecking for UT-bot signal...");
+        if (IsCurrentOpenOrderLong == null)
+        {
+            bool isLong = CheckLongSignal();
+            bool isShort = CheckShortSignal();
+            return !isLong && !isShort ? null : isLong || !isShort;
+        }
 
-        List<Gmail> emails = GmailApiHelper.GetAllEmails(OwnerGmail, GmailApiHelper.SignalProviderEmail);
+        return IsCurrentOpenOrderLong switch
+        {
+            false => CheckLongSignal() ? true : null,
+            true => CheckShortSignal() ? false : null
+        };
+    }
+
+    public bool CheckLongSignal()
+    {
+        System.Console.WriteLine("\n\nChecking for UT-bot Long signal...");
+
+        List<Gmail> emails = GmailApiHelperForLong.GetAllEmails(LongOwnerGmail, GmailApiHelperForLong.SignalProviderEmail);
         if (!emails.Any())
         {
-            System.Console.WriteLine("UT Bot signal has been checked, Result: No Signal(No Email Found)");
-            return null;
+            System.Console.WriteLine("UT Bot Long signal has been checked, Result: No Signal(No Email Found)");
+            return false;
         }
 
         Gmail mostRecentEmail = emails[0];
 
-        if (mostRecentEmail.Id == PreviousEmailSignalId)
+        if (mostRecentEmail.Id == PreviousEmailLongSignalId)
         {
-            System.Console.WriteLine("UT Bot signal has been checked, Result: No Signal");
-            return null;
+            System.Console.WriteLine("UT Bot Long signal has been checked, Result: No Signal");
+            return false;
         }
         else if (mostRecentEmail.Body.Contains("UT Long"))
         {
-            System.Console.WriteLine("UT Bot signal has been checked, Result: Long Signal");
-            PreviousEmailSignalId = mostRecentEmail.Id;
+            System.Console.WriteLine("UT Bot Long signal has been checked, Result: Long Signal");
+            PreviousEmailLongSignalId = mostRecentEmail.Id;
             return true;
+        }
+        else
+        {
+            System.Console.WriteLine("UT Bot Long signal has been checked, Result: No Signal");
+            return false;
+        }
+    }
+
+    public bool CheckShortSignal()
+    {
+        System.Console.WriteLine("\n\nChecking for UT-bot Short signal...");
+
+        List<Gmail> emails = GmailApiHelperForShort.GetAllEmails(ShortOwnerGmail, GmailApiHelperForShort.SignalProviderEmail);
+        if (!emails.Any())
+        {
+            System.Console.WriteLine("UT Bot Short signal has been checked, Result: No Signal(No Email Found)");
+            return false;
+        }
+
+        Gmail mostRecentEmail = emails[0];
+
+        if (mostRecentEmail.Id == PreviousEmailShortSignalId)
+        {
+            System.Console.WriteLine("UT Bot Short signal has been checked, Result: No Signal");
+            return false;
         }
         else if (mostRecentEmail.Body.Contains("UT Short"))
         {
-            System.Console.WriteLine("UT Bot signal has been checked, Result: Short Signal");
-            PreviousEmailSignalId = mostRecentEmail.Id;
-            return false;
+            System.Console.WriteLine("UT Bot Short signal has been checked, Result: Short Signal");
+            PreviousEmailLongSignalId = mostRecentEmail.Id;
+            return true;
         }
         else
-            throw new SignalCheckException();
+        {
+            System.Console.WriteLine("UT Bot Short signal has been checked, Result: No Signal");
+            return false;
+        }
     }
 }

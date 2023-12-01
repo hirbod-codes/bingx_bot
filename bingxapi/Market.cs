@@ -1,7 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace bingx_test;
+namespace bingx_test.BingxApi;
 
 public class Market : Api
 {
@@ -26,6 +25,7 @@ public class Market : Api
                 throw new LastPriceException("Invalid response received.");
 
             float lastPrice = responseBody["Data"]!["Data"]![1]!["close"]!.GetValue<float>();
+            System.Console.WriteLine($"last price => {lastPrice}");
 
             System.Console.WriteLine("Got last symbol price...");
             return lastPrice;

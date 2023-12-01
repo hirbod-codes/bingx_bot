@@ -1,4 +1,4 @@
-namespace bingx_test;
+namespace bingx_test.BingxApi;
 
 public class Api
 {

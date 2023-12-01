@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -14,7 +13,7 @@ public static class Utilities
         System.Console.WriteLine("Notification has been sent...");
     }
 
-    public static async Task<HttpResponseMessage> HandleRequest(string protocol, string host, string endpointAddress, string method, string apiKey, string apiSecret, object payload)
+    public static async Task<HttpResponseMessage> HandleBingxRequest(string protocol, string host, string endpointAddress, string method, string apiKey, string apiSecret, object payload)
     {
         System.Console.WriteLine("\n\nHandling request to bingx...");
 
@@ -50,7 +49,7 @@ public static class Utilities
         return httpResponseMessage;
     }
 
-    public static async Task<JsonNode> HandleResponse(HttpResponseMessage response)
+    public static async Task<JsonNode> HandleBingxResponse(HttpResponseMessage response)
     {
         System.Console.WriteLine("\n\nHandling response to bingx...");
 
