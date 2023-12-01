@@ -211,7 +211,7 @@ public class UTBot
         else if (mostRecentEmail.Body.Contains("UT Short"))
         {
             System.Console.WriteLine("UT Bot Short signal has been checked, Result: Short Signal");
-            PreviousEmailLongSignalId = mostRecentEmail.Id;
+            PreviousEmailShortSignalId = mostRecentEmail.Id;
             return true;
         }
         else
