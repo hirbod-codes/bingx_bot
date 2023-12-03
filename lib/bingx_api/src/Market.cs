@@ -17,7 +17,7 @@ public class Market : Api
                 throw new LastPriceException("Invalid Argument supplied.");
             HttpResponseMessage response = await new HttpClient().GetAsync($"https://min-api.cryptocompare.com/data/v2/histominute?fsym={symbol.Split("-")[0]}&tsym={symbol.Split("-")[1]}&limit=1&aggregate={TimeFrame}&e=binance");
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode) throw new LastPriceException();
 
             string responseString = await response.Content.ReadAsStringAsync();
             JsonNode responseBody = JsonNode.Parse(responseString) ?? throw new LastPriceException("Failed to parse response json.");

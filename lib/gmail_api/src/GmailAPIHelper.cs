@@ -6,6 +6,7 @@ using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using gmail_api.Models;
+using gmail_api.Exceptions;
 
 namespace gmail_api;
 
@@ -169,7 +170,7 @@ public class GmailApiHelper
 
         var t = await response.Content.ReadAsStringAsync();
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode) throw new EmailsDeletionException();
 
         System.Console.WriteLine("Deletion of emails successfully finished...");
     }

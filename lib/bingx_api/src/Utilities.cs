@@ -1,16 +1,19 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using bingx_api.Exceptions;
 
 namespace bingx_api;
 
 public static class Utilities
 {
-    public static async Task NotifyListeners()
+    public static async Task NotifyListeners(string message)
     {
         System.Console.WriteLine("\n\nSending notification on candle creation...");
-        await new HttpClient().PostAsync("http://ntfy.sh/xpSQ6aicPmPB38VV1653rq", new StringContent("Candle created."));
+        HttpResponseMessage response = await new HttpClient().PostAsync("http://ntfy.sh/xpSQ6aicPmPB38VV1653rq", new StringContent(message));
         System.Console.WriteLine("Notification has been sent...");
+
+        if (!response.IsSuccessStatusCode) throw new NotificationException();
     }
 
     public static async Task<HttpResponseMessage> HandleBingxRequest(string protocol, string host, string endpointAddress, string method, string apiKey, string apiSecret, object payload)
@@ -36,7 +39,7 @@ public static class Utilities
         using HttpClient client = new(handler);
         client.DefaultRequestHeaders.Add("X-BX-APIKEY", apiKey);
 
-        HttpResponseMessage httpResponseMessage = method.ToUpper() switch
+        HttpResponseMessage response = method.ToUpper() switch
         {
             "GET" => await client.GetAsync(url),
             "POST" => await client.PostAsync(url, null),
@@ -46,7 +49,7 @@ public static class Utilities
         };
 
         System.Console.WriteLine("\n\nRequest to bingx handled...");
-        return httpResponseMessage;
+        return response;
     }
 
     public static async Task<JsonNode> HandleBingxResponse(HttpResponseMessage response)
@@ -59,7 +62,7 @@ public static class Utilities
 
         await File.WriteAllTextAsync("./response.json", responseString);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode) throw new ResponseHandlingException();
 
         JsonNode responseBody = JsonNode.Parse(responseString) ?? throw new Exception();
 
@@ -74,7 +77,7 @@ public static class Utilities
     {
         byte[] keyBytes = System.Text.Encoding.UTF8.GetBytes(key);
         byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
-        using HMACSHA256 hmac = new HMACSHA256(keyBytes);
+        using HMACSHA256 hmac = new(keyBytes);
         byte[] hashBytes = hmac.ComputeHash(inputBytes);
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
     }
