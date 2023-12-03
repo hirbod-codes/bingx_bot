@@ -346,4 +346,9 @@ public class GmailApiHelper
         System.Console.WriteLine("Finished getting the last email...");
         return lastEmail;
     }
+
+    public Gmail? GetLastEmail(object shortProviderGmail, string signalProviderEmail)
+    {
+        throw new NotImplementedException();
+    }
 }

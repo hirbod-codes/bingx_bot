@@ -131,6 +131,13 @@ public class Trade : Api
         symbol = Symbol
     });
 
+    public async Task<HttpResponseMessage> GetOrders(DateTime startTime, DateTime endTime) => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOrders", "GET", ApiKey, ApiSecret, new
+    {
+        symbol = Symbol,
+        startTime = DateTimeOffset.Parse(startTime.ToString()).ToUnixTimeMilliseconds(),
+        endTime = DateTimeOffset.Parse(endTime.ToString()).ToUnixTimeMilliseconds(),
+    });
+
     public async Task<HttpResponseMessage> CloseOpenPositions() => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/closeAllPositions", "POST", ApiKey, ApiSecret, new { });
 
     public async Task<HttpResponseMessage> CloseOrders() => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOpenOrders", "DELETE", ApiKey, ApiSecret, new

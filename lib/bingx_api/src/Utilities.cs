@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using bingx_api.Exceptions;
+using Newtonsoft.Json.Linq;
 
 namespace bingx_api;
 
@@ -52,7 +53,7 @@ public static class Utilities
         return response;
     }
 
-    public static async Task<JsonNode> HandleBingxResponse(HttpResponseMessage response)
+    public static async Task<string> HandleBingxResponse(HttpResponseMessage response)
     {
         System.Console.WriteLine("\n\nHandling response to bingx...");
 
@@ -70,7 +71,7 @@ public static class Utilities
             throw new Exception();
 
         System.Console.WriteLine("\n\nResponse to bingx handled...");
-        return responseBody;
+        return responseString;
     }
 
     private static string CalculateHmacSha256(string input, string key)
@@ -80,5 +81,47 @@ public static class Utilities
         using HMACSHA256 hmac = new(keyBytes);
         byte[] hashBytes = hmac.ComputeHash(inputBytes);
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+    }
+
+    public static float CalculateProfit(string orderHistoryResponse)
+    {
+        JObject response = JObject.Parse(orderHistoryResponse)!;
+
+        IJEnumerable<JToken> orders = response["data"]!["orders"]!.AsJEnumerable();
+
+        float totalProfit = 0;
+        List<JToken> newOrders = new();
+        for (int i = 0; i < orders.Count(); i++)
+        {
+            if (orders[i]!["status"]!.Value<string>() == "CANCELLED")
+                continue;
+
+            totalProfit += orders.ElementAt(i)["profit"]!.Value<float>();
+            totalProfit += orders.ElementAt(i)["commission"]!.Value<float>();
+
+            newOrders.Add(JToken.FromObject(new
+            {
+                side = orders.ElementAt(i)["side"],
+                positionSide = orders.ElementAt(i)["positionSide"],
+                type = orders.ElementAt(i)["type"],
+                price = orders.ElementAt(i)["price"],
+                profit = orders.ElementAt(i)["profit"],
+                commission = orders.ElementAt(i)["commission"],
+                status = orders.ElementAt(i)["status"],
+                time = DateTimeOffset.FromUnixTimeMilliseconds(orders[i]!["time"]!.Value<long>()).ToString(),
+                updateTime = DateTimeOffset.FromUnixTimeMilliseconds(orders[i]!["updateTime"]!.Value<long>()).ToString(),
+            }));
+        }
+
+        newOrders = newOrders.Prepend(JToken.FromObject(new
+        {
+            totalProfit
+        })).ToList();
+
+        File.WriteAllText("./computedOrderAnalysis.json", JArray.FromObject(newOrders).ToString());
+
+        System.Console.WriteLine($"Total profit is: {totalProfit}");
+
+        return totalProfit;
     }
 }
