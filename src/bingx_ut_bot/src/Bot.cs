@@ -5,6 +5,7 @@ using bingx_api;
 using gmail_api;
 using bingx_api.Exceptions;
 using gmail_api.Models;
+using gmail_api.Exceptions;
 
 namespace bingx_ut_bot;
 
@@ -50,7 +51,7 @@ public class Bot
     private string ShortOwnerGmail { get; }
 
     private long CurrentOpenOrderId { get; set; }
-    private bool? IsCurrentOpenOrderLong { get; set; } = null;
+    private bool? IsCurrentOpenPositionLong { get; set; } = null;
 
     public async Task Run()
     {
@@ -71,7 +72,7 @@ public class Bot
                     System.Console.WriteLine("--- Tick ---");
                     System.Console.WriteLine($"Minute ==> {DateTime.UtcNow.Minute}");
 
-                    await Utilities.NotifyListeners();
+                    await Utilities.NotifyListeners("Candle Created.");
 
                     // 2 seconds delay to ensure the alert has reached gmail's severs
                     await Task.Delay(millisecondsDelay: 3000);
@@ -103,60 +104,51 @@ public class Bot
                         response.EnsureSuccessStatusCode();
 
                         CurrentOpenOrderId = (await Utilities.HandleBingxResponse(response))["data"]!["order"]!["orderId"]!.GetValue<long>();
-                        IsCurrentOpenOrderLong = signal;
+                        IsCurrentOpenPositionLong = signal;
                     }
                 }
 
                 await Task.Delay(millisecondsDelay: 1000);
             }
         }
-        catch (LeverageSetException)
+        catch (NotificationException) { throw; }
+        catch (BingxApiException ex)
         {
+            try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {ex.GetType().Name}, Message: {ex.Message}"); }
+            catch (Exception) { }
+            try { await Trade.CloseOpenPositions(); }
+            catch (Exception closeOpenPositionsEx)
+            {
+                try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {closeOpenPositionsEx.GetType().Name}, Message: {closeOpenPositionsEx.Message}"); }
+                catch (Exception) { }
+            }
             throw;
         }
-        catch (FormatException)
+        catch (GmailApiException ex)
         {
-            await Trade.CloseOpenPositions();
+            try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {ex.GetType().Name}, Message: {ex.Message}"); }
+            catch (Exception) { }
+            try { await Trade.CloseOpenPositions(); }
+            catch (Exception closeOpenPositionsEx)
+            {
+                try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {closeOpenPositionsEx.GetType().Name}, Message: {closeOpenPositionsEx.Message}"); }
+                catch (Exception) { }
+            }
             throw;
         }
-        catch (LastPriceException)
+        catch (Exception ex)
         {
-            if (CurrentOpenOrderId != 0)
-                await Trade.CloseOrder(CurrentOpenOrderId);
-            throw;
-        }
-        catch (OpenOrderException)
-        {
-            if (CurrentOpenOrderId != 0)
-                await Trade.CloseOrder(CurrentOpenOrderId);
-            throw;
-        }
-        catch (CloseOrderException)
-        {
-            await Trade.CloseOpenPositions();
-            throw;
-        }
-        catch (CloseOrdersException)
-        {
+            try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {ex.GetType().Name}, Message: {ex.Message}"); }
+            catch (Exception) { }
             throw;
         }
     }
-
-    public bool? CheckSignal()
+    public bool? CheckSignal() => IsCurrentOpenPositionLong switch
     {
-        if (IsCurrentOpenOrderLong == null)
-        {
-            bool isLong = CheckLongSignal();
-            bool isShort = CheckShortSignal();
-            return !isLong && !isShort ? null : isLong || !isShort;
-        }
-
-        return IsCurrentOpenOrderLong switch
-        {
-            false => CheckLongSignal() ? true : null,
-            true => CheckShortSignal() ? false : null
-        };
-    }
+        null => CheckLongSignal() ? true : (CheckShortSignal() ? false : null),
+        false => CheckLongSignal() ? true : null,
+        true => CheckShortSignal() ? false : null
+    };
 
     public bool CheckLongSignal()
     {
