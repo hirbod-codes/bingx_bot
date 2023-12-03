@@ -15,15 +15,15 @@ public class EMASignals : ISignals
     public string ShortSignalProvider { get; private set; }
     public string? ShortProviderLastId { get; private set; } = null;
 
-    public EMASignals(GmailProvider longGmailProvider, GmailProvider shortGmailProvider)
+    public EMASignals(GmailProvider longProvider, GmailProvider shortProvider)
     {
-        LongProvider = new(longGmailProvider.ClientId, longGmailProvider.ClientSecret, longGmailProvider.Scopes, longGmailProvider.SignalProviderEmail, longGmailProvider.DataStoreFolderAddress);
-        LongProviderGmail = longGmailProvider.SignalProviderEmail;
-        LongSignalProvider = longGmailProvider.SignalProviderEmail;
+        LongProvider = new(longProvider.ClientId, longProvider.ClientSecret, longProvider.Scopes, longProvider.SignalProviderEmail, longProvider.DataStoreFolderAddress);
+        LongProviderGmail = longProvider.OwnerGmail;
+        LongSignalProvider = longProvider.SignalProviderEmail;
 
-        ShortProvider = new(shortGmailProvider.ClientId, shortGmailProvider.ClientSecret, shortGmailProvider.Scopes, shortGmailProvider.SignalProviderEmail, shortGmailProvider.DataStoreFolderAddress);
-        ShortProviderGmail = shortGmailProvider.SignalProviderEmail;
-        ShortSignalProvider = shortGmailProvider.SignalProviderEmail;
+        ShortProvider = new(shortProvider.ClientId, shortProvider.ClientSecret, shortProvider.Scopes, shortProvider.SignalProviderEmail, shortProvider.DataStoreFolderAddress);
+        ShortProviderGmail = shortProvider.OwnerGmail;
+        ShortSignalProvider = shortProvider.SignalProviderEmail;
     }
 
     public async Task Initiate()
