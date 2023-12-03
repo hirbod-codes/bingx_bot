@@ -1,4 +1,4 @@
-namespace bingx_test;
+namespace gmail_api.Models;
 
 using System;
 using System.Collections.Generic;

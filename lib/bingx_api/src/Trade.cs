@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace bingx_test.BingxApi;
+namespace bingx_api;
 
 public class Trade : Api
 {

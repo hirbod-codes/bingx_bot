@@ -1,14 +1,16 @@
 using Google.Apis.Gmail.v1;
 using Microsoft.Extensions.Configuration;
-using bingx_test.BingxApi;
-using bingx_test.GmailApi;
-using bingx_test.Exceptions;
+using bingx_ut_bot.Exceptions;
+using bingx_api;
+using gmail_api;
+using bingx_api.Exceptions;
+using gmail_api.Models;
 
-namespace bingx_test;
+namespace bingx_ut_bot;
 
-public class UTBot
+public class Bot
 {
-    public UTBot(IConfigurationSection bingxApi, IConfigurationSection gmailApi)
+    public Bot(IConfigurationSection bingxApi, IConfigurationSection gmailApi)
     {
         BingxApi = bingxApi;
         GmailApi = gmailApi;
@@ -90,12 +92,9 @@ public class UTBot
 
                     if (signal != null)
                     {
-                        if (CurrentOpenOrderId != 0)
-                        {
-                            response = await Trade.CloseOpenPositions();
-                            await Utilities.HandleBingxResponse(response);
-                            CurrentOpenOrderId = 0;
-                        }
+                        response = await Trade.CloseOpenPositions();
+                        await Utilities.HandleBingxResponse(response);
+                        CurrentOpenOrderId = 0;
 
                         LastPrice = await Market.GetLastPrice(Trade.Symbol, TimeFrame);
 
@@ -163,14 +162,12 @@ public class UTBot
     {
         System.Console.WriteLine("\n\nChecking for UT-bot Long signal...");
 
-        List<Gmail> emails = GmailApiHelperForLong.GetAllEmails(LongOwnerGmail, GmailApiHelperForLong.SignalProviderEmail);
-        if (!emails.Any())
+        Gmail? mostRecentEmail = GmailApiHelperForLong.GetLastEmail(LongOwnerGmail, GmailApiHelperForLong.SignalProviderEmail);
+        if (mostRecentEmail == null)
         {
             System.Console.WriteLine("UT Bot Long signal has been checked, Result: No Signal(No Email Found)");
             return false;
         }
-
-        Gmail mostRecentEmail = emails[0];
 
         if (mostRecentEmail.Id == PreviousEmailLongSignalId)
         {
@@ -194,14 +191,12 @@ public class UTBot
     {
         System.Console.WriteLine("\n\nChecking for UT-bot Short signal...");
 
-        List<Gmail> emails = GmailApiHelperForShort.GetAllEmails(ShortOwnerGmail, GmailApiHelperForShort.SignalProviderEmail);
-        if (!emails.Any())
+        Gmail? mostRecentEmail = GmailApiHelperForShort.GetLastEmail(ShortOwnerGmail, GmailApiHelperForShort.SignalProviderEmail);
+        if (mostRecentEmail == null)
         {
             System.Console.WriteLine("UT Bot Short signal has been checked, Result: No Signal(No Email Found)");
             return false;
         }
-
-        Gmail mostRecentEmail = emails[0];
 
         if (mostRecentEmail.Id == PreviousEmailShortSignalId)
         {

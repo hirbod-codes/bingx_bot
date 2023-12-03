@@ -1,9 +1,9 @@
 using System.Runtime.Serialization;
 
-namespace bingx_test.Exceptions;
+namespace bingx_api.Exceptions;
 
 [Serializable]
-internal class LeverageSetException : Exception
+public class LeverageSetException : Exception
 {
     public LeverageSetException()
     {

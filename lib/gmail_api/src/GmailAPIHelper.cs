@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http.Json;
 using System.Text;
 using Google.Apis.Auth.OAuth2;
@@ -8,8 +5,9 @@ using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using gmail_api.Models;
 
-namespace bingx_test.GmailApi;
+namespace gmail_api;
 
 public class GmailApiHelper
 {
@@ -259,5 +257,92 @@ public class GmailApiHelper
 
         System.Console.WriteLine("Finished getting all the emails...");
         return EmailList;
+    }
+
+    public Gmail? GetLastEmail(string ownerGmail, string? filterByEmail = null)
+    {
+        System.Console.WriteLine("\n\nGetting the last email...");
+        System.Console.WriteLine($"filterByEmail value is: {filterByEmail}");
+
+        Gmail? lastEmail = null;
+        UsersResource.MessagesResource.ListRequest ListRequest = Service.Users.Messages.List(ownerGmail);
+        ListRequest.LabelIds = "INBOX";
+        ListRequest.IncludeSpamTrash = false;
+        if (filterByEmail != null)
+            ListRequest.Q = $"from:{filterByEmail}";
+
+        ListMessagesResponse ListResponse = ListRequest.Execute();
+
+        if (ListResponse == null || ListResponse.Messages == null || !ListResponse.Messages.Any())
+        {
+            System.Console.WriteLine("No email found...");
+            System.Console.WriteLine("Finished getting the last email...");
+            return null;
+        }
+
+        System.Console.WriteLine($"{ListResponse.Messages.Count} emails has received...");
+        foreach (Message message in ListResponse.Messages)
+        {
+            //MESSAGE MARKS AS READ AFTER READING MESSAGE
+            MsgMarkAsRead(ownerGmail, message.Id);
+
+            UsersResource.MessagesResource.GetRequest Message = Service.Users.Messages.Get(ownerGmail, message.Id);
+            Console.WriteLine("\n-----------------NEW MAIL----------------------");
+            Console.WriteLine("STEP-1: Message ID:" + message.Id);
+
+            //MAKE ANOTHER REQUEST FOR THAT EMAIL ID...
+            Message MsgContent = Message.Execute();
+
+            if (MsgContent == null)
+                continue;
+
+            string FromAddress = string.Empty;
+            string Date = string.Empty;
+            string Subject;
+            string MailBody;
+            string ReadableText;
+
+            //LOOP THROUGH THE HEADERS AND GET THE FIELDS WE NEED (SUBJECT, MAIL)
+            foreach (var MessageParts in MsgContent.Payload.Headers)
+                if (MessageParts.Name == "From")
+                    FromAddress = MessageParts.Value;
+                else if (MessageParts.Name == "Date")
+                    Date = MessageParts.Value;
+                else if (MessageParts.Name == "Subject")
+                    Subject = MessageParts.Value;
+
+            //READ MAIL BODY-------------------------------------------------------------------------------------
+            Console.WriteLine("STEP-2: Read Mail Body");
+
+            if (MsgContent.Payload.Parts == null && MsgContent.Payload.Body != null)
+                MailBody = MsgContent.Payload.Body.Data;
+            else
+                MailBody = MsgNestedParts(MsgContent.Payload.Parts ?? throw new NullReferenceException("Failed to set mail's body."));
+
+            //BASE64 TO READABLE TEXT--------------------------------------------------------------------------------
+            ReadableText = Base64Decode(MailBody);
+
+            Console.WriteLine("STEP-4: Identifying & Configure Mails.");
+
+            if (!string.IsNullOrEmpty(ReadableText))
+            {
+                lastEmail = new()
+                {
+                    From = FromAddress,
+                    Body = ReadableText,
+                    Id = message.Id,
+                    To = ownerGmail,
+                    ETag = message.ETag
+                };
+
+                if (DateTime.TryParse(Date, out DateTime dt))
+                    lastEmail.MailDateTime = dt;
+
+                break;
+            }
+        }
+
+        System.Console.WriteLine("Finished getting the last email...");
+        return lastEmail;
     }
 }

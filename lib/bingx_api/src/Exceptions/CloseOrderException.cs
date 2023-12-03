@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace bingx_test.Exceptions;
+namespace bingx_api.Exceptions;
 
 [Serializable]
 public class CloseOrderException : Exception

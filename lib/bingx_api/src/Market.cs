@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using bingx_test.Exceptions;
+using bingx_api.Exceptions;
 
-namespace bingx_test.BingxApi;
+namespace bingx_api;
 
 public class Market : Api
 {

@@ -19,4 +19,9 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\lib\gmail_api\gmail_api.csproj" />
+    <ProjectReference Include="..\..\lib\bingx_api\bingx_api.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace bingx_test;
+namespace bingx_api;
 
 public static class Utilities
 {

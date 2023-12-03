@@ -1,9 +1,9 @@
 using System.Runtime.Serialization;
 
-namespace bingx_test.Exceptions;
+namespace bingx_api.Exceptions;
 
 [Serializable]
-internal class LastPriceException : Exception
+public class LastPriceException : Exception
 {
     public LastPriceException()
     {
