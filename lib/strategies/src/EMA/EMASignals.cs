@@ -48,7 +48,7 @@ public class EMASignals : ISignals
             System.Console.WriteLine("EMA cross-up signal has been checked, Result: No Signal");
             return false;
         }
-        else if (mostRecentEmail.Body.Contains("Crossing UP"))
+        else if (mostRecentEmail.Body.Contains("Crossing Up"))
         {
             System.Console.WriteLine("EMA cross-up signal has been checked, Result: Long Signal");
             return true;
