@@ -4,7 +4,9 @@ namespace bingx_api;
 
 public class Trade : Api
 {
-    public Trade(string base_url, string apiKey, string apiSecret, string symbol) : base(base_url, apiKey, apiSecret, symbol) { }
+    public Trade(string base_url, string apiKey, string apiSecret, string symbol, Utilities utilities) : base(base_url, apiKey, apiSecret, symbol) => Utilities = utilities;
+
+    private Utilities Utilities { get; set; }
 
     public async Task<HttpResponseMessage> GetLeverage() => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/leverage", "GET", ApiKey, ApiSecret, new
     {

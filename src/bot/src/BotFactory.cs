@@ -1,5 +1,6 @@
 using gmail_api.Models;
-using Microsoft.Extensions.Configuration;
+using Serilog;
+using Serilog.Settings.Configuration;
 using strategies.src.EMA;
 using strategies.src.UT;
 
@@ -7,47 +8,68 @@ namespace bot.src;
 
 public class BotFactory
 {
-    public static IBot CreateEMABot(IConfigurationRoot configuration) => new Bot(
-            configuration.GetSection("EMAStrategy:BingxApi"),
+    public static IBot CreateEMABot()
+    {
+        Program.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(Program.Configuration, new ConfigurationReaderOptions() { SectionName = "EMAStrategy:Serilog" })
+        .CreateLogger();
+
+        return new Bot(
+            Program.Configuration.GetSection("EMAStrategy:BingxApi"),
             new EMAStrategy(new EMASignals(
                 new GmailProvider()
                 {
-                    OwnerGmail = configuration["EMAStrategy:GmailApi:LongProvider:Gmail"]!,
-                    ClientId = configuration["EMAStrategy:GmailApi:LongProvider:ClientId"]!,
-                    ClientSecret = configuration["EMAStrategy:GmailApi:LongProvider:ClientSecret"]!,
-                    SignalProviderEmail = configuration["EMAStrategy:GmailApi:LongProvider:SignalProviderEmail"]!,
-                    DataStoreFolderAddress = configuration["EMAStrategy:GmailApi:LongProvider:DataStoreFolderAddress"]!,
+                    OwnerGmail = Program.Configuration["EMAStrategy:GmailApi:LongProvider:Gmail"]!,
+                    ClientId = Program.Configuration["EMAStrategy:GmailApi:LongProvider:ClientId"]!,
+                    ClientSecret = Program.Configuration["EMAStrategy:GmailApi:LongProvider:ClientSecret"]!,
+                    SignalProviderEmail = Program.Configuration["EMAStrategy:GmailApi:LongProvider:SignalProviderEmail"]!,
+                    DataStoreFolderAddress = Program.Configuration["EMAStrategy:GmailApi:LongProvider:DataStoreFolderAddress"]!,
                 },
                 new GmailProvider()
                 {
-                    OwnerGmail = configuration["EMAStrategy:GmailApi:ShortProvider:Gmail"]!,
-                    ClientId = configuration["EMAStrategy:GmailApi:ShortProvider:ClientId"]!,
-                    ClientSecret = configuration["EMAStrategy:GmailApi:ShortProvider:ClientSecret"]!,
-                    SignalProviderEmail = configuration["EMAStrategy:GmailApi:ShortProvider:SignalProviderEmail"]!,
-                    DataStoreFolderAddress = configuration["EMAStrategy:GmailApi:ShortProvider:DataStoreFolderAddress"]!,
+                    OwnerGmail = Program.Configuration["EMAStrategy:GmailApi:ShortProvider:Gmail"]!,
+                    ClientId = Program.Configuration["EMAStrategy:GmailApi:ShortProvider:ClientId"]!,
+                    ClientSecret = Program.Configuration["EMAStrategy:GmailApi:ShortProvider:ClientSecret"]!,
+                    SignalProviderEmail = Program.Configuration["EMAStrategy:GmailApi:ShortProvider:SignalProviderEmail"]!,
+                    DataStoreFolderAddress = Program.Configuration["EMAStrategy:GmailApi:ShortProvider:DataStoreFolderAddress"]!,
                 }
             ))
         );
+    }
 
-    public static IBot CreateUTBot(IConfigurationRoot configuration) => new Bot(
-            configuration.GetSection("UTStrategy:BingxApi"),
+    public static IBot CreateUTBot()
+    {
+        Program.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(Program.Configuration, new ConfigurationReaderOptions() { SectionName = "UTStrategy:Serilog" })
+        .CreateLogger();
+
+        return new Bot(
+            Program.Configuration.GetSection("UTStrategy:BingxApi"),
             new UTStrategy(new UTSignals(
                 new GmailProvider()
                 {
-                    OwnerGmail = configuration["UTStrategy:GmailApi:LongProvider:Gmail"]!,
-                    ClientId = configuration["UTStrategy:GmailApi:LongProvider:ClientId"]!,
-                    ClientSecret = configuration["UTStrategy:GmailApi:LongProvider:ClientSecret"]!,
-                    SignalProviderEmail = configuration["UTStrategy:GmailApi:LongProvider:SignalProviderEmail"]!,
-                    DataStoreFolderAddress = configuration["UTStrategy:GmailApi:LongProvider:DataStoreFolderAddress"]!,
+                    OwnerGmail = Program.Configuration["UTStrategy:GmailApi:LongProvider:Gmail"]!,
+                    ClientId = Program.Configuration["UTStrategy:GmailApi:LongProvider:ClientId"]!,
+                    ClientSecret = Program.Configuration["UTStrategy:GmailApi:LongProvider:ClientSecret"]!,
+                    SignalProviderEmail = Program.Configuration["UTStrategy:GmailApi:LongProvider:SignalProviderEmail"]!,
+                    DataStoreFolderAddress = Program.Configuration["UTStrategy:GmailApi:LongProvider:DataStoreFolderAddress"]!,
                 },
                 new GmailProvider()
                 {
-                    OwnerGmail = configuration["UTStrategy:GmailApi:ShortProvider:Gmail"]!,
-                    ClientId = configuration["UTStrategy:GmailApi:ShortProvider:ClientId"]!,
-                    ClientSecret = configuration["UTStrategy:GmailApi:ShortProvider:ClientSecret"]!,
-                    SignalProviderEmail = configuration["UTStrategy:GmailApi:ShortProvider:SignalProviderEmail"]!,
-                    DataStoreFolderAddress = configuration["UTStrategy:GmailApi:ShortProvider:DataStoreFolderAddress"]!,
+                    OwnerGmail = Program.Configuration["UTStrategy:GmailApi:ShortProvider:Gmail"]!,
+                    ClientId = Program.Configuration["UTStrategy:GmailApi:ShortProvider:ClientId"]!,
+                    ClientSecret = Program.Configuration["UTStrategy:GmailApi:ShortProvider:ClientSecret"]!,
+                    SignalProviderEmail = Program.Configuration["UTStrategy:GmailApi:ShortProvider:SignalProviderEmail"]!,
+                    DataStoreFolderAddress = Program.Configuration["UTStrategy:GmailApi:ShortProvider:DataStoreFolderAddress"]!,
                 }
             ))
         );
+    }
+
+    public static IBot CreateBot() => Program.Configuration["StrategyName"] switch
+    {
+        "UT" => CreateUTBot(),
+        "EMA" => CreateEMABot(),
+        _ => throw new Exception($"Invalid configuration provided for StrategyName property. StrategyName: {Program.Configuration["StrategyName"]}")
+    };
 }

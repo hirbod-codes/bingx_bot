@@ -8,14 +8,14 @@ public class EMAStrategy : IStrategy
 
     public async Task Initiate() => await Signals.Initiate();
 
-    public bool CheckClosePositionSignal(bool? IsCurrentOpenPositionLong) => IsCurrentOpenPositionLong switch
+    public bool CheckClosePositionSignal(bool? isLastOpenPositionLong) => isLastOpenPositionLong switch
     {
         null => false,
         true => Signals.CheckShortSignal(),
         false => Signals.CheckLongSignal()
     };
 
-    public bool? CheckOpenPositionSignal(bool? IsCurrentOpenPositionLong) => IsCurrentOpenPositionLong switch
+    public bool? CheckOpenPositionSignal(bool? isLastOpenPositionLong) => isLastOpenPositionLong switch
     {
         null => Signals.CheckLongSignal() ? true : (Signals.CheckShortSignal() ? false : null),
         true => Signals.CheckShortSignal(),

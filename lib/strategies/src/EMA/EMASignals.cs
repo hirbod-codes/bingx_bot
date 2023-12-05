@@ -1,5 +1,6 @@
 using gmail_api;
 using gmail_api.Models;
+using Serilog.Core;
 
 namespace strategies.src.EMA;
 
@@ -14,8 +15,9 @@ public class EMASignals : ISignals
     public string ShortProviderGmail { get; private set; }
     public string ShortSignalProvider { get; private set; }
     public string? ShortProviderLastId { get; private set; } = null;
+    private Logger Logger { get; }
 
-    public EMASignals(GmailProvider longProvider, GmailProvider shortProvider)
+    public EMASignals(GmailProvider longProvider, GmailProvider shortProvider, Logger logger)
     {
         LongProvider = new(longProvider.ClientId, longProvider.ClientSecret, longProvider.Scopes, longProvider.SignalProviderEmail, longProvider.DataStoreFolderAddress);
         LongProviderGmail = longProvider.OwnerGmail;
@@ -24,6 +26,7 @@ public class EMASignals : ISignals
         ShortProvider = new(shortProvider.ClientId, shortProvider.ClientSecret, shortProvider.Scopes, shortProvider.SignalProviderEmail, shortProvider.DataStoreFolderAddress);
         ShortProviderGmail = shortProvider.OwnerGmail;
         ShortSignalProvider = shortProvider.SignalProviderEmail;
+        Logger = logger;
     }
 
     public async Task Initiate()
@@ -34,56 +37,56 @@ public class EMASignals : ISignals
 
     public bool CheckLongSignal()
     {
-        System.Console.WriteLine("\n\nChecking for EMA cross-up signal...");
+        Logger.Information("Checking for EMA cross-up signal...");
 
         Gmail? mostRecentEmail = LongProvider.GetLastEmail(LongProviderGmail, LongProvider.SignalProviderEmail);
         if (mostRecentEmail == null)
         {
-            System.Console.WriteLine("EMA cross-up signal has been checked, Result: No Signal(No Email Found)");
+            Logger.Information("EMA cross-up signal has been checked, Result: No Signal(No Email Found)");
             return false;
         }
 
         if (mostRecentEmail.Id == LongProviderLastId)
         {
-            System.Console.WriteLine("EMA cross-up signal has been checked, Result: No Signal");
+            Logger.Information("EMA cross-up signal has been checked, Result: No Signal");
             return false;
         }
         else if (mostRecentEmail.Body.Contains("Crossing Up"))
         {
-            System.Console.WriteLine("EMA cross-up signal has been checked, Result: Long Signal");
+            Logger.Information("EMA cross-up signal has been checked, Result: Long Signal");
             return true;
         }
         else
         {
-            System.Console.WriteLine("EMA cross-up signal has been checked, Result: No Signal");
+            Logger.Information("EMA cross-up signal has been checked, Result: No Signal");
             return false;
         }
     }
 
     public bool CheckShortSignal()
     {
-        System.Console.WriteLine("\n\nChecking for EMA cross-down signal...");
+        Logger.Information("Checking for EMA cross-down signal...");
 
         Gmail? mostRecentEmail = ShortProvider.GetLastEmail(ShortProviderGmail, ShortProvider.SignalProviderEmail);
         if (mostRecentEmail == null)
         {
-            System.Console.WriteLine("EMA cross-down signal has been checked, Result: No Signal(No Email Found)");
+            Logger.Information("EMA cross-down signal has been checked, Result: No Signal(No Email Found)");
             return false;
         }
 
         if (mostRecentEmail.Id == ShortProviderLastId)
         {
-            System.Console.WriteLine("EMA cross-down signal has been checked, Result: No Signal");
+            Logger.Information("EMA cross-down signal has been checked, Result: No Signal");
             return false;
         }
         else if (mostRecentEmail.Body.Contains("Crossing Down"))
         {
-            System.Console.WriteLine("EMA cross-down signal has been checked, Result: Short Signal");
+            Logger.Information("EMA cross-down signal has been checked, Result: Short Signal");
             return true;
         }
         else
         {
-            System.Console.WriteLine("EMA cross-down signal has been checked, Result: No Signal");
+            Logger.Information("EMA cross-down signal has been checked, Result: No Signal");
             return false;
         }
     }

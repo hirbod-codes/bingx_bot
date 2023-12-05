@@ -1,0 +1,43 @@
+version: "3.8"
+
+networks:
+    EMANetwork:
+        driver: bridge
+    UTNetwork:
+        driver: bridge
+  
+services:
+    EMABot:
+        container_name: EMABot
+        build:
+            context: ./
+            target: production
+            dockerfile: ./src/bot/Dockerfile
+        environment:
+            StrategyName: EMA
+            EMAStrategy:Serilog:WriteTo:1:Args:serverUrl: http://EMASeq:80
+    EMASeq:
+        image: datalust/seq:5.1
+        ports:
+          - 80:80
+        environment:
+            - ACCEPT_EULA=Y
+        volumes:
+          - ./src/bot/EMALogs:/data:rw
+    UTBot:
+        container_name: UTBot
+        build:
+            context: ./
+            target: production
+            dockerfile: ./src/bot/Dockerfile
+        environment:
+            StrategyName: UT
+            UTStrategy:Serilog:WriteTo:1:Args:serverUrl: http://UTSeq:80
+    UTSeq:
+        image: datalust/seq:5.1
+        ports:
+          - 80:80
+        environment:
+            - ACCEPT_EULA=Y
+        volumes:
+          - ./src/bot/UTLogs:/data:rw

@@ -7,6 +7,7 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using gmail_api.Models;
 using gmail_api.Exceptions;
+using Serilog.Core;
 
 namespace gmail_api;
 
@@ -21,7 +22,9 @@ public class GmailApiHelper
     public string AccessToken { get; private set; } = null!;
     public string RefreshToken { get; private set; } = null!;
 
-    public GmailApiHelper(string clientId, string clientSecret, string[] scopes, string signalProviderEmail, string dataStoreFolderAddress)
+    private Logger Logger { get; }
+
+    public GmailApiHelper(string clientId, string clientSecret, string[] scopes, string signalProviderEmail, string dataStoreFolderAddress, Logger logger)
     {
         ClientId = clientId;
         ClientSecret = clientSecret;
@@ -29,6 +32,7 @@ public class GmailApiHelper
         SignalProviderEmail = signalProviderEmail;
         DataStoreFolderAddress = dataStoreFolderAddress;
         Service = GetService();
+        Logger = logger;
     }
 
     public GmailService GetService()
@@ -150,13 +154,13 @@ public class GmailApiHelper
     {
         List<Gmail> emails = GetAllEmails(ownerGmail, filterByEmail);
 
-        System.Console.WriteLine("\n\nInitial deletion of emails...");
+        Logger.Information("Initial deletion of emails...");
 
         List<string> Ids = emails.ConvertAll(x => x.Id).ToList();
 
         if (!Ids.Any())
         {
-            System.Console.WriteLine("There is no email to delete...");
+            Logger.Information("There is no email to delete...");
             return;
         }
 
@@ -172,15 +176,15 @@ public class GmailApiHelper
 
         if (!response.IsSuccessStatusCode) throw new EmailsDeletionException();
 
-        System.Console.WriteLine("Deletion of emails successfully finished...");
+        Logger.Information("Deletion of emails successfully finished...");
     }
 
     public List<Gmail> GetAllEmails(string ownerGmail, string? filterByEmail = null)
     {
-        System.Console.WriteLine("\n\nGetting all the emails...");
-        System.Console.WriteLine($"filterByEmail value is: {filterByEmail}");
+        Logger.Information("Getting all the emails...");
+        Logger.Information("filterByEmail value is: {filterByEmail}", filterByEmail);
 
-        List<Gmail> EmailList = new();
+        List<Gmail> emails = new();
         UsersResource.MessagesResource.ListRequest ListRequest = Service.Users.Messages.List(ownerGmail);
         ListRequest.LabelIds = "INBOX";
         ListRequest.IncludeSpamTrash = false;
@@ -192,8 +196,8 @@ public class GmailApiHelper
 
         if (ListResponse == null || ListResponse.Messages == null)
         {
-            System.Console.WriteLine("Finished getting all the emails...");
-            return EmailList;
+            Logger.Information("Finished getting all the emails...");
+            return emails;
         }
 
         //LOOP THROUGH EACH EMAIL AND GET WHAT FIELDS I WANT
@@ -203,8 +207,6 @@ public class GmailApiHelper
             MsgMarkAsRead(ownerGmail, message.Id);
 
             UsersResource.MessagesResource.GetRequest Message = Service.Users.Messages.Get(ownerGmail, message.Id);
-            Console.WriteLine("\n-----------------NEW MAIL----------------------");
-            Console.WriteLine("STEP-1: Message ID:" + message.Id);
 
             //MAKE ANOTHER REQUEST FOR THAT EMAIL ID...
             Message MsgContent = Message.Execute();
@@ -228,7 +230,6 @@ public class GmailApiHelper
                     Subject = MessageParts.Value;
 
             //READ MAIL BODY-------------------------------------------------------------------------------------
-            Console.WriteLine("STEP-2: Read Mail Body");
 
             if (MsgContent.Payload.Parts == null && MsgContent.Payload.Body != null)
                 MailBody = MsgContent.Payload.Body.Data;
@@ -238,7 +239,6 @@ public class GmailApiHelper
             //BASE64 TO READABLE TEXT--------------------------------------------------------------------------------
             ReadableText = Base64Decode(MailBody);
 
-            Console.WriteLine("STEP-4: Identifying & Configure Mails.");
 
             if (!string.IsNullOrEmpty(ReadableText))
             {
@@ -252,18 +252,18 @@ public class GmailApiHelper
                 };
                 if (DateTime.TryParse(Date, out DateTime dt))
                     Gmail.MailDateTime = dt;
-                EmailList.Add(Gmail);
+                emails.Add(Gmail);
             }
         }
 
-        System.Console.WriteLine("Finished getting all the emails...");
-        return EmailList;
+        Logger.Information("Finished getting all the emails... {EmailList}", emails);
+        return emails;
     }
 
     public Gmail? GetLastEmail(string ownerGmail, string? filterByEmail = null)
     {
-        System.Console.WriteLine("\n\nGetting the last email...");
-        System.Console.WriteLine($"filterByEmail value is: {filterByEmail}");
+        Logger.Information("Getting the last email...");
+        Logger.Information("filterByEmail value is: {filterByEmail}", filterByEmail);
 
         Gmail? lastEmail = null;
         UsersResource.MessagesResource.ListRequest ListRequest = Service.Users.Messages.List(ownerGmail);
@@ -276,20 +276,18 @@ public class GmailApiHelper
 
         if (ListResponse == null || ListResponse.Messages == null || !ListResponse.Messages.Any())
         {
-            System.Console.WriteLine("No email found...");
-            System.Console.WriteLine("Finished getting the last email...");
+            Logger.Information("No email found...");
+            Logger.Information("Finished getting the last email...");
             return null;
         }
 
-        System.Console.WriteLine($"{ListResponse.Messages.Count} emails has received...");
+        Logger.Information($"{ListResponse.Messages.Count} emails has received...");
         foreach (Message message in ListResponse.Messages)
         {
             //MESSAGE MARKS AS READ AFTER READING MESSAGE
             MsgMarkAsRead(ownerGmail, message.Id);
 
             UsersResource.MessagesResource.GetRequest Message = Service.Users.Messages.Get(ownerGmail, message.Id);
-            Console.WriteLine("\n-----------------NEW MAIL----------------------");
-            Console.WriteLine("STEP-1: Message ID:" + message.Id);
 
             //MAKE ANOTHER REQUEST FOR THAT EMAIL ID...
             Message MsgContent = Message.Execute();
@@ -313,7 +311,6 @@ public class GmailApiHelper
                     Subject = MessageParts.Value;
 
             //READ MAIL BODY-------------------------------------------------------------------------------------
-            Console.WriteLine("STEP-2: Read Mail Body");
 
             if (MsgContent.Payload.Parts == null && MsgContent.Payload.Body != null)
                 MailBody = MsgContent.Payload.Body.Data;
@@ -323,7 +320,6 @@ public class GmailApiHelper
             //BASE64 TO READABLE TEXT--------------------------------------------------------------------------------
             ReadableText = Base64Decode(MailBody);
 
-            Console.WriteLine("STEP-4: Identifying & Configure Mails.");
 
             if (!string.IsNullOrEmpty(ReadableText))
             {
@@ -343,7 +339,7 @@ public class GmailApiHelper
             }
         }
 
-        System.Console.WriteLine("Finished getting the last email...");
+        Logger.Information("Finished getting all the emails... {lastEmail}", lastEmail);
         return lastEmail;
     }
 
