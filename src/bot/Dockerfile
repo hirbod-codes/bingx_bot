@@ -2,13 +2,13 @@ FROM mcr.microsoft.com/dotnet/sdk:7.0 AS production
 
 WORKDIR /project
 
-COPY ./bot.csproj ./
+COPY . .
 RUN dotnet restore -v d
 
-COPY . .
+COPY ./src/bot/ ./src/bot/
 
-RUN dotnet publish --no-restore -c Release -o /publish
+RUN dotnet build
 
-WORKDIR /publish
+WORKDIR /project/src/bot
 
-CMD dotnet bot.dll 
+CMD dotnet run

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\gmail_api\gmail_api.csproj" />
+    <ProjectReference Include="..\email_api\email_api.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

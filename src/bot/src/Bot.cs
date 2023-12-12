@@ -1,45 +1,51 @@
-using bingx_api;
-using bingx_api.Exceptions;
-using Microsoft.Extensions.Configuration;
-using strategies.src;
+using broker_api.Exceptions;
+using email_api.src;
+using broker_api.src;
 
 namespace bot.src;
 
 public class Bot : IBot
 {
-    public Bot(IConfigurationSection bingxApiConfSection, IStrategy strategy)
+    public Bot(IStrategy strategy, IAccount account, ITrade trade, IMarket market, int timeFrame, IBingxUtilities bingxUtilities, IUtilities utilities)
     {
         Strategy = strategy;
-        Utilities = new(Program.Logger);
+        BingxUtilities = bingxUtilities;
+        Utilities = utilities;
 
-        BingxApi = bingxApiConfSection;
-
-        Trade = new Trade(bingxApiConfSection["BaseUrl"]!, bingxApiConfSection["ApiKey"]!, bingxApiConfSection["ApiSecret"]!, bingxApiConfSection["Symbol"]!, Utilities);
-        Market = new Market(bingxApiConfSection["BaseUrl"]!, bingxApiConfSection["ApiKey"]!, bingxApiConfSection["ApiSecret"]!, bingxApiConfSection["Symbol"]!, Utilities);
-        TimeFrame = int.Parse(bingxApiConfSection["TimeFrame"]!);
-        Margin = float.Parse(bingxApiConfSection["Margin"]!);
-        Leverage = int.Parse(bingxApiConfSection["Leverage"]!);
-        TpPercentage = !string.IsNullOrEmpty(bingxApiConfSection["TpPercentage"]) ? float.Parse(bingxApiConfSection["TpPercentage"]!) : null;
-        SlPercentage = float.Parse(bingxApiConfSection["SlPercentage"]!);
+        Account = account;
+        Trade = trade;
+        Market = market;
+        TimeFrame = timeFrame;
     }
 
-    public IConfigurationSection BingxApi { get; }
-
     private IStrategy Strategy { get; set; }
-    private Utilities Utilities { get; set; }
+    public IUtilities Utilities { get; private set; }
+    private IBingxUtilities BingxUtilities { get; set; }
 
-    public Trade Trade { get; }
-    public Market Market { get; }
+    public IAccount Account { get; }
+    public ITrade Trade { get; }
+    public IMarket Market { get; }
     public int TimeFrame { get; }
-    public float Margin { get; }
-    public int Leverage { get; }
     public float LastPrice { get; private set; }
-    public float? TpPercentage { get; } = null;
-    public float SlPercentage { get; private set; } = 10f;
 
     private bool? IsLastOpenPositionLong { get; set; } = null;
+    private int OpenPositionCount
+    {
+        get
+        {
+            return _openPositionCount;
+        }
+        set
+        {
+            if (value < 0) throw new Exception();
+            _openPositionCount = value;
+        }
+    }
+    private int _openPositionCount = 0;
 
-    public async Task Run()
+    public float? LastTPPrice { get; private set; }
+
+    public async Task Run(DateTime? terminationDate = null)
     {
         try
         {
@@ -49,60 +55,74 @@ public class Bot : IBot
 
             await Strategy.Initiate();
 
-            (await Trade.SetLeverage(Leverage, true)).EnsureSuccessStatusCode();
-            (await Trade.SetLeverage(Leverage, false)).EnsureSuccessStatusCode();
-
-            while (true)
+            while (!Utilities.IsTerminationDatePassed(terminationDate))
             {
-                if (DateTime.UtcNow.Minute % TimeFrame == 0 && DateTime.UtcNow.Second == 0)
+                if (!Utilities.HasTimeFrameReached(TimeFrame))
                 {
-                    Program.Logger.Information("\n\n--- Tick ---");
-                    Program.Logger.Information("{tick}", DateTime.UtcNow);
+                    await Utilities.Sleep(1000);
+                    continue;
+                }
 
-                    try { await Utilities.NotifyListeners("Candle created."); }
-                    catch (NotificationException) { throw; }
+                Program.Logger.Information("\n\n--- Tick ---");
+                Program.Logger.Information("{tick}", DateTime.UtcNow);
 
-                    // 3 seconds delay to ensure the alert has reached gmail's severs
-                    await Task.Delay(millisecondsDelay: 3000);
+                try { await BingxUtilities.NotifyListeners("Candle created."); }
+                catch (NotificationException) { throw; }
 
-                    HttpResponseMessage response;
+                // 2.5 seconds delay to ensure the alert has reached the gmail's severs
+                await Utilities.Sleep(2500);
 
-                    if (IsLastOpenPositionLong != null && Strategy.CheckClosePositionSignal(IsLastOpenPositionLong))
+                HttpResponseMessage? response = null;
+
+                if (LastTPPrice is null && OpenPositionCount != 0 && await Strategy.CheckClosePositionSignal(IsLastOpenPositionLong))
+                {
+                    LastPrice = await Market.GetLastPrice(Trade.GetSymbol(), TimeFrame);
+                    ISignalProvider signalProvider = Strategy.GetLastSignal();
+                    if (signalProvider.GetTPPrice() is null)
                     {
                         response = await Trade.CloseOpenPositions();
-                        await Utilities.HandleBingxResponse(response);
+                        await BingxUtilities.EnsureSuccessfulBingxResponse(response);
 
-                        try { await Utilities.CalculateFinancialPerformance(startDateTime, Trade); }
+                        OpenPositionCount = 0;
+
+                        try { await BingxUtilities.CalculateFinancialPerformance(startDateTime, Trade); }
                         catch (System.Exception ex) { Program.Logger.Error(ex, "Failure while trying to calculate financial performance."); }
-                    }
-
-                    bool? signal = Strategy.CheckOpenPositionSignal(IsLastOpenPositionLong);
-                    if (signal != null)
-                    {
-                        LastPrice = await Market.GetLastPrice(Trade.Symbol, TimeFrame);
-
-                        bool isLong = (bool)signal;
-                        response = await Trade.OpenMarketOrder(isLong, (float)(Margin * Leverage / LastPrice), TpPercentage != null ? Trade.CalculateTp(isLong, (float)TpPercentage, LastPrice, Leverage) : null, Trade.CalculateSl(isLong, SlPercentage, LastPrice, Leverage));
-                        await Utilities.HandleBingxResponse(response);
-
-                        IsLastOpenPositionLong = signal;
                     }
                 }
 
-                await Task.Delay(millisecondsDelay: 1000);
+                response = null;
+
+                if (((LastTPPrice is not null && await Account.GetOpenPositionCount() == 0) || (LastTPPrice is null && OpenPositionCount == 0)) && await Strategy.CheckOpenPositionSignal(IsLastOpenPositionLong))
+                {
+                    LastPrice = await Market.GetLastPrice(Trade.GetSymbol(), TimeFrame);
+
+                    ISignalProvider signalProvider = Strategy.GetLastSignal();
+                    LastTPPrice = signalProvider.GetTPPrice();
+
+                    response = await Trade.SetLeverage(signalProvider.GetLeverage(), true);
+                    await BingxUtilities.EnsureSuccessfulBingxResponse(response);
+                    response = await Trade.SetLeverage(signalProvider.GetLeverage(), false);
+                    await BingxUtilities.EnsureSuccessfulBingxResponse(response);
+
+                    response = await Trade.OpenMarketOrder(signalProvider.IsSignalLong(), (float)(signalProvider.GetMargin() * signalProvider.GetLeverage() / LastPrice), signalProvider.GetTPPrice(), signalProvider.GetSLPrice());
+                    await BingxUtilities.EnsureSuccessfulBingxResponse(response);
+
+                    IsLastOpenPositionLong = signalProvider.IsSignalLong();
+                    OpenPositionCount++;
+                }
             }
         }
         catch (Exception ex)
         {
             Program.Logger.Fatal(ex, "Fatal exception has been thrown {message}", ex.Message);
 
-            try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {ex.GetType().Name}, Message: {ex.Message}"); }
+            try { await BingxUtilities.NotifyListeners($"Fatal Exception has been thrown: {ex.GetType().Name}, Message: {ex.Message}"); }
             catch (Exception NotifyListenersException) { Program.Logger.Error(NotifyListenersException, "Failure while trying to send notification"); }
             try { await Trade.CloseOpenPositions(); }
             catch (Exception closeOpenPositionsEx)
             {
                 Program.Logger.Error(closeOpenPositionsEx, "Failure while trying to close all of the open positions.");
-                try { await Utilities.NotifyListeners($"Fatal Exception has been thrown: {closeOpenPositionsEx.GetType().Name}, Message: {closeOpenPositionsEx.Message}"); }
+                try { await BingxUtilities.NotifyListeners($"Fatal Exception has been thrown: {closeOpenPositionsEx.GetType().Name}, Message: {closeOpenPositionsEx.Message}"); }
                 catch (Exception NotifyListenersException) { Program.Logger.Error(NotifyListenersException, "Failure while trying to send notification"); }
             }
             throw;
