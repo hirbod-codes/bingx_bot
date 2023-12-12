@@ -8,8 +8,11 @@
 sudo docker run -d --name seq1 -e ACCEPT_EULA=Y -v ./logs:/data:rw -p 8081:80 --restart unless-stopped datalust/seq:5.1
 ```
 
-## To start the bot run
+## To start the bot run with required StrategyName configuration variable(you can also specify in appsettings.json)
 
 ```bash
-dotnet run
+dotnet run StrategyName=UT -o outputDirectory/ --project ./src/bot
+#   .
+#   .
+#   .
 ```

@@ -18,6 +18,7 @@ public class Program
             Configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
+                .AddCommandLine(args)
                 .Build();
 
             Logger = new LoggerConfiguration()
