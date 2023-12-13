@@ -61,13 +61,13 @@ public class GeneralSignals : ISignalProvider
         SignalTime = DateTime.Parse(properties["time"]);
         Logger.Information("SignalTime: {SignalTime}", SignalTime);
 
-        LongSignal = properties["side"].ToLower() == "long";
+        LongSignal = properties["side"].ToLower() == "long" || properties["side"].ToLower() == "1";
         Logger.Information("LongSignal: {LongSignal}", LongSignal);
 
-        Margin = int.Parse(properties["margin"]);
+        Margin = float.Parse(properties["margin"]);
         Logger.Information("Margin: {margin}", Margin);
 
-        Leverage = int.Parse(properties["leverage"]);
+        Leverage = (int)float.Parse(properties["leverage"]);
         Logger.Information("Leverage: {leverage}", Leverage);
 
         properties.TryGetValue("tp", out string? tp);

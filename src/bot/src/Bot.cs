@@ -67,7 +67,11 @@ public class Bot : IBot
                 Program.Logger.Information("{tick}", DateTime.UtcNow);
 
                 try { await BingxUtilities.NotifyListeners("Candle created."); }
-                catch (NotificationException) { throw; }
+                catch (NotificationException ex)
+                {
+                    Program.Logger.Error(ex, "Failure while notify users on candle creation.");
+                    throw;
+                }
 
                 // 2.5 seconds delay to ensure the alert has reached the gmail's severs
                 await Utilities.Sleep(2500);
@@ -111,6 +115,8 @@ public class Bot : IBot
                     OpenPositionCount++;
                 }
             }
+
+            Program.Logger.Information("Ended at {date}...", DateTime.UtcNow);
         }
         catch (Exception ex)
         {

@@ -184,7 +184,7 @@ public class GmailProvider : IEmailProvider
 
         string response = await Service.Users.Messages.Delete(EmailProviderOptions.OwnerGmail, id).ExecuteAsync();
 
-        if (string.IsNullOrEmpty(response))
+        if (!string.IsNullOrEmpty(response))
         {
             Logger.Error("Failure while trying to delete email with email id: {id}", id);
             throw new EmailsDeletionException($"Failure while trying to delete email with email id: {id}");
@@ -209,7 +209,7 @@ public class GmailProvider : IEmailProvider
 
         string response = await Service.Users.Messages.BatchDelete(new BatchDeleteMessagesRequest() { Ids = Ids.ToList() }, EmailProviderOptions.OwnerGmail).ExecuteAsync();
 
-        if (string.IsNullOrEmpty(response))
+        if (!string.IsNullOrEmpty(response))
         {
             Logger.Error("Failure while trying to delete emails. filterByEmail: {filterByEmail}", filterByEmail);
             throw new EmailsDeletionException($"Failure while trying to delete emails. filterByEmail: {filterByEmail}");

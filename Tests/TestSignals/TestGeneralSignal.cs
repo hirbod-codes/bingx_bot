@@ -8,6 +8,13 @@ namespace TestSignals;
 
 public class TestGeneralSignal
 {
+    private static readonly string FormattedDateTime = "2020-1-1 10:20:00";
+    private static readonly string Side = "long";
+    private static readonly float Leverage = 154.26741f;
+    private static readonly float Margin = 154.26741f;
+    private static readonly float TPPrice = 154.26741f;
+    private static readonly float SLPrice = 154.26741f;
+
     public static IEnumerable<object?[]> MessageBody =>
         new List<object?[]>
         {
@@ -16,11 +23,11 @@ public class TestGeneralSignal
                 {
                     Body = GeneralSignals.EMAIL_SEPARATOR +
                     "time=2020-1-1T10:20:00" + GeneralSignals.MESSAGE_DELIMITER +
-                    "side=long" + GeneralSignals.MESSAGE_DELIMITER +
-                    "leverage=50" + GeneralSignals.MESSAGE_DELIMITER +
-                    "margin=200" + GeneralSignals.MESSAGE_DELIMITER +
-                    $"sl={40000 - 200}" + GeneralSignals.MESSAGE_DELIMITER +
-                    $"tp={40000 + 200}" +
+                    $"side={Side}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"leverage={Leverage}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"margin={Margin}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"sl={SLPrice}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"tp={TPPrice}" +
                     GeneralSignals.EMAIL_SEPARATOR,
                 }
             },
@@ -29,10 +36,10 @@ public class TestGeneralSignal
                 {
                     Body = GeneralSignals.EMAIL_SEPARATOR +
                     "time=2020-1-1T10:20:00" + GeneralSignals.MESSAGE_DELIMITER +
-                    "side=long" + GeneralSignals.MESSAGE_DELIMITER +
-                    "leverage=50" + GeneralSignals.MESSAGE_DELIMITER +
-                    "margin=200" + GeneralSignals.MESSAGE_DELIMITER +
-                    $"sl={40000 - 200}" +
+                    $"side={Side}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"leverage={Leverage}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"margin={Margin}" + GeneralSignals.MESSAGE_DELIMITER +
+                    $"sl={SLPrice}" +
                     GeneralSignals.EMAIL_SEPARATOR,
                 }
             },
@@ -75,7 +82,7 @@ public class TestGeneralSignal
         await generalSignals.CheckSignals();
 
         int actualLeverage = generalSignals.GetLeverage();
-        Assert.Equal(50, actualLeverage);
+        Assert.Equal((int)Leverage, actualLeverage);
     }
 
     [Theory]
@@ -93,7 +100,7 @@ public class TestGeneralSignal
         await generalSignals.CheckSignals();
 
         float actualMargin = generalSignals.GetMargin();
-        Assert.Equal(200, actualMargin);
+        Assert.Equal(Margin, actualMargin);
     }
 
     [Theory]
@@ -111,7 +118,7 @@ public class TestGeneralSignal
         await generalSignals.CheckSignals();
 
         float actualSLPrice = generalSignals.GetSLPrice();
-        Assert.Equal(40000 - 200, actualSLPrice);
+        Assert.Equal(SLPrice, actualSLPrice);
     }
 
     [Theory]
@@ -130,7 +137,7 @@ public class TestGeneralSignal
 
         float? actualTPPrice = generalSignals.GetTPPrice();
         if (actualTPPrice is not null)
-            Assert.Equal(40000 + 200, actualTPPrice);
+            Assert.Equal(TPPrice, actualTPPrice);
     }
 
     [Fact]
@@ -159,8 +166,8 @@ public class TestGeneralSignal
         emailProvider.Setup(o => o.GetLastEmail(signalProviderEmail)).Returns(value: Task.FromResult<Email?>(email));
         await generalSignals.CheckSignals();
 
-        DateTime actualSignalTime = generalSignals.GetSignalTime();
-        Assert.Equal(DateTime.Parse("2020-1-1 10:20:00"), actualSignalTime);
+        bool actualSignal = generalSignals.IsSignalLong();
+        Assert.Equal(Side.ToLower() == "long", actualSignal);
     }
 
     [Theory]
@@ -198,6 +205,6 @@ public class TestGeneralSignal
         await generalSignals.CheckSignals();
 
         DateTime actualSignalTime = generalSignals.GetSignalTime();
-        Assert.Equal(DateTime.Parse("2020-1-1 10:20:00"), actualSignalTime);
+        Assert.Equal(DateTime.Parse(FormattedDateTime), actualSignalTime);
     }
 }
