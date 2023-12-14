@@ -80,7 +80,7 @@ public class Bot : IBot
 
                 HttpResponseMessage? response = null;
 
-                if (LastTPPrice is null && OpenPositionCount != 0 && await Strategy.CheckClosePositionSignal(IsLastOpenPositionLong))
+                if (LastTPPrice is null && OpenPositionCount != 0 && await Strategy.CheckClosePositionSignal(IsLastOpenPositionLong, TimeFrame))
                 {
                     ISignalProvider signalProvider = Strategy.GetLastSignal();
                     if (signalProvider.GetTPPrice() is null)
@@ -97,7 +97,7 @@ public class Bot : IBot
 
                 response = null;
 
-                if (((LastTPPrice is not null && await Account.GetOpenPositionCount() == 0) || (LastTPPrice is null && OpenPositionCount == 0)) && await Strategy.CheckOpenPositionSignal(IsLastOpenPositionLong))
+                if (((LastTPPrice is not null && await Account.GetOpenPositionCount() == 0) || (LastTPPrice is null && OpenPositionCount == 0)) && await Strategy.CheckOpenPositionSignal(IsLastOpenPositionLong, TimeFrame))
                 {
                     LastPrice = await Market.GetLastPrice(Trade.GetSymbol(), TimeFrame);
 

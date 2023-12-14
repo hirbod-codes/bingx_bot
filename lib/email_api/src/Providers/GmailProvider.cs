@@ -89,10 +89,9 @@ public class GmailProvider : IEmailProvider
                 Body = readableText,
                 Id = message.Id,
                 To = EmailProviderOptions.OwnerGmail,
-                ETag = message.ETag
+                ETag = message.ETag,
+                MailDateTime = DateTime.Parse(date.Contains('(') ? date[..(date.IndexOf('(') - 1)] : date)
             };
-            if (DateTime.TryParse(date, out DateTime dt))
-                email.MailDateTime = dt;
             return Task.FromResult<Email?>(email);
         }
 

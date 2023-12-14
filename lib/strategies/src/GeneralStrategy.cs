@@ -13,7 +13,7 @@ public class GeneralStrategy : IStrategy
         Logger = logger;
     }
 
-    public async Task<bool> CheckClosePositionSignal(bool? isLastOpenPositionLong)
+    public async Task<bool> CheckClosePositionSignal(bool? isLastOpenPositionLong, int timeFrame)
     {
         Logger.Information("Checking for close position...");
         bool r = false;
@@ -29,7 +29,7 @@ public class GeneralStrategy : IStrategy
 
         bool signal = await SignalProvider.CheckSignals() && SignalProvider.GetSignalTime() >= DateTime.UtcNow.AddMinutes(-1);
 
-        if (signal && ((bool)isLastOpenPositionLong ? !SignalProvider.IsSignalLong() : SignalProvider.IsSignalLong()))
+        if (signal && (bool)isLastOpenPositionLong == !SignalProvider.IsSignalLong())
             r = true;
 
         Logger.Information("Result is {result}", r);
@@ -37,7 +37,7 @@ public class GeneralStrategy : IStrategy
         return r;
     }
 
-    public async Task<bool> CheckOpenPositionSignal(bool? isLastOpenPositionLong)
+    public async Task<bool> CheckOpenPositionSignal(bool? isLastOpenPositionLong, int timeFrame)
     {
         Logger.Information("Checking for open position...");
         SignalProvider.ResetSignals();

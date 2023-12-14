@@ -58,7 +58,7 @@ public class GeneralSignals : ISignalProvider
             properties.Add(propertiesPairs[i].Split("=")[0], propertiesPairs[i].Split("=")[1]);
         }
 
-        SignalTime = DateTime.Parse(properties["time"]);
+        SignalTime = email.MailDateTime;
         Logger.Information("SignalTime: {SignalTime}", SignalTime);
 
         LongSignal = properties["side"].ToLower() == "long" || properties["side"].ToLower() == "1";
