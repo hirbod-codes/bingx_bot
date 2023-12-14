@@ -55,6 +55,8 @@ public class Bot : IBot
 
             await Strategy.Initiate();
 
+            await BingxUtilities.EnsureSuccessfulBingxResponse(await Trade.CloseOpenPositions());
+
             while (!Utilities.IsTerminationDatePassed(terminationDate))
             {
                 if (!Utilities.HasTimeFrameReached(TimeFrame))
@@ -73,14 +75,13 @@ public class Bot : IBot
                     throw;
                 }
 
-                // 2.5 seconds delay to ensure the alert has reached the gmail's severs
-                await Utilities.Sleep(2500);
+                // 5 seconds delay to ensure the alert has reached the gmail's severs
+                await Utilities.Sleep(5000);
 
                 HttpResponseMessage? response = null;
 
                 if (LastTPPrice is null && OpenPositionCount != 0 && await Strategy.CheckClosePositionSignal(IsLastOpenPositionLong))
                 {
-                    LastPrice = await Market.GetLastPrice(Trade.GetSymbol(), TimeFrame);
                     ISignalProvider signalProvider = Strategy.GetLastSignal();
                     if (signalProvider.GetTPPrice() is null)
                     {
@@ -108,7 +109,11 @@ public class Bot : IBot
                     response = await Trade.SetLeverage(signalProvider.GetLeverage(), false);
                     await BingxUtilities.EnsureSuccessfulBingxResponse(response);
 
-                    response = await Trade.OpenMarketOrder(signalProvider.IsSignalLong(), (float)(signalProvider.GetMargin() * signalProvider.GetLeverage() / LastPrice), signalProvider.GetTPPrice(), signalProvider.GetSLPrice());
+                    if (signalProvider.GetTPPrice() is null)
+                        response = await Trade.OpenMarketOrder(signalProvider.IsSignalLong(), signalProvider.GetMargin() * (float)signalProvider.GetLeverage() / LastPrice, signalProvider.GetSLPrice());
+                    else
+                        response = await Trade.OpenMarketOrder(signalProvider.IsSignalLong(), signalProvider.GetMargin() * (float)signalProvider.GetLeverage() / LastPrice, (float)signalProvider.GetTPPrice()!, signalProvider.GetSLPrice());
+
                     await BingxUtilities.EnsureSuccessfulBingxResponse(response);
 
                     IsLastOpenPositionLong = signalProvider.IsSignalLong();
@@ -116,7 +121,7 @@ public class Bot : IBot
                 }
             }
 
-            Program.Logger.Information("Ended at {date}...", DateTime.UtcNow);
+            Program.Logger.Information("Ending at {date}...", DateTime.UtcNow);
         }
         catch (Exception ex)
         {
@@ -132,6 +137,21 @@ public class Bot : IBot
                 catch (Exception NotifyListenersException) { Program.Logger.Error(NotifyListenersException, "Failure while trying to send notification"); }
             }
             throw;
+        }
+        finally
+        {
+            try { await BingxUtilities.NotifyListeners("Bot terminated"); }
+            catch (Exception NotifyListenersException) { Program.Logger.Error(NotifyListenersException, "Failure while trying to send notification"); }
+
+            try { await Trade.CloseOpenPositions(); }
+            catch (Exception closeOpenPositionsEx)
+            {
+                Program.Logger.Error(closeOpenPositionsEx, "Failure while trying to close all of the open positions.");
+                try { await BingxUtilities.NotifyListeners($"Fatal Exception has been thrown: {closeOpenPositionsEx.GetType().Name}, Message: {closeOpenPositionsEx.Message}"); }
+                catch (Exception NotifyListenersException) { Program.Logger.Error(NotifyListenersException, "Failure while trying to send notification"); }
+            }
+
+            Program.Logger.Information("Ended at {date}...", DateTime.UtcNow);
         }
     }
 }

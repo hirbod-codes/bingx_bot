@@ -37,7 +37,7 @@ public class GmailProvider : IEmailProvider
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
 
         UsersResource.MessagesResource.GetRequest getRequest = Service.Users.Messages.Get(EmailProviderOptions.OwnerGmail, id);
-        Message message = getRequest.Execute();
+        Message message = await getRequest.ExecuteAsync();
         Email? email = await ProcessMessage(message);
 
         Logger.Information("Found the email: {@email}", JsonSerializer.Serialize(email));
@@ -112,7 +112,7 @@ public class GmailProvider : IEmailProvider
             listRequest.Q = $"from:{filterByEmail}";
 
         //GET ALL EMAILS
-        ListMessagesResponse listResponse = listRequest.Execute();
+        ListMessagesResponse listResponse = await listRequest.ExecuteAsync();
 
         if (listResponse == null || listResponse.Messages == null)
         {
@@ -149,7 +149,7 @@ public class GmailProvider : IEmailProvider
             listRequest.Q = $"from:{filterByEmail}";
 
         //GET ALL EMAILS
-        ListMessagesResponse listResponse = listRequest.Execute();
+        ListMessagesResponse listResponse = await listRequest.ExecuteAsync();
 
         if (listResponse == null || listResponse.Messages == null)
         {

@@ -15,27 +15,40 @@ public class GeneralStrategy : IStrategy
 
     public async Task<bool> CheckClosePositionSignal(bool? isLastOpenPositionLong)
     {
+        Logger.Information("Checking for close position...");
+        bool r = false;
+
         if (isLastOpenPositionLong is null)
-            return false;
+        {
+            Logger.Information("Result is {result}.(isLastOpenPositionLong is null)", r);
+            Logger.Information("Finished checking for close position...");
+            return r;
+        }
 
         SignalProvider.ResetSignals();
 
         bool signal = await SignalProvider.CheckSignals() && SignalProvider.GetSignalTime() >= DateTime.UtcNow.AddMinutes(-1);
 
         if (signal && ((bool)isLastOpenPositionLong ? !SignalProvider.IsSignalLong() : SignalProvider.IsSignalLong()))
-            return true;
+            r = true;
 
-        return false;
+        Logger.Information("Result is {result}", r);
+        Logger.Information("Finished checking for close position...");
+        return r;
     }
 
     public async Task<bool> CheckOpenPositionSignal(bool? isLastOpenPositionLong)
     {
-        if (isLastOpenPositionLong is not null)
-            return false;
-
+        Logger.Information("Checking for open position...");
         SignalProvider.ResetSignals();
 
-        return await SignalProvider.CheckSignals() && SignalProvider.GetSignalTime() >= DateTime.UtcNow.AddMinutes(-1);
+        bool r = await SignalProvider.CheckSignals() &&
+            SignalProvider.GetSignalTime() >= DateTime.UtcNow.AddMinutes(-1) &&
+            (isLastOpenPositionLong is null || isLastOpenPositionLong is not null && SignalProvider.IsSignalLong() == !isLastOpenPositionLong);
+
+        Logger.Information("Result is {result}", r);
+        Logger.Information("Finished checking for open position...");
+        return r;
     }
 
     public ISignalProvider GetLastSignal() => SignalProvider;

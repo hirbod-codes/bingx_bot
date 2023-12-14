@@ -69,9 +69,9 @@ public class BingxUtilities : IBingxUtilities
         }
 
         string responseString = await response.Content.ReadAsStringAsync();
-        BingxResponse bingxResponse = JsonSerializer.Deserialize<BingxResponse>(responseString)!;
+        BingxResponse bingxResponse = JsonSerializer.Deserialize<BingxResponse>(responseString, options: new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
-        if (bingxResponse!.Code == 0)
+        if (bingxResponse!.Code != 0)
         {
             Logger.Error("bingx response code is not successful, code: {code}, body: {responseBody}", bingxResponse.Code, await response.Content.ReadAsStringAsync());
             throw new Exception($"bingx response failure: {bingxResponse.Msg}");
@@ -89,9 +89,9 @@ public class BingxUtilities : IBingxUtilities
             }
 
             string responseString = await response.Content.ReadAsStringAsync();
-            BingxResponse bingxResponse = JsonSerializer.Deserialize<BingxResponse>(responseString)!;
+            BingxResponse bingxResponse = JsonSerializer.Deserialize<BingxResponse>(responseString, options: new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
-            if (bingxResponse!.Code == 0)
+            if (bingxResponse!.Code != 0)
             {
                 Logger.Warning("bingx response code is not successful, code: {code}, body: {responseBody}", bingxResponse.Code, await response.Content.ReadAsStringAsync());
                 return false;

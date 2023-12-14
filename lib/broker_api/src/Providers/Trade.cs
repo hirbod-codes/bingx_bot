@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace broker_api.src.Providers;
 
@@ -22,7 +23,7 @@ public class Trade : Api, ITrade
         leverage
     });
 
-    public async Task<HttpResponseMessage> OpenMarketOrder(bool isLong, float quantity, float? tp, float sl) => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
+    public async Task<HttpResponseMessage> OpenMarketOrder(bool isLong, float quantity, float tp, float sl) => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
     {
         symbol = Symbol,
         type = "MARKET",
@@ -38,6 +39,24 @@ public class Trade : Api, ITrade
             price = tp,
             workingType = "MARK_PRICE"
         }),
+        stopLoss = JsonSerializer.Serialize(new
+        {
+            type = "STOP_MARKET",
+            quantity,
+            stopPrice = sl,
+            price = sl,
+            workingType = "MARK_PRICE"
+        })
+    });
+
+    public async Task<HttpResponseMessage> OpenMarketOrder(bool isLong, float quantity, float sl) => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
+    {
+        symbol = Symbol,
+        type = "MARKET",
+        side = isLong ? "BUY" : "SELL",
+        positionSide = isLong ? "LONG" : "SHORT",
+        quantity,
+        // recvWindow = 1000,
         stopLoss = JsonSerializer.Serialize(new
         {
             type = "STOP_MARKET",

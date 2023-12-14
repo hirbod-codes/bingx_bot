@@ -25,7 +25,7 @@ public class Market : Api, IMarket
 
             Dictionary<string, JsonElement?>? dictionary = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(response);
 
-            Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value.GetArrayLength());
+            Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value);
 
             float lastPrice = float.Parse(data!["price"]!.Value.GetString()!);
             Utilities.Logger.Information($"last price => {lastPrice}");
