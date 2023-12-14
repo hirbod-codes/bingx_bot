@@ -133,6 +133,12 @@ public class BingxUtilities : IBingxUtilities
         string json = await response.Content.ReadAsStringAsync();
         BingxResponse<HistoryData>? bingxResponse = JsonSerializer.Deserialize<BingxResponse<HistoryData>>(json, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
 
+        if (!bingxResponse!.Data!.Orders.Any())
+        {
+            Logger.Information("Finished calculating financial performance.(No orders found)");
+            return;
+        }
+
         IEnumerable<Order> filteredOrders = FilterCancelledOrders(bingxResponse!.Data!.Orders);
         (float profit, float commission) = CalculateProfitAndCommission(filteredOrders);
 
@@ -144,7 +150,7 @@ public class BingxUtilities : IBingxUtilities
             OrdersCount = bingxResponse!.Data!.Orders.Count()
         }));
 
-        Logger.Information("Finished calculating financial performance...");
+        Logger.Information("Finished calculating financial performance.");
     }
 
     private IEnumerable<Order> FilterCancelledOrders(IEnumerable<Order> orders)

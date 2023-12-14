@@ -43,7 +43,7 @@ public class GeneralSignals : ISignalProvider
     }
 
     /// <summary>
-    /// This method expects an email body with a MESSAGE_DELIMITER delimited list of key value pairs with following keys: side,time,margin,leverage,tp(optional),sl
+    /// This method expects an email body with a MESSAGE_DELIMITER delimited list of key value pairs with following keys: side,margin,leverage,tp(optional),sl
     /// </summary>
     private void CollectPropertiesFromEmail(Email email)
     {

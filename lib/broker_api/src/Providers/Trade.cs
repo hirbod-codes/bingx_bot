@@ -149,7 +149,7 @@ public class Trade : Api, ITrade
         })
     });
 
-    public async Task<HttpResponseMessage> GetOrders() => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/openOrders", "GET", ApiKey, ApiSecret, new
+    public async Task<HttpResponseMessage> GetOrders() => await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOrders", "GET", ApiKey, ApiSecret, new
     {
         symbol = Symbol
     });

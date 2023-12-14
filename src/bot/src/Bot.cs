@@ -76,7 +76,7 @@ public class Bot : IBot
                 }
 
                 // 5 seconds delay to ensure the alert has reached the gmail's severs
-                await Utilities.Sleep(5000);
+                await Utilities.Sleep(7000);
 
                 HttpResponseMessage? response = null;
 
