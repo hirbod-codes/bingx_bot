@@ -21,8 +21,8 @@ public class TestGeneralSignal
             new object?[] {
                 new Email()
                 {
+                    MailDateTime = DateTime.Parse("2020-1-1T10:20:00"),
                     Body = GeneralSignals.EMAIL_SEPARATOR +
-                    "time=2020-1-1T10:20:00" + GeneralSignals.MESSAGE_DELIMITER +
                     $"side={Side}" + GeneralSignals.MESSAGE_DELIMITER +
                     $"leverage={Leverage}" + GeneralSignals.MESSAGE_DELIMITER +
                     $"margin={Margin}" + GeneralSignals.MESSAGE_DELIMITER +
@@ -34,8 +34,8 @@ public class TestGeneralSignal
             new object?[] {
                 new Email()
                 {
+                    MailDateTime = DateTime.Parse("2020-1-1T10:20:00"),
                     Body = GeneralSignals.EMAIL_SEPARATOR +
-                    "time=2020-1-1T10:20:00" + GeneralSignals.MESSAGE_DELIMITER +
                     $"side={Side}" + GeneralSignals.MESSAGE_DELIMITER +
                     $"leverage={Leverage}" + GeneralSignals.MESSAGE_DELIMITER +
                     $"margin={Margin}" + GeneralSignals.MESSAGE_DELIMITER +
@@ -205,6 +205,6 @@ public class TestGeneralSignal
         await generalSignals.CheckSignals();
 
         DateTime actualSignalTime = generalSignals.GetSignalTime();
-        Assert.Equal(DateTime.Parse(FormattedDateTime), actualSignalTime);
+        Assert.Equal(email.MailDateTime, actualSignalTime);
     }
 }
