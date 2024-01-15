@@ -21,3 +21,5 @@ src/*log*
 !.env.example
 
 security/
+
+Tests/manual_tests

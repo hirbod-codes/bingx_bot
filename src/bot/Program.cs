@@ -1,5 +1,6 @@
 ﻿using bot.src.Bots;
 using bot.src.Brokers;
+using bot.src.Data.InMemory;
 using bot.src.MessageStores;
 using bot.src.Notifiers.NTFY;
 using bot.src.Strategies;
@@ -29,7 +30,7 @@ public class Program
             .ReadFrom.Configuration(Configuration, new ConfigurationReaderOptions() { SectionName = "Serilog" })
             .CreateLogger();
 
-            await new BotFactory(Configuration, Logger, new StrategyFactory(Configuration, Logger, new MessageStoreFactory(Configuration, Logger)), new BrokerFactory(Configuration, Logger), new Time())
+            await new BotFactory(Configuration, Logger, new StrategyFactory(Configuration, Logger, new MessageStoreFactory(Configuration, Logger, new MessageRepository())), new BrokerFactory(Configuration, Logger), new Time())
             .CreateBot()
             .Run();
         }

@@ -43,7 +43,7 @@ public class GeneralBot : IBot
         }
     }
 
-    private async Task Tick()
+    public async Task Tick()
     {
         Logger.Information("Ticked at: {dateTime}", DateTime.UtcNow.ToString());
 
@@ -77,10 +77,12 @@ public class GeneralBot : IBot
 
         Logger.Information("Opening a market position...");
 
+        await Trade.SetLeverage(Strategy.GetLeverage());
+
         if (Strategy.GetTPPrice() is null)
-            await Trade.OpenMarketOrder(Strategy.GetMargin() * Strategy.GetLeverage() / (await Trade.GetPrice()), Strategy.GetDirection(), Strategy.GetSLPrice());
+            await Trade.OpenMarketOrder(Strategy.GetMargin(), Strategy.GetDirection(), Strategy.GetSLPrice());
         else
-            await Trade.OpenMarketOrder(Strategy.GetMargin() * Strategy.GetLeverage() / (await Trade.GetPrice()), Strategy.GetDirection(), Strategy.GetSLPrice(), (float)Strategy.GetTPPrice()!);
+            await Trade.OpenMarketOrder(Strategy.GetMargin(), Strategy.GetDirection(), Strategy.GetSLPrice(), (decimal)Strategy.GetTPPrice()!);
 
         Logger.Information("market position is opened.");
     }

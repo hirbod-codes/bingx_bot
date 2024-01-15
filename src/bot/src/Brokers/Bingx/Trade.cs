@@ -3,7 +3,7 @@ using System.Text.Json;
 using bot.src.Brokers.Bingx.DTOs;
 using bot.src.Brokers.Bingx.Exceptions;
 using bot.src.Brokers.Bingx.Models;
-using bot.src.Strategies.Models;
+using bot.src.Data.Models;
 using Serilog;
 
 namespace bot.src.Brokers.Bingx;
@@ -27,7 +27,7 @@ public class Trade : Api, ITrade
         return Task.CompletedTask;
     }
 
-    public async Task<float> GetPrice()
+    public async Task<decimal> GetPrice()
     {
         _logger.Information("Getting last price of the symbol...");
 
@@ -42,7 +42,7 @@ public class Trade : Api, ITrade
 
         string response = await httpResponseMessage.Content.ReadAsStringAsync();
 
-        if (!float.TryParse(((JsonSerializer.Deserialize<BingxResponse<BingxLastPriceDto>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new LastPriceException()).Data ?? throw new LastPriceException()).Price ?? throw new LastPriceException(), out float price))
+        if (!decimal.TryParse(((JsonSerializer.Deserialize<BingxResponse<BingxLastPriceDto>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new LastPriceException()).Data ?? throw new LastPriceException()).Price ?? throw new LastPriceException(), out decimal price))
             throw new LastPriceException();
 
         _logger.Information("symbol's last price => {price}", price);
@@ -51,7 +51,7 @@ public class Trade : Api, ITrade
         return price;
     }
 
-    public async Task<float> GetLeverage()
+    public async Task<decimal> GetLeverage()
     {
         _logger.Information("Getting the leverage...");
 
@@ -73,7 +73,7 @@ public class Trade : Api, ITrade
         return leverage;
     }
 
-    public async Task SetLeverage(float leverage)
+    public async Task SetLeverage(decimal leverage)
     {
         _logger.Information("Setting the leverage...");
         _logger.Information("leverage: {leverage}", leverage);
@@ -104,7 +104,7 @@ public class Trade : Api, ITrade
         return;
     }
 
-    public async Task OpenMarketOrder(float quantity, bool direction, float slPrice, float tpPrice)
+    public async Task OpenMarketOrder(decimal quantity, bool direction, decimal slPrice, decimal tpPrice)
     {
         _logger.Information("Opening a market order...");
         _logger.Information("quantity: {quantity}, direction: {direction}, slPrice: {slPrice}, tpPrice: {tpPrice}", quantity, direction, slPrice, tpPrice);
@@ -141,7 +141,7 @@ public class Trade : Api, ITrade
         return;
     }
 
-    public async Task OpenMarketOrder(float quantity, bool direction, float slPrice)
+    public async Task OpenMarketOrder(decimal quantity, bool direction, decimal slPrice)
     {
         _logger.Information("Opening a market order...");
         _logger.Information("quantity: {quantity}, direction: {direction}, slPrice: {slPrice}", quantity, direction, slPrice);
@@ -242,8 +242,8 @@ public class Trade : Api, ITrade
         // {
         //     position = new()
         //     {
-        //         EntryPrice = float.Parse((bingxResponse.Data ?? throw new CloseAllPositionsException()).Price),
-        //         SLPrice = float.Parse((bingxResponse.Data ?? throw new CloseAllPositionsException())),
+        //         EntryPrice = decimal.Parse((bingxResponse.Data ?? throw new CloseAllPositionsException()).Price),
+        //         SLPrice = decimal.Parse((bingxResponse.Data ?? throw new CloseAllPositionsException())),
         //         TPPrice = "",
         //         Commission = "",
         //         Leverage = "",

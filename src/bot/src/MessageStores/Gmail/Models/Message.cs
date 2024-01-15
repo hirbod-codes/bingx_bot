@@ -1,6 +1,6 @@
-namespace bot.src.MessageStores.Models;
+namespace bot.src.MessageStores.Gmail.Models;
 
-public class Message
+public class Message : IMessage
 {
     public string Id { get; set; } = null!;
     public string ETag { get; set; } = null!;

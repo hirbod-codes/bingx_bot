@@ -1,21 +1,20 @@
-using bot.src.MessageStores.Models;
 
 namespace bot.src.MessageStores;
 
 public interface IMessageStore
 {
     /// <exception cref="NullReferenceException"></exception>
-    public Task<IEnumerable<Message>> GetMessages();
+    public Task<IEnumerable<IMessage>> GetMessages();
     /// <exception cref="NullReferenceException"></exception>
-    public Task<IEnumerable<Message>> GetMessages(string from);
+    public Task<IEnumerable<IMessage>> GetMessages(string from);
     /// <exception cref="NullReferenceException"></exception>
-    public Task<Message?> GetLastMessage();
+    public Task<IMessage?> GetLastMessage();
     /// <exception cref="NullReferenceException"></exception>
-    public Task<Message?> GetLastMessage(string from);
+    public Task<IMessage?> GetLastMessage(string from);
     /// <exception cref="NullReferenceException"></exception>
-    public Task<Message?> GetMessage(string id);
+    public Task<IMessage?> GetMessage(string id);
     /// <exception cref="NullReferenceException"></exception>
-    public Task<Message?> GetMessage(string attribute, string value);
+    public Task<IMessage?> GetMessage(string attribute, string value);
     public Task<bool> DeleteMessage(string id);
     public Task<bool> DeleteMessages(string from);
     public Task<bool> DeleteMessages(IEnumerable<string> ids);

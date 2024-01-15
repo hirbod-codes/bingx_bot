@@ -1,4 +1,3 @@
-using bot.src.MessageStores.Models;
 using bot.src.Strategies.GeneralStrategy;
 using Serilog;
 
@@ -7,9 +6,6 @@ namespace unit_tests.src.Strategies.GeneralStrategy;
 [Collection("Strategy")]
 public class GeneralStrategyTest
 {
-    public const string MESSAGE_DELIMITER = bot.src.Strategies.GeneralStrategy.GeneralStrategy.MESSAGE_DELIMITER;
-    public const string FIELD_DELIMITER = bot.src.Strategies.GeneralStrategy.GeneralStrategy.FIELD_DELIMITER;
-    public const string KEY_VALUE_PAIR_DELIMITER = bot.src.Strategies.GeneralStrategy.GeneralStrategy.KEY_VALUE_PAIR_DELIMITER;
     private readonly string provider = "provider";
     public Fixture Fixture { get; private set; }
 

@@ -1,14 +1,20 @@
 using System.Text.Json;
 using bot.src.Brokers.Bingx.Exceptions;
 using bot.src.Brokers.Bingx.Models;
+using Serilog;
 
 namespace bot.src.Brokers.Bingx;
 
 public class Account : Api, IAccount
 {
     private BingxUtilities Utilities { get; set; }
+    private readonly ILogger _logger;
 
-    public Account(string base_url, string apiKey, string apiSecret, string symbol, BingxUtilities utilities) : base(base_url, apiKey, apiSecret, symbol) => Utilities = utilities;
+    public Account(string base_url, string apiKey, string apiSecret, string symbol, BingxUtilities utilities, ILogger logger) : base(base_url, apiKey, apiSecret, symbol)
+    {
+        Utilities = utilities;
+        _logger = logger;
+    }
 
     class BingxBalance
     {
@@ -27,18 +33,18 @@ public class Account : Api, IAccount
     {
         public string UserId { get; set; } = null!;
         public string Asset { get; set; } = null!;
-        public float Value { get; set; }
-        public float Equity { get; set; }
-        public float UnrealizedProfit { get; set; }
-        public float RealizedProfit { get; set; }
-        public float AvailableMargin { get; set; }
-        public float UsedMargin { get; set; }
-        public float FreezedMargin { get; set; }
+        public decimal Value { get; set; }
+        public decimal Equity { get; set; }
+        public decimal UnrealizedProfit { get; set; }
+        public decimal RealizedProfit { get; set; }
+        public decimal AvailableMargin { get; set; }
+        public decimal UsedMargin { get; set; }
+        public decimal FreezedMargin { get; set; }
     }
 
-    public async Task<float> GetBalance()
+    public async Task<decimal> GetBalance()
     {
-        Utilities.Logger.Information("Getting account balance...");
+        _logger.Information("Getting account balance...");
 
         HttpResponseMessage httpResponseMessage = await Utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/balance", "GET", ApiKey, ApiSecret, new
         {
@@ -50,12 +56,12 @@ public class Account : Api, IAccount
 
         string response = await httpResponseMessage.Content.ReadAsStringAsync();
 
-        if (!float.TryParse(((JsonSerializer.Deserialize<BingxResponse<BingxBalance>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new AccountBalanceException()).Data ?? throw new AccountBalanceException()).Balance ?? throw new AccountBalanceException(), out float balance))
+        if (!decimal.TryParse(((JsonSerializer.Deserialize<BingxResponse<BingxBalance>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new AccountBalanceException()).Data ?? throw new AccountBalanceException()).Balance ?? throw new AccountBalanceException(), out decimal balance))
             throw new AccountBalanceException();
 
-        Utilities.Logger.Information("account balance => {balance}", balance);
+        _logger.Information("account balance => {balance}", balance);
 
-        Utilities.Logger.Information("Finished getting account balance...");
+        _logger.Information("Finished getting account balance...");
         return balance;
     }
 }

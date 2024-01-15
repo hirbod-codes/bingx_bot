@@ -12,15 +12,15 @@ public interface IStrategy
 
     /// <returns>If true it's a long position, otherwise a short position.</returns>
     public bool GetDirection();
-    public float GetMargin();
-    public float GetLeverage();
-    public float GetSLPrice();
+    public decimal GetMargin();
+    public decimal GetLeverage();
+    public decimal GetSLPrice();
 
     /// <returns>Time frame in seconds</returns>
     public int GetTimeFrame();
 
     /// <returns>Determines the price in which the position will exit from. If null positions exit when a position in opposite direction is opened.</returns>
-    public float? GetTPPrice();
+    public decimal? GetTPPrice();
     public bool IsParallelPositionsAllowed();
     public bool ShouldOpenPosition();
     public bool ShouldCloseAllPositions();

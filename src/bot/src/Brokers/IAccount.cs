@@ -2,5 +2,5 @@ namespace bot.src.Brokers;
 
 public interface IAccount
 {
-    public Task<float> GetBalance();
+    public Task<decimal> GetBalance();
 }

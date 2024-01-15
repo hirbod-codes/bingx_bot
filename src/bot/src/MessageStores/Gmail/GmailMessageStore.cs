@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
-using GmailMessage = Google.Apis.Gmail.v1.Data.Message;
 using Serilog;
-using Message = bot.src.MessageStores.Models.Message;
+using Message = bot.src.MessageStores.Gmail.Models.Message;
+using GmailMessage = Google.Apis.Gmail.v1.Data.Message;
 using bot.src.MessageStores.Gmail.Models;
 
 namespace bot.src.MessageStores.Gmail;
@@ -32,7 +32,7 @@ public class GmailMessageStore : IMessageStore
 
     public string GetProviderEmail() => EmailProviderOptions.OwnerGmail;
 
-    public async Task<Message?> GetLastMessage()
+    public async Task<IMessage?> GetLastMessage()
     {
         Logger.Information("Getting the last message...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
@@ -41,13 +41,13 @@ public class GmailMessageStore : IMessageStore
         listRequest.LabelIds = "INBOX";
         listRequest.IncludeSpamTrash = true;
 
-        Message? message = await GetLastMessage(listRequest);
+        IMessage? message = await GetLastMessage(listRequest);
 
         Logger.Information("Finished getting the last message... {@message}", JsonSerializer.Serialize(message));
         return message;
     }
 
-    public async Task<Message?> GetLastMessage(string from)
+    public async Task<IMessage?> GetLastMessage(string from)
     {
         Logger.Information("Getting the last message...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
@@ -58,13 +58,13 @@ public class GmailMessageStore : IMessageStore
         listRequest.IncludeSpamTrash = true;
         listRequest.Q = $"from:{from}";
 
-        Message? message = await GetLastMessage(listRequest);
+        IMessage? message = await GetLastMessage(listRequest);
 
         Logger.Information("Finished getting the last message... {@message}", JsonSerializer.Serialize(message));
         return message;
     }
 
-    private async Task<Message?> GetLastMessage(UsersResource.MessagesResource.ListRequest listRequest)
+    private async Task<IMessage?> GetLastMessage(UsersResource.MessagesResource.ListRequest listRequest)
     {
         ListMessagesResponse listResponse = await listRequest.ExecuteAsync();
 
@@ -74,7 +74,7 @@ public class GmailMessageStore : IMessageStore
         foreach (GmailMessage gmailMessage in listResponse.Messages)
         {
             GmailMessage fetchedGmailMessage = await Service.Users.Messages.Get(EmailProviderOptions.OwnerGmail, gmailMessage.Id).ExecuteAsync();
-            Message? message = ProcessMessage(fetchedGmailMessage);
+            IMessage? message = ProcessMessage(fetchedGmailMessage);
             if (message is null)
                 continue;
 
@@ -84,21 +84,21 @@ public class GmailMessageStore : IMessageStore
         return null;
     }
 
-    public async Task<Message?> GetMessage(string id)
+    public async Task<IMessage?> GetMessage(string id)
     {
         Logger.Information("Getting the message...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
 
         UsersResource.MessagesResource.GetRequest getRequest = Service.Users.Messages.Get(EmailProviderOptions.OwnerGmail, id);
         GmailMessage gmailMessage = await getRequest.ExecuteAsync();
-        Message? message = ProcessMessage(gmailMessage);
+        IMessage? message = ProcessMessage(gmailMessage);
 
         Logger.Information("Found the message: {@message}", JsonSerializer.Serialize(message));
         Logger.Information("Finished Getting the message...");
         return message;
     }
 
-    public async Task<Message?> GetMessage(string attribute, string value)
+    public async Task<IMessage?> GetMessage(string attribute, string value)
     {
         Logger.Information("Getting the message with attributes...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
@@ -110,13 +110,13 @@ public class GmailMessageStore : IMessageStore
         listRequest.IncludeSpamTrash = true;
         listRequest.Q = $"{attribute}:{value}";
 
-        Message? message = await GetLastMessage(listRequest);
+        IMessage? message = await GetLastMessage(listRequest);
 
         Logger.Information("Finished getting the message... {@message}", JsonSerializer.Serialize(message));
         return message;
     }
 
-    public async Task<IEnumerable<Message>> GetMessages()
+    public async Task<IEnumerable<IMessage>> GetMessages()
     {
         Logger.Information("Getting messages...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
@@ -125,13 +125,13 @@ public class GmailMessageStore : IMessageStore
         listRequest.LabelIds = "INBOX";
         listRequest.IncludeSpamTrash = true;
 
-        IEnumerable<Message> messages = await GetMessages(listRequest);
+        IEnumerable<IMessage> messages = await GetMessages(listRequest);
 
-        Logger.Information("Finished getting messages... {@message}", JsonSerializer.Serialize(messages));
+        Logger.Information("Finished getting messages... {@messages}", messages);
         return messages;
     }
 
-    public async Task<IEnumerable<Message>> GetMessages(string from)
+    public async Task<IEnumerable<IMessage>> GetMessages(string from)
     {
         Logger.Information("Getting messages...");
         Logger.Information("ownerGmail value is: {ownerGmail}", EmailProviderOptions.OwnerGmail);
@@ -141,15 +141,15 @@ public class GmailMessageStore : IMessageStore
         listRequest.IncludeSpamTrash = true;
         listRequest.Q = $"from:{from}";
 
-        IEnumerable<Message> messages = await GetMessages(listRequest);
+        IEnumerable<IMessage> messages = await GetMessages(listRequest);
 
-        Logger.Information("Finished getting messages... {@message}", JsonSerializer.Serialize(messages));
+        Logger.Information("Finished getting messages... {@messages}", messages);
         return messages;
     }
 
-    private async Task<IEnumerable<Message>> GetMessages(UsersResource.MessagesResource.ListRequest listRequest)
+    private async Task<IEnumerable<IMessage>> GetMessages(UsersResource.MessagesResource.ListRequest listRequest)
     {
-        IEnumerable<Message> messages = Array.Empty<Message>();
+        IEnumerable<IMessage> messages = Array.Empty<IMessage>();
 
         ListMessagesResponse listResponse = await listRequest.ExecuteAsync();
 
@@ -158,7 +158,7 @@ public class GmailMessageStore : IMessageStore
 
         foreach (GmailMessage gmailMessage in listResponse.Messages)
         {
-            Message? message = ProcessMessage(gmailMessage);
+            IMessage? message = ProcessMessage(gmailMessage);
             if (message is null)
                 continue;
 
@@ -168,7 +168,7 @@ public class GmailMessageStore : IMessageStore
         return messages;
     }
 
-    private Message? ProcessMessage(GmailMessage message)
+    private IMessage? ProcessMessage(GmailMessage message)
     {
         string fromAddress = string.Empty;
         string date = string.Empty;
@@ -198,7 +198,7 @@ public class GmailMessageStore : IMessageStore
         base64DecodedMailBody = GmailApiHelper.Base64Decode(mailBody);
 
         if (!string.IsNullOrEmpty(base64DecodedMailBody))
-            return new()
+            return new Message()
             {
                 Id = message.Id,
                 From = fromAddress,
@@ -231,7 +231,7 @@ public class GmailMessageStore : IMessageStore
 
     public async Task<bool> DeleteMessages(string from)
     {
-        IEnumerable<Message> messages = await GetMessages(from);
+        IEnumerable<IMessage> messages = await GetMessages(from);
 
         Logger.Information("Deleting all of the messages...");
 
