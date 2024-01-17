@@ -13,7 +13,7 @@ public class Position
     public decimal? ProfitWithCommission { get; set; }
     public decimal Margin { get; set; }
     public decimal Leverage { get; set; }
-    private string? _positionStatus;
+    private string _positionStatus = Models.PositionStatus.OPENED;
     public string PositionStatus
     {
         get { return _positionStatus!; }

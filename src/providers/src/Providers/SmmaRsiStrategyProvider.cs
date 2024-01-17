@@ -111,7 +111,7 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         {
             _logger.Information("Candle is valid for a position, sending the message...");
 
-            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Open, false);
+            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Open, hasTPPrice: true);
             await _notifier.SendMessage(message);
             _logger.Information("Message sent.");
         }

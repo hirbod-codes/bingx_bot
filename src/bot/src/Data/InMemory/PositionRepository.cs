@@ -6,35 +6,6 @@ public class PositionRepository : IPositionRepository
 {
     private IEnumerable<Position> _positions = Array.Empty<Position>();
 
-    public Task CreatePosition(decimal openedPrice, decimal margin, decimal leverage, decimal slPrice, decimal tpPrice, DateTime openedAt)
-    {
-        _positions = _positions.Append(new()
-        {
-            Id = _positions.Any() ? int.Parse(_positions.Last().Id + 1).ToString() : "0",
-            OpenedPrice = openedPrice,
-            Margin = margin,
-            Leverage = leverage,
-            SLPrice = slPrice,
-            TPPrice = tpPrice,
-            OpenedAt = openedAt
-        });
-        return Task.CompletedTask;
-    }
-
-    public Task CreatePosition(decimal openedPrice, decimal margin, decimal leverage, decimal slPrice, DateTime openedAt)
-    {
-        _positions = _positions.Append(new()
-        {
-            Id = _positions.Any() ? int.Parse(_positions.Last().Id + 1).ToString() : "0",
-            OpenedPrice = openedPrice,
-            Margin = margin,
-            Leverage = leverage,
-            SLPrice = slPrice,
-            OpenedAt = openedAt
-        });
-        return Task.CompletedTask;
-    }
-
     public Task CreatePosition(Position position)
     {
         position.Id = _positions.Any() ? int.Parse(_positions.Last().Id + 1).ToString() : "0";

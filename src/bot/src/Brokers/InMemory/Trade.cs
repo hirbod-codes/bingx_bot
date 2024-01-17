@@ -48,6 +48,8 @@ public class Trade : ITrade
         position.Commission = commission;
         position.ProfitWithCommission = profit - commission;
 
+        position.PositionStatus = PositionStatus.CLOSED;
+
         await _positionRepository.ReplacePosition(position);
     }
 

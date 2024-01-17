@@ -70,29 +70,25 @@ public class Broker : IBroker
 
     private async Task ClosePosition(Position position)
     {
+        decimal? closedPrice = null!;
         if (position.PositionDirection == PositionDirection.LONG)
+        {
             if (_currentCandle.Low <= position.SLPrice)
-                position.ClosedPrice = position.SLPrice;
+                closedPrice = position.SLPrice;
             else if (position.TPPrice != null && _currentCandle.High >= position.TPPrice)
-                position.ClosedPrice = position.TPPrice;
-            else if (position.TPPrice == null)
-                position.ClosedPrice = _currentCandle.Close;
-            else
-                throw new ClosePositionException();
+                closedPrice = (decimal)position.TPPrice;
+        }
         else if (position.PositionDirection == PositionDirection.SHORT)
+        {
             if (_currentCandle.High >= position.SLPrice)
-                position.ClosedPrice = position.SLPrice;
+                closedPrice = position.SLPrice;
             else if (position.TPPrice != null && _currentCandle.Low <= position.TPPrice)
-                position.ClosedPrice = position.TPPrice;
-            else if (position.TPPrice == null)
-                position.ClosedPrice = _currentCandle.Close;
-            else
-                throw new ClosePositionException();
+                closedPrice = (decimal)position.TPPrice;
+        }
         else
             throw new ClosePositionException();
 
-        position.ClosedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame());
-        await _trade.ClosePosition(position.Id, (decimal)position.ClosedPrice, (DateTime)position.ClosedAt);
+        await _trade.ClosePosition(position.Id, (decimal)closedPrice, _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()));
     }
 
     public async Task CandleClosed(int index) => await CandleClosed(await _candleRepository.GetCandle(index));
