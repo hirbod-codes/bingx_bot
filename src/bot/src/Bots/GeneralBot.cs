@@ -1,4 +1,3 @@
-using bot.src.Broker;
 using bot.src.Brokers;
 using bot.src.Strategies;
 using bot.src.Util;
@@ -20,15 +19,6 @@ public class GeneralBot : IBot
         _logger = logger.ForContext<GeneralBot>();
         _time = time;
         _broker = broker;
-    }
-
-    public event EventHandler? Ticked;
-
-    private void OnTicked()
-    {
-        _logger.Information("Raising Ticked event.");
-        Ticked?.Invoke(this, EventArgs.Empty);
-        _logger.Information("Ticked event raised.");
     }
 
     public async Task Run()
@@ -60,7 +50,6 @@ public class GeneralBot : IBot
         if (!await _strategy.CheckForSignal())
         {
             _logger.Information("No signal");
-            OnTicked();
             return;
         }
 
@@ -69,7 +58,6 @@ public class GeneralBot : IBot
         if ((!_strategy.ShouldOpenPosition() && !_strategy.ShouldCloseAllPositions()) || (_strategy.ShouldOpenPosition() && _strategy.ShouldCloseAllPositions()))
         {
             _logger.Information("Invalid signal, ShouldOpenPosition and ShouldCloseAllPositions variables are both true at the same time!");
-            OnTicked();
             return;
         }
 
@@ -78,14 +66,12 @@ public class GeneralBot : IBot
             _logger.Information("Closing all of the open positions...");
             await _broker.CloseAllPositions();
             _logger.Information("open positions are closed.");
-            OnTicked();
             return;
         }
 
         if (!_strategy.IsParallelPositionsAllowed() && (await _broker.GetOpenPositions()).Any())
         {
             _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
-            OnTicked();
             return;
         }
 
@@ -97,7 +83,5 @@ public class GeneralBot : IBot
             await _broker.OpenMarketPosition(_strategy.GetMargin(), _strategy.GetLeverage(), _strategy.GetDirection(), _strategy.GetSLPrice(), (decimal)_strategy.GetTPPrice()!);
 
         _logger.Information("market position is opened.");
-
-        OnTicked();
     }
 }

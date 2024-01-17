@@ -14,7 +14,7 @@ public class RiskManagement : IRiskManagement
 
     public decimal GetSLPrice(string positionDirection, decimal positionEntryPrice)
     {
-        decimal priceDifference = RiskManagementOptions.SLPercentages * positionEntryPrice / (100 * RiskManagementOptions.Leverage);
+        decimal priceDifference = RiskManagementOptions.SLPercentages * positionEntryPrice / 100m / RiskManagementOptions.Leverage;
         if (positionDirection == PositionDirection.LONG)
             return positionEntryPrice - priceDifference;
         else
@@ -23,7 +23,7 @@ public class RiskManagement : IRiskManagement
 
     public decimal GetTPPrice(string positionDirection, decimal positionEntryPrice)
     {
-        decimal priceDifference = RiskManagementOptions.SLPercentages * positionEntryPrice * RiskManagementOptions.Ratio / (100 * RiskManagementOptions.Leverage);
+        decimal priceDifference = RiskManagementOptions.SLPercentages * positionEntryPrice * RiskManagementOptions.Ratio / 100m / RiskManagementOptions.Leverage;
         if (positionDirection == PositionDirection.LONG)
             return positionEntryPrice + priceDifference;
         else

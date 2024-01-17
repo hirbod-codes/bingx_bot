@@ -4,7 +4,6 @@ namespace bot.src.Brokers;
 
 public interface IBroker
 {
-    public event EventHandler? CandleProcessed;
     public Task CandleClosed(Candle candle);
     public Task CandleClosed(int index);
     public Task CloseAllPositions();

@@ -7,7 +7,6 @@ namespace bot.src.Brokers.InMemory;
 
 public class Broker : IBroker
 {
-    public event EventHandler? CandleProcessed;
     private readonly ICandleRepository _candleRepository;
     private readonly IAccount _account;
     private readonly ITrade _trade;
@@ -24,8 +23,6 @@ public class Broker : IBroker
         _account = account;
     }
 
-    private void OnCandleProcessed() => CandleProcessed?.Invoke(this, EventArgs.Empty);
-
     public async Task CandleClosed(Candle candle)
     {
         _currentCandle = candle;
@@ -36,10 +33,6 @@ public class Broker : IBroker
         if (!openPositions.Any())
         {
             _logger.Information("There is no open position.");
-
-            _logger.Information("Raising OnCandleProcessed event...");
-            OnCandleProcessed();
-            _logger.Information("OnCandleProcessed event raised...");
             return;
         }
 
@@ -52,10 +45,6 @@ public class Broker : IBroker
                 await ClosePosition(position);
             }
         _logger.Information("{closedPositionsCount} positions closed.", closedPositionsCount);
-
-        _logger.Information("Raising OnCandleProcessed event...");
-        OnCandleProcessed();
-        _logger.Information("OnCandleProcessed event raised...");
     }
 
     private bool ShouldClosePosition(Position position) =>

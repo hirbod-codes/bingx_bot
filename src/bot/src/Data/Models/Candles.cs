@@ -4,7 +4,20 @@ namespace bot.src.Data.Models;
 
 public class Candles : IEnumerable<Candle>
 {
-    public int TimeFrame { get; private set; } = 0;
+    private int _timeFrame = 0;
+    public int TimeFrame
+    {
+        get
+        {
+            if (_timeFrame == 0)
+                throw new ZeroTimeFrameException();
+            return _timeFrame;
+        }
+        private set
+        {
+            _timeFrame = value;
+        }
+    }
 
     private IEnumerable<Candle> _candles = Array.Empty<Candle>();
 
@@ -13,17 +26,14 @@ public class Candles : IEnumerable<Candle>
         if (!candles.Any())
             throw new ArgumentException("No candle provided.");
 
-        if (candles.Count() >= 2)
-            TimeFrame = (int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds;
-        else
+        if (candles.Count() == 1)
         {
             _candles = candles;
             return;
         }
 
-        Candle firstCandle = candles.First();
-        candles = candles.Skip(1);
-        _candles = _candles.Append(firstCandle);
+        if (_timeFrame == 0)
+            _timeFrame = (int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds;
 
         foreach (Candle candle in candles)
             AddCandle(candle);
@@ -31,19 +41,20 @@ public class Candles : IEnumerable<Candle>
 
     public void AddCandle(Candle candle)
     {
-        if (!_candles.Any())
+        if (_candles.Count() < 2)
         {
             _candles = _candles.Append(candle);
             return;
         }
 
-        if (TimeFrame != 0 && (_candles.Last().Date - candle.Date).TotalSeconds != TimeFrame)
+        if (_timeFrame == 0)
+            _timeFrame = (int)(_candles.ElementAt(0).Date - _candles.ElementAt(1).Date).TotalSeconds;
+
+        if (_timeFrame != 0 && (_candles.Last().Date - candle.Date).TotalSeconds != _timeFrame)
             throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
 
         _candles = _candles.Append(candle);
-
-        if (TimeFrame == 0 && _candles.Count() >= 2)
-            TimeFrame = (int)(_candles.ElementAt(0).Date - _candles.ElementAt(1).Date).TotalSeconds;
+        return;
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

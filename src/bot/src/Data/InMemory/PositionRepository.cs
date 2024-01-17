@@ -8,7 +8,7 @@ public class PositionRepository : IPositionRepository
 
     public Task CreatePosition(Position position)
     {
-        position.Id = _positions.Any() ? int.Parse(_positions.Last().Id + 1).ToString() : "0";
+        position.Id = _positions.Any() ? (int.Parse(_positions.Last().Id) + 1).ToString() : "0";
         _positions = _positions.Append(position);
         return Task.CompletedTask;
     }

@@ -23,11 +23,7 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
     private readonly ILogger _logger;
     private readonly ITime _time;
     private int? _index = null;
-    private bool _hasBrokerProcessedCandle = false;
-    private bool _hasBotTicked = false;
-
-    public event EventHandler<OnCandleCloseEventsArgs>? CandleClosed;
-    public event EventHandler? LastCandleReached;
+    private int _candlesCount;
 
     public SmmaRsiStrategyProvider(ICandleRepository candleRepository, IndicatorsOptions indicatorsOptions, IEnumerable<SmmaResult> smma1, IEnumerable<SmmaResult> smma2, IEnumerable<SmmaResult> smma3, IEnumerable<RsiResult> rsi, INotifier notifier, IRiskManagement riskManagement, ILogger logger, ITime time)
     {
@@ -44,55 +40,31 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         _time = time;
     }
 
-    private void OnLastCandleReached()
+    public async Task Initiate()
     {
-        _logger.Information("Raising LastCandleReached event.");
-        LastCandleReached?.Invoke(this, EventArgs.Empty);
-        _logger.Information("LastCandleReached event raised.");
-    }
-
-    private void OnCandleClosed(Candle candle)
-    {
-        _logger.Information("Raising OnCandleClosed event.");
-        CandleClosed?.Invoke(this, new OnCandleCloseEventsArgs(candle));
-        _logger.Information("OnCandleClosed event raised.");
-    }
-
-    public void BotTicked() => _hasBotTicked = true;
-
-    public void BrokerProcessedCandle() => _hasBrokerProcessedCandle = true;
-
-    public async Task TryMoveToNextCandle()
-    {
-        int candlesCount = await _candleRepository.CandlesCount();
-
-        if (_index != null && _index < candlesCount - 1 && (!_hasBotTicked || !_hasBrokerProcessedCandle))
-        {
-            _logger.Information("bot has not ticked yet or broker has not finished processing the candle.");
-            return;
-        }
-        else
-        {
-            _hasBotTicked = false;
-            _hasBrokerProcessedCandle = false;
-        }
-
         if (_index == null)
             await Reset();
 
+        _candlesCount = await _candleRepository.CandlesCount();
+
+        if (_smma1.Count() != _candlesCount || _smma2.Count() != _candlesCount || _smma3.Count() != _candlesCount || _rsi.Count() != _candlesCount)
+            throw new InvalidIndicatorException();
+    }
+
+    public async Task Reset() => _index = await _candleRepository.CandlesCount();
+
+    public async Task<Candle> GetClosedCandle() => await _candleRepository.GetCandle((int)_index!);
+
+    public async Task<bool> TryMoveToNextCandle()
+    {
         int? oldIndex = _index;
         _index--;
-
         _logger.Information("index decrease from: {oldIndex} to: {newIndex}", oldIndex, _index);
-
-        if (_smma1.Count() != candlesCount || _smma2.Count() != candlesCount || _smma3.Count() != candlesCount || _rsi.Count() != candlesCount)
-            throw new InvalidIndicatorException();
 
         if (_index < 0)
         {
             _logger.Information("End of candles reached.");
-            OnLastCandleReached();
-            return;
+            return false;
         }
 
         bool isUpTrend = IsUpTrend((int)_index!);
@@ -111,21 +83,17 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         {
             _logger.Information("Candle is valid for a position, sending the message...");
 
-            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Open, hasTPPrice: true);
+            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Close, hasTPPrice: true);
             await _notifier.SendMessage(message);
             _logger.Information("Message sent.");
         }
 
-        Candle candle = await _candleRepository.GetCandle((int)_index!);
+        Candle candle = await GetClosedCandle();
 
         _time.SetUtcNow(candle.Date);
 
-        OnCandleClosed(candle);
+        return true;
     }
-
-    public async Task Reset() => _index = await _candleRepository.CandlesCount();
-
-    public Task GetCandleIndex() => Task.FromResult(_index);
 
     private bool HasRsiCrossedUnderUpperBand(int index)
     {

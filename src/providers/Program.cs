@@ -69,42 +69,20 @@ public class Program
         Candles candles = await candleRepository.GetCandles();
         SmmaRsiStrategyProvider smmaRsiStrategyProvider = new(candleRepository, indicatorsOptions, candles.GetSmma(indicatorsOptions.Smma1.Period), candles.GetSmma(indicatorsOptions.Smma2.Period), candles.GetSmma(indicatorsOptions.Smma3.Period), candles.GetRsi(indicatorsOptions.Rsi.Period), notifier, riskManagement, _logger, time);
 
-        smmaRsiStrategyProvider.CandleClosed += async (o, args) =>
-        {
-            await broker.CandleClosed(args.Candle);
-        };
+        await smmaRsiStrategyProvider.Initiate();
 
-        smmaRsiStrategyProvider.CandleClosed += async (o, args) =>
+        while (await smmaRsiStrategyProvider.TryMoveToNextCandle())
         {
+            Candle candle = await smmaRsiStrategyProvider.GetClosedCandle();
+            await broker.CandleClosed(candle);
             await bot.Tick();
-        };
+        }
 
-        broker.CandleProcessed += async (o, args) =>
-        {
-            smmaRsiStrategyProvider.BrokerProcessedCandle();
-            await smmaRsiStrategyProvider.TryMoveToNextCandle();
-        };
+        IEnumerable<Position> openedPositions = await positionRepository.GetOpenedPositions();
+        IEnumerable<Position> closedPositions = await positionRepository.GetClosedPositions();
+        IEnumerable<Position> cancelledPositions = await positionRepository.GetCancelledPositions();
+        IEnumerable<Position> pendingPositions = await positionRepository.GetPendingPositions();
 
-        bot.Ticked += async (o, args) =>
-        {
-            smmaRsiStrategyProvider.BotTicked();
-            await smmaRsiStrategyProvider.TryMoveToNextCandle();
-        };
-
-        smmaRsiStrategyProvider.LastCandleReached += async (o, args) =>
-        {
-            Candles candles = await candleRepository.GetCandles();
-
-            IEnumerable<Position> openedPositions = await positionRepository.GetOpenedPositions();
-            IEnumerable<Position> closedPositions = await positionRepository.GetClosedPositions();
-            IEnumerable<Position> cancelledPositions = await positionRepository.GetCancelledPositions();
-            IEnumerable<Position> pendingPositions = await positionRepository.GetPendingPositions();
-
-            IEnumerable<IMessage> messages = await messageRepository.GetMessages();
-        };
-
-        await smmaRsiStrategyProvider.TryMoveToNextCandle();
-
-        System.Console.ReadLine();
+        IEnumerable<IMessage> messages = await messageRepository.GetMessages();
     }
 }

@@ -73,14 +73,10 @@ public class Trade : ITrade
 
     public async Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetClosedPositions(start, end);
 
-    public async Task<IEnumerable<Position>> GetOpenPositions() => await _positionRepository.GetPositions();
+    public async Task<IEnumerable<Position>> GetOpenPositions() => await _positionRepository.GetOpenedPositions();
 
     public async Task<IEnumerable<Position>> GetOpenPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetOpenedPositions(start, end);
 
     public async Task<Position?> GetPosition(string id) => await _positionRepository.GetPosition(id);
 
-}
-
-internal class TradeOptions
-{
 }
