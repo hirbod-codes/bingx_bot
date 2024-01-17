@@ -4,8 +4,7 @@ namespace bot.src.Data;
 
 public interface IPositionRepository
 {
-    public Task CreatePosition(decimal openedPrice, decimal margin, decimal leverage, decimal slPrice, decimal tpPrice, DateTime openedAt);
-    public Task CreatePosition(decimal openedPrice, decimal margin, decimal leverage, decimal slPrice, DateTime openedAt);
+    public Task CreatePosition(Position position);
     public Task<Position?> GetPosition(string id);
     public Task<Position?> GetOpenedPosition(string id);
     public Task<Position?> GetClosedPosition(string id);

@@ -1,4 +1,5 @@
 using bot.src.MessageStores;
+using bot.src.Util;
 using Serilog;
 
 namespace bot.src.Strategies.GeneralStrategy;
@@ -7,11 +8,12 @@ public class GeneralStrategy : IStrategy
 {
     private bool _allowingParallelPositions;
     private bool _closingAllPositions;
-    private bool _direction;
+    private string _direction = null!;
     private decimal _leverage;
     private decimal _margin;
     private readonly IMessageStore _messageStore;
     private readonly ILogger _logger;
+    private readonly ITime _time;
     private bool _openingPosition;
     private string? _previousMessageId = null;
     private readonly string _provider;
@@ -19,11 +21,12 @@ public class GeneralStrategy : IStrategy
     private int _timeFrame;
     private decimal? _tpPrice = null;
 
-    public GeneralStrategy(string provider, IMessageStore messageStore, ILogger logger)
+    public GeneralStrategy(string provider, IMessageStore messageStore, ILogger logger, ITime time)
     {
         _provider = provider;
         _messageStore = messageStore;
         _logger = logger.ForContext<GeneralStrategy>();
+        _time = time;
     }
 
     public async Task<bool> CheckForSignal()
@@ -69,7 +72,7 @@ public class GeneralStrategy : IStrategy
             throw ex;
         }
 
-        if (message.SentAt.AddSeconds(_timeFrame) < DateTime.UtcNow)
+        if (message.SentAt.AddSeconds(_timeFrame) < _time.GetUtcNow())
         {
             ExpiredSignalException ex = new();
             _logger.Error(ex, "This message is expired(too old for this time frame).");
@@ -80,7 +83,7 @@ public class GeneralStrategy : IStrategy
         return true;
     }
 
-    public bool GetDirection() => _direction;
+    public string GetDirection() => _direction;
 
     public decimal GetLeverage() => _leverage;
 

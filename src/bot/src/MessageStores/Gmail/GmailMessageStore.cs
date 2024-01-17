@@ -11,14 +11,14 @@ namespace bot.src.MessageStores.Gmail;
 public class GmailMessageStore : IMessageStore
 {
     public GmailService Service { get; private set; }
-    public MessageProviderOptions EmailProviderOptions { get; }
+    public MessageStoreOptions EmailProviderOptions { get; }
     public string AccessToken { get; private set; } = null!;
     public string RefreshToken { get; private set; } = null!;
 
     private ILogger Logger { get; }
 
 
-    public GmailMessageStore(MessageProviderOptions messageProviderOptions, ILogger logger)
+    public GmailMessageStore(MessageStoreOptions messageProviderOptions, ILogger logger)
     {
         EmailProviderOptions = messageProviderOptions;
         (GmailService service, string accessToken, string refreshToken) = GmailApiHelper.Authenticate(messageProviderOptions);

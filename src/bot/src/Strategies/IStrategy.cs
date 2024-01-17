@@ -10,8 +10,7 @@ public interface IStrategy
     /// <exception cref="MessageParseException"></exception>
     public Task<bool> CheckForSignal();
 
-    /// <returns>If true it's a long position, otherwise a short position.</returns>
-    public bool GetDirection();
+    public string GetDirection();
     public decimal GetMargin();
     public decimal GetLeverage();
     public decimal GetSLPrice();

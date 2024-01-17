@@ -1,6 +1,6 @@
-namespace bot.src.Broker.InMemory;
+namespace bot.src.Brokers.InMemory;
 
-public record AccountOptions
+public class AccountOptions
 {
     public decimal Balance { get; set; }
 }

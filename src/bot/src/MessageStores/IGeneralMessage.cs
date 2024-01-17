@@ -1,3 +1,6 @@
+
+using bot.src.Data.Models;
+
 namespace bot.src.MessageStores;
 
 public interface IGeneralMessage : IMessage
@@ -7,13 +10,51 @@ public interface IGeneralMessage : IMessage
     public const string KEY_VALUE_PAIR_DELIMITER = "=";
     public bool AllowingParallelPositions { get; set; }
     public bool ClosingAllPositions { get; set; }
-    public bool Direction { get; set; }
+    public string Direction { get; set; }
     public decimal Leverage { get; set; }
     public decimal Margin { get; set; }
     public bool OpeningPosition { get; set; }
     public decimal SlPrice { get; set; }
     public int TimeFrame { get; set; }
     public decimal? TpPrice { get; set; }
+
+    public static string CreateMessageBody(bool openingPosition, bool allowingParallelPositions, bool closingAllPositions, string direction, decimal leverage, decimal margin, int timeFrame, decimal slPrice, decimal? tpPrice = null)
+    {
+        string message = $"{MESSAGE_DELIMITER}";
+
+        message += $"{nameof(AllowingParallelPositions)}{KEY_VALUE_PAIR_DELIMITER}{(allowingParallelPositions ? "1" : "0")}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(ClosingAllPositions)}{KEY_VALUE_PAIR_DELIMITER}{(closingAllPositions ? "1" : "0")}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(Direction)}{KEY_VALUE_PAIR_DELIMITER}{direction}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(OpeningPosition)}{KEY_VALUE_PAIR_DELIMITER}{(openingPosition ? "1" : "0")}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(Leverage)}{KEY_VALUE_PAIR_DELIMITER}{leverage}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(Margin)}{KEY_VALUE_PAIR_DELIMITER}{margin}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(SlPrice)}{KEY_VALUE_PAIR_DELIMITER}{slPrice}";
+        message += $"{FIELD_DELIMITER}";
+
+        message += $"{nameof(TimeFrame)}{KEY_VALUE_PAIR_DELIMITER}{timeFrame}";
+
+        if (tpPrice != null)
+        {
+            message += $"{FIELD_DELIMITER}";
+            message += $"{nameof(TpPrice)}{KEY_VALUE_PAIR_DELIMITER}{tpPrice}";
+        }
+
+        message += $"{MESSAGE_DELIMITER}";
+
+        return message;
+    }
 
     /// <exception cref="MessageParseException"></exception>
     public static IGeneralMessage? CreateMessage(IGeneralMessage generalMessage, IMessage message)
@@ -24,8 +65,12 @@ public interface IGeneralMessage : IMessage
         if (!message.Body.Contains(FIELD_DELIMITER) || !message.Body.Contains(KEY_VALUE_PAIR_DELIMITER))
             throw new MessageParseException();
 
+        generalMessage.Id = message.Id;
+        generalMessage.From = message.From;
+        generalMessage.SentAt = message.SentAt;
+
         string fieldsString = message.Body.Split(MESSAGE_DELIMITER, StringSplitOptions.None)[1];
-        List<string> strings = fieldsString.Split(FIELD_DELIMITER, StringSplitOptions.TrimEntries).ToList();
+        List<string> strings = fieldsString.Split(FIELD_DELIMITER, StringSplitOptions.RemoveEmptyEntries).ToList();
         Dictionary<string, string> fields = strings.ConvertAll(s =>
         {
             string[] kv = s.Split(KEY_VALUE_PAIR_DELIMITER, StringSplitOptions.TrimEntries);
@@ -44,7 +89,7 @@ public interface IGeneralMessage : IMessage
         else
             throw new MessageParseException();
 
-        if (fields.TryGetValue(nameof(Direction), out string? directionString) && TryParseBoolean(directionString, out bool direction))
+        if (fields.TryGetValue(nameof(Direction), out string? direction) && (direction == PositionDirection.LONG || direction == PositionDirection.SHORT))
             generalMessage.Direction = direction;
         else
             throw new MessageParseException();

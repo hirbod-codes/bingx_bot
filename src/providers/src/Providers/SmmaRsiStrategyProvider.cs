@@ -3,6 +3,8 @@ using bot.src.Data.Models;
 using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
 using bot.src.Notifiers;
+using bot.src.RiskManagement;
+using providers.src.IndicatorOptions;
 using Serilog;
 using Skender.Stock.Indicators;
 
@@ -19,11 +21,15 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
     private readonly INotifier _notifier;
     private readonly IRiskManagement _riskManagement;
     private readonly ILogger _logger;
-    private int _index;
+    private readonly ITime _time;
+    private int? _index = null;
+    private bool _hasBrokerProcessedCandle = false;
+    private bool _hasBotTicked = false;
 
     public event EventHandler<OnCandleCloseEventsArgs>? CandleClosed;
+    public event EventHandler? LastCandleReached;
 
-    public SmmaRsiStrategyProvider(ICandleRepository candleRepository, IndicatorsOptions indicatorsOptions, IEnumerable<SmmaResult> smma1, IEnumerable<SmmaResult> smma2, IEnumerable<SmmaResult> smma3, IEnumerable<RsiResult> rsi, INotifier notifier, IRiskManagement riskManagement, ILogger logger)
+    public SmmaRsiStrategyProvider(ICandleRepository candleRepository, IndicatorsOptions indicatorsOptions, IEnumerable<SmmaResult> smma1, IEnumerable<SmmaResult> smma2, IEnumerable<SmmaResult> smma3, IEnumerable<RsiResult> rsi, INotifier notifier, IRiskManagement riskManagement, ILogger logger, ITime time)
     {
         _candleRepository = candleRepository;
         _indicatorsOptions = indicatorsOptions;
@@ -35,29 +41,66 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         _riskManagement = riskManagement;
 
         _logger = logger.ForContext<SmmaRsiStrategyProvider>();
+        _time = time;
     }
 
-    public void OnCandleClosed(Candle candle)
+    private void OnLastCandleReached()
     {
-        _logger.Information("candle closed with index: {index}", _index);
+        _logger.Information("Raising LastCandleReached event.");
+        LastCandleReached?.Invoke(this, EventArgs.Empty);
+        _logger.Information("LastCandleReached event raised.");
+    }
+
+    private void OnCandleClosed(Candle candle)
+    {
+        _logger.Information("Raising OnCandleClosed event.");
         CandleClosed?.Invoke(this, new OnCandleCloseEventsArgs(candle));
+        _logger.Information("OnCandleClosed event raised.");
     }
 
-    public async Task MoveToNextCandle()
+    public void BotTicked() => _hasBotTicked = true;
+
+    public void BrokerProcessedCandle() => _hasBrokerProcessedCandle = true;
+
+    public async Task TryMoveToNextCandle()
     {
-        _index++;
+        int candlesCount = await _candleRepository.CandlesCount();
 
-        if (_index >= await _candleRepository.CandlesCount())
+        if (_index != null && _index < candlesCount - 1 && (!_hasBotTicked || !_hasBrokerProcessedCandle))
+        {
+            _logger.Information("bot has not ticked yet or broker has not finished processing the candle.");
             return;
+        }
+        else
+        {
+            _hasBotTicked = false;
+            _hasBrokerProcessedCandle = false;
+        }
 
-        OnCandleClosed(await _candleRepository.GetCandle(_index));
+        if (_index == null)
+            await Reset();
 
-        bool isUpTrend = IsUpTrend(_index);
-        bool isDownTrend = IsDownTrend(_index);
+        int? oldIndex = _index;
+        _index--;
+
+        _logger.Information("index decrease from: {oldIndex} to: {newIndex}", oldIndex, _index);
+
+        if (_smma1.Count() != candlesCount || _smma2.Count() != candlesCount || _smma3.Count() != candlesCount || _rsi.Count() != candlesCount)
+            throw new InvalidIndicatorException();
+
+        if (_index < 0)
+        {
+            _logger.Information("End of candles reached.");
+            OnLastCandleReached();
+            return;
+        }
+
+        bool isUpTrend = IsUpTrend((int)_index!);
+        bool isDownTrend = IsDownTrend((int)_index!);
         bool isInTrend = isUpTrend || isDownTrend;
 
-        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand(_index);
-        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand(_index);
+        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand((int)_index!);
+        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand((int)_index!);
 
         bool shouldOpenPosition = false;
         if (isInTrend)
@@ -66,101 +109,83 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
 
         if (shouldOpenPosition)
         {
-            IMessage message = await CreateOpenPositionMessageAsync(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle(_index)).Open, false);
+            _logger.Information("Candle is valid for a position, sending the message...");
+
+            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Open, false);
             await _notifier.SendMessage(message);
+            _logger.Information("Message sent.");
         }
 
-        return;
+        Candle candle = await _candleRepository.GetCandle((int)_index!);
+
+        _time.SetUtcNow(candle.Date);
+
+        OnCandleClosed(candle);
     }
 
-    public Task Reset()
-    {
-        _index = -1;
-        return Task.CompletedTask;
-    }
+    public async Task Reset() => _index = await _candleRepository.CandlesCount();
 
     public Task GetCandleIndex() => Task.FromResult(_index);
 
     private bool HasRsiCrossedUnderUpperBand(int index)
     {
-        if (_rsi.ElementAtOrDefault(index) is null || _rsi.ElementAtOrDefault(index - 1) is null)
+        index = _rsi.Count() - 1 - index;
+
+        if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
 
-        return _rsi.ElementAt(index).Rsi > _indicatorsOptions.Rsi.UpperBand && _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand;
+        return _rsi.ElementAt(index - 1).Rsi > _indicatorsOptions.Rsi.UpperBand && _rsi.ElementAt(index).Rsi < _indicatorsOptions.Rsi.UpperBand;
     }
 
     private bool HasRsiCrossedOverLowerBand(int index)
     {
-        if (_rsi.ElementAtOrDefault(index) is null || _rsi.ElementAtOrDefault(index - 1) is null)
+        index = _rsi.Count() - 1 - index;
+
+        if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
 
-        return _rsi.ElementAt(index).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index - 1).Rsi > _indicatorsOptions.Rsi.UpperBand;
+        return _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index).Rsi > _indicatorsOptions.Rsi.LowerBand;
     }
 
-    private bool IsDownTrend(int index) => _smma1.ElementAt(index).Smma < _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma < _smma3.ElementAt(index).Smma;
-
-    private bool IsUpTrend(int index) => _smma1.ElementAt(index).Smma > _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma > _smma3.ElementAt(index).Smma;
-
-    private async Task<IMessage> CreateOpenPositionMessageAsync(string direction, decimal positionEntryPrice, bool hasTPPrice)
+    private bool IsDownTrend(int index)
     {
-        string message = $"{IGeneralMessage.MESSAGE_DELIMITER}";
+        index = _smma1.Count() - 1 - index;
 
-        message += $"{nameof(IGeneralMessage.AllowingParallelPositions)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}1";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
+        if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
+            return false;
 
-        message += $"{nameof(IGeneralMessage.ClosingAllPositions)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}0";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
+        return _smma1.ElementAt(index).Smma <= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma <= _smma3.ElementAt(index).Smma;
+    }
 
-        message += $"{nameof(IGeneralMessage.Direction)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{(direction == PositionDirection.LONG ? "1" : "0")}";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
+    private bool IsUpTrend(int index)
+    {
+        index = _smma1.Count() - 1 - index;
 
-        message += $"{nameof(IGeneralMessage.OpeningPosition)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}1";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
+        if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
+            return false;
 
-        message += $"{nameof(IGeneralMessage.Leverage)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{_riskManagement.GetLeverage()}";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
+        return _smma1.ElementAt(index).Smma >= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma >= _smma3.ElementAt(index).Smma;
+    }
 
-        message += $"{nameof(IGeneralMessage.Margin)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{_riskManagement.GetMargin()}";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
-
-        message += $"{nameof(IGeneralMessage.SlPrice)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{_riskManagement.GetSLPrice(direction, positionEntryPrice)}";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
-
-        message += $"{nameof(IGeneralMessage.TimeFrame)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{await _candleRepository.GetTimeFrame()}";
-        message += $"{IGeneralMessage.FIELD_DELIMITER}";
-
-        if (hasTPPrice)
-            message += $"{nameof(IGeneralMessage.TpPrice)}{IGeneralMessage.KEY_VALUE_PAIR_DELIMITER}{_riskManagement.GetTPPrice(direction, positionEntryPrice)}";
-
-        message += $"{IGeneralMessage.MESSAGE_DELIMITER}";
+    private async Task<IMessage> CreateOpenPositionMessage(string direction, decimal positionEntryPrice, bool hasTPPrice)
+    {
+        string message = IGeneralMessage.CreateMessageBody(
+            openingPosition: true,
+            allowingParallelPositions: true,
+            closingAllPositions: false,
+            direction,
+            _riskManagement.GetLeverage(),
+            _riskManagement.GetMargin(),
+            await _candleRepository.GetTimeFrame(),
+            _riskManagement.GetSLPrice(direction, positionEntryPrice),
+            hasTPPrice ? _riskManagement.GetTPPrice(direction, positionEntryPrice) : null
+        );
 
         return new Message()
         {
             From = nameof(SmmaRsiStrategyProvider),
             Body = message,
-            SentAt = (await _candleRepository.GetCandle(_index)).Date.AddSeconds(await _candleRepository.GetTimeFrame())
+            SentAt = (await _candleRepository.GetCandle((int)_index!)).Date.AddSeconds(await _candleRepository.GetTimeFrame())
         };
     }
-}
-
-public class IndicatorsOptions
-{
-    public SmmaOptions Smma1 { get; set; } = null!;
-    public SmmaOptions Smma2 { get; set; } = null!;
-    public SmmaOptions Smma3 { get; set; } = null!;
-    public RsiOptions Rsi { get; set; } = null!;
-}
-
-public class RsiOptions
-{
-    public int Period { get; set; }
-    public string Source { get; set; } = null!;
-    public int UpperBand { get; set; }
-    public int LowerBand { get; set; }
-}
-
-public class SmmaOptions
-{
-    public int Period { get; set; }
-    public string Source { get; set; } = null!;
 }

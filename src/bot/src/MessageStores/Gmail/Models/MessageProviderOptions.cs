@@ -2,7 +2,7 @@ using Google.Apis.Gmail.v1;
 
 namespace bot.src.MessageStores.Gmail.Models;
 
-public class MessageProviderOptions
+public class MessageStoreOptions
 {
     public string ClientId { get { return _clientId; } set { if (!string.IsNullOrEmpty(value)) _clientId = value; } }
     private string _clientId = null!;

@@ -1,4 +1,3 @@
-
 using bot.src.Data.Models;
 
 namespace bot.src.Data.InMemory;
@@ -33,6 +32,13 @@ public class PositionRepository : IPositionRepository
             SLPrice = slPrice,
             OpenedAt = openedAt
         });
+        return Task.CompletedTask;
+    }
+
+    public Task CreatePosition(Position position)
+    {
+        position.Id = _positions.Any() ? int.Parse(_positions.Last().Id + 1).ToString() : "0";
+        _positions = _positions.Append(position);
         return Task.CompletedTask;
     }
 

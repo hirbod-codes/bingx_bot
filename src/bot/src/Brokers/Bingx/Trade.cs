@@ -1,4 +1,3 @@
-using System.Runtime.Serialization;
 using System.Text.Json;
 using bot.src.Brokers.Bingx.DTOs;
 using bot.src.Brokers.Bingx.Exceptions;
@@ -12,6 +11,7 @@ public class Trade : Api, ITrade
 {
     private readonly IBingxUtilities _utilities;
     private readonly ILogger _logger;
+    private Candle _currentCandle = null!;
 
     public Trade(string base_url, string apiKey, string apiSecret, string symbol, IBingxUtilities utilities, ILogger logger) : base(base_url, apiKey, apiSecret, symbol)
     {
@@ -235,7 +235,7 @@ public class Trade : Api, ITrade
 
         BingxResponse<BingxPositionDto> bingxResponse = JsonSerializer.Deserialize<BingxResponse<BingxPositionDto>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
 
-        Position position;
+        // Position position;
 
         throw new NotImplementedException();
         // try
@@ -254,79 +254,63 @@ public class Trade : Api, ITrade
         // catch (CloseAllPositionsException) { throw; }
         // catch (Exception) { throw new CloseAllPositionsException(); }
 
-        _logger.Information("position: {@position}", position);
-        _logger.Information("Finished getting a position...");
-        return position;
+        // _logger.Information("position: {@position}", position);
+        // _logger.Information("Finished getting a position...");
+        // return position;
     }
 
-    public async Task<IEnumerable<Position>> GetOpenPositions()
+    public Task<IEnumerable<Position>> GetOpenPositions()
     {
         // /openApi/swap/v2/trade/allOrders
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetOpenPositions(DateTime start, DateTime? end = null)
+    public Task<IEnumerable<Position>> GetOpenPositions(DateTime start, DateTime? end = null)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetClosedPositions()
+    public Task<IEnumerable<Position>> GetClosedPositions()
     {
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null)
+    public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetAllPositions()
+    public Task<IEnumerable<Position>> GetAllPositions()
     {
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetAllPositions(DateTime start, DateTime? end = null)
+    public Task<IEnumerable<Position>> GetAllPositions(DateTime start, DateTime? end = null)
     {
         throw new NotImplementedException();
     }
-}
 
-[Serializable]
-internal class CloseAllPositionsException : Exception
-{
-    public CloseAllPositionsException()
+    public Candle GetCurrentCandle() => _currentCandle;
+
+    public void SetCurrentCandle(Candle candle) => _currentCandle = candle;
+
+    public Task OpenMarketPosition(Position position)
     {
+        throw new NotImplementedException();
     }
 
-    public CloseAllPositionsException(string? message) : base(message)
+    public Task CloseAllPositions(Candle candle)
     {
+        throw new NotImplementedException();
     }
 
-    public CloseAllPositionsException(string? message, Exception? innerException) : base(message, innerException)
+    public Task ClosePosition(string id, decimal closedPrice, DateTime closedAt)
     {
+        throw new NotImplementedException();
     }
 
-    protected CloseAllPositionsException(SerializationInfo info, StreamingContext context) : base(info, context)
+    public Task CloseOpenPositions(Candle currentCandle)
     {
-    }
-}
-
-[Serializable]
-internal class OpenMarketOrderException : Exception
-{
-    public OpenMarketOrderException()
-    {
-    }
-
-    public OpenMarketOrderException(string? message) : base(message)
-    {
-    }
-
-    public OpenMarketOrderException(string? message, Exception? innerException) : base(message, innerException)
-    {
-    }
-
-    protected OpenMarketOrderException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
+        throw new NotImplementedException();
     }
 }

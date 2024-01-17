@@ -1,3 +1,6 @@
+using bot.src.Data.Models;
+using bot.src.MessageStores;
+using bot.src.MessageStores.InMemory.Models;
 using bot.src.Strategies.GeneralStrategy;
 using Serilog;
 
@@ -13,25 +16,36 @@ public class GeneralStrategyTest
 
     public bot.src.Strategies.GeneralStrategy.GeneralStrategy Instantiate() => new(provider, Fixture.IMessageStore.Object, new LoggerConfiguration().CreateLogger());
 
+    public static readonly IGeneralMessage DefaultMessage = IGeneralMessage.CreateMessage(new GeneralMessage(), new Message()
+    {
+        Id = "id",
+        From = "provider",
+        Body = IGeneralMessage.CreateMessageBody(
+            openingPosition: true,
+            allowingParallelPositions: true,
+            closingAllPositions: false,
+            PositionDirection.LONG,
+            leverage: 10,
+            margin: 10,
+            timeFrame: 60,
+            slPrice: 100,
+            tpPrice: 120
+        ),
+        SentAt = DateTime.UtcNow.AddSeconds(-30)
+    })!;
+
     public static readonly List<object[]> TestIsParallelPositionsAllowedData = new(){
-        new object[] {"1"},
-        new object[] {"0"}
+        new object[] {true},
+        new object[] {false}
     };
 
     [Theory]
     [MemberData(nameof(TestIsParallelPositionsAllowedData))]
-    public async Task TestIsParallelPositionsAllowed(string allowingParallelPositions)
+    public async Task TestIsParallelPositionsAllowed(bool allowingParallelPositions)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}{allowingParallelPositions}{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.AllowingParallelPositions = allowingParallelPositions;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -40,24 +54,18 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestShouldCloseAllPositionsData = new(){
-        new object[] {"0", "1"},
-        new object[] {"1", "0"}
+        new object[] {false, true},
+        new object[] {true, false}
     };
 
     [Theory]
     [MemberData(nameof(TestShouldCloseAllPositionsData))]
-    public async Task TestShouldCloseAllPositions(string closingAllPositions, string openingPosition)
+    public async Task TestShouldCloseAllPositions(bool closingAllPositions, bool openingPosition)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}{closingAllPositions}{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}{openingPosition}{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.OpeningPosition = openingPosition;
+        DefaultMessage.ClosingAllPositions = closingAllPositions;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -66,27 +74,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetDirectionData = new(){
-        new object[] {"0"},
-        new object[] {"1"},
-        new object[] {"1  "},
-        new object[] {"  1"},
-        new object[] {"  1  "}
+        new object[] {true},
+        new object[] {false},
     };
 
     [Theory]
     [MemberData(nameof(TestGetDirectionData))]
-    public async Task TestGetDirection(string direction)
+    public async Task TestGetDirection(bool direction)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}{direction}{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Direction = direction;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -95,26 +93,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetLeverageData = new(){
-        new object[] {"10"},
-        new object[] {"10.6"},
-        new object[] {"  10.6"},
-        new object[] {"10.6"}
+        new object[] {10m},
+        new object[] {10.6m},
     };
 
     [Theory]
     [MemberData(nameof(TestGetLeverageData))]
-    public async Task TestGetLeverage(string leverage)
+    public async Task TestGetLeverage(decimal leverage)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}{leverage}{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Leverage = leverage;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -123,25 +112,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetLeverageFailureData = new(){
-        new object[] {"-10.1"},
-        new object[] {"0"},
-        new object[] {"aa"}
+        new object[] {-10.1m},
+        new object[] {0m},
     };
 
     [Theory]
     [MemberData(nameof(TestGetLeverageFailureData))]
-    public async Task TestGetLeverageFailure(string leverage)
+    public async Task TestGetLeverageFailure(decimal leverage)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}{leverage}{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Leverage = leverage;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -149,26 +130,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetMarginData = new(){
-        new object[] {"10"},
-        new object[] {"10.6"},
-        new object[] {"  10.6"},
-        new object[] {"10.6"}
+        new object[] {10m},
+        new object[] {10.6m}
     };
 
     [Theory]
     [MemberData(nameof(TestGetMarginData))]
-    public async Task TestGetMargin(string margin)
+    public async Task TestGetMargin(decimal margin)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.5{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}{margin}{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Margin = margin;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -177,25 +149,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetMarginFailureData = new(){
-        new object[] {"-10.1"},
-        new object[] {"0"},
-        new object[] {"aa"}
+        new object[] {-10.1m},
+        new object[] {0m}
     };
 
     [Theory]
     [MemberData(nameof(TestGetMarginFailureData))]
-    public async Task TestGetMarginFailure(string margin)
+    public async Task TestGetMarginFailure(decimal margin)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.6{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}{margin}{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Margin = margin;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -203,24 +167,18 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestShouldOpenPositionData = new(){
-        new object[] {"0", "1"},
-        new object[] {"1", "0"}
+        new object[] {false, true},
+        new object[] {true, false}
     };
 
     [Theory]
     [MemberData(nameof(TestShouldOpenPositionData))]
-    public async Task TestShouldOpenPosition(string closingAllPositions, string openingPosition)
+    public async Task TestShouldOpenPosition(bool closingAllPositions, bool openingPosition)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}{closingAllPositions}{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}{openingPosition}{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.OpeningPosition = openingPosition;
+        DefaultMessage.ClosingAllPositions = closingAllPositions;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -229,26 +187,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetSLPriceData = new(){
-        new object[] {"10"},
-        new object[] {"10.6"},
-        new object[] {"  10.6"},
-        new object[] {"10.6"}
+        new object[] {10m},
+        new object[] {10.6m}
     };
 
     [Theory]
     [MemberData(nameof(TestGetSLPriceData))]
-    public async Task TestGetSLPrice(string slPrice)
+    public async Task TestGetSLPrice(decimal slPrice)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.5{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}{slPrice}{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.SlPrice = slPrice;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -257,25 +206,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetSLPriceFailureData = new(){
-        new object[] {"-10.1"},
-        new object[] {"0"},
-        new object[] {"aa"}
+        new object[] {-10.1m},
+        new object[] {0m}
     };
 
     [Theory]
     [MemberData(nameof(TestGetSLPriceFailureData))]
-    public async Task TestGetSLPriceFailure(string slPrice)
+    public async Task TestGetSLPriceFailure(decimal slPrice)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}{slPrice}{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.SlPrice = slPrice;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -283,25 +224,16 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetTimeFrameData = new(){
-        new object[] {"60"},
-        new object[] {"  60"},
-        new object[] {"60  "}
+        new object[] {60},
     };
 
     [Theory]
     [MemberData(nameof(TestGetTimeFrameData))]
-    public async Task TestGetTimeFrame(string timeFrame)
+    public async Task TestGetTimeFrame(int timeFrame)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.5{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}{timeFrame}{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.TimeFrame = timeFrame;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -310,27 +242,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetTimeFrameFailureData = new(){
-        new object[] {"10.5"},
-        new object[] {"10a"},
-        new object[] {"-10.1"},
-        new object[] {"0"},
-        new object[] {"aa"}
+        new object[] {-10.1},
+        new object[] {0}
     };
 
     [Theory]
     [MemberData(nameof(TestGetTimeFrameFailureData))]
-    public async Task TestGetTimeFrameFailure(string timeFrame)
+    public async Task TestGetTimeFrameFailure(int timeFrame)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}{timeFrame}{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.TimeFrame = timeFrame;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -338,26 +260,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetTPPriceData = new(){
-        new object[] {"10"},
-        new object[] {"10.6"},
-        new object[] {"  10.6"},
-        new object[] {"10.6"}
+        new object[] {10m},
+        new object[] {10.6m},
     };
 
     [Theory]
     [MemberData(nameof(TestGetTPPriceData))]
-    public async Task TestGetTPPrice(string tpPrice)
+    public async Task TestGetTPPrice(decimal tpPrice)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.5{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}{tpPrice}" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.TpPrice = tpPrice;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -368,16 +281,9 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestGetTPPriceNoTP()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10.5{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.TpPrice = null;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
         await instance.CheckForSignal();
@@ -386,25 +292,17 @@ public class GeneralStrategyTest
     }
 
     public static readonly List<object[]> TestGetTPPriceFailureData = new(){
-        new object[] {"-10.1"},
-        new object[] {"0"},
-        new object[] {"aa"}
+        new object[] {-10.1m},
+        new object[] {0m}
     };
 
     [Theory]
     [MemberData(nameof(TestGetTPPriceFailureData))]
-    public async Task TestGetTPPriceFailure(string tpPrice)
+    public async Task TestGetTPPriceFailure(decimal tpPrice)
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}{tpPrice}" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.TpPrice = tpPrice;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -414,16 +312,7 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalOk()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
-
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -433,7 +322,7 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureNoMessage()
     {
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(null));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(null));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -443,16 +332,8 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureOldId()
     {
-        Message message = new()
-        {
-            Id = "1",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
-
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        DefaultMessage.Id = "1";
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -463,16 +344,9 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureProvider()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = "some other provider",
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.From = "another provider";
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -482,16 +356,9 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureBadMessage()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = "bad message",
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.Body = "bad message";
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
@@ -501,31 +368,19 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureOpenCloseSignal()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.OpeningPosition = false;
+        DefaultMessage.ClosingAllPositions = false;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 
         await Assert.ThrowsAsync<InvalidSignalException>(instance.CheckForSignal);
 
-        message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-30)
-        };
+        DefaultMessage.OpeningPosition = true;
+        DefaultMessage.ClosingAllPositions = true;
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         instance = Instantiate();
 
@@ -535,16 +390,9 @@ public class GeneralStrategyTest
     [Fact]
     public async Task TestCheckForSignalFailureExpiredSignal()
     {
-        Message message = new()
-        {
-            Id = "id",
-            Subject = "subject",
-            Body = MESSAGE_DELIMITER + $"_allowingParallelPositions{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_closingAllPositions{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_direction{KEY_VALUE_PAIR_DELIMITER}1{FIELD_DELIMITER}_leverage{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_margin{KEY_VALUE_PAIR_DELIMITER}10{FIELD_DELIMITER}_openingPosition{KEY_VALUE_PAIR_DELIMITER}0{FIELD_DELIMITER}_slPrice{KEY_VALUE_PAIR_DELIMITER}100{FIELD_DELIMITER}_timeFrame{KEY_VALUE_PAIR_DELIMITER}60{FIELD_DELIMITER}_tpPrice{KEY_VALUE_PAIR_DELIMITER}120" + MESSAGE_DELIMITER,
-            From = provider,
-            SentAt = DateTime.UtcNow.AddSeconds(-61)
-        };
+        DefaultMessage.SentAt = DateTime.UtcNow.AddSeconds(-61);
 
-        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<Message?>(message));
+        Fixture.IMessageStore.Setup(o => o.GetLastMessage(provider)).Returns(Task.FromResult<IMessage?>(DefaultMessage));
 
         bot.src.Strategies.GeneralStrategy.GeneralStrategy instance = Instantiate();
 

@@ -6,7 +6,7 @@ public class GeneralMessage : IGeneralMessage
 {
     public bool AllowingParallelPositions { get; set; }
     public bool ClosingAllPositions { get; set; }
-    public bool Direction { get; set; }
+    public string Direction { get; set; } = null!;
     public decimal Leverage { get; set; }
     public decimal Margin { get; set; }
     public bool OpeningPosition { get; set; }

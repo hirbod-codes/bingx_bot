@@ -3,6 +3,7 @@ namespace bot.src.Data.Models;
 public class Position
 {
     public string Id { get; set; } = null!;
+    public string Symbol { get; set; } = null!;
     public decimal OpenedPrice { get; set; }
     public decimal? ClosedPrice { get; set; }
     public decimal SLPrice { get; set; }

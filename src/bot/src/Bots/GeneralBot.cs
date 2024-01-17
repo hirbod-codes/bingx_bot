@@ -1,3 +1,4 @@
+using bot.src.Broker;
 using bot.src.Brokers;
 using bot.src.Strategies;
 using bot.src.Util;
@@ -7,27 +8,36 @@ namespace bot.src.Bots;
 
 public class GeneralBot : IBot
 {
-    private readonly IStrategy Strategy;
-    private readonly ITrade Trade;
-    private readonly ILogger Logger;
-    private readonly ITime Time;
+    private readonly IStrategy _strategy;
+    private readonly IBroker _broker;
+    private readonly ILogger _logger;
+    private readonly ITime _time;
     private int TimeFrame = 60;
 
-    public GeneralBot(IStrategy strategy, ITrade trade, ITime time, ILogger logger)
+    public GeneralBot(IStrategy strategy, IBroker broker, ITime time, ILogger logger)
     {
-        Strategy = strategy;
-        Logger = logger.ForContext<GeneralBot>();
-        Time = time;
-        Trade = trade;
+        _strategy = strategy;
+        _logger = logger.ForContext<GeneralBot>();
+        _time = time;
+        _broker = broker;
+    }
+
+    public event EventHandler? Ticked;
+
+    private void OnTicked()
+    {
+        _logger.Information("Raising Ticked event.");
+        Ticked?.Invoke(this, EventArgs.Empty);
+        _logger.Information("Ticked event raised.");
     }
 
     public async Task Run()
     {
         try
         {
-            Logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
+            _logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
 
-            await Time.StartTimer(TimeFrame, async (o, args) => await Tick());
+            await _time.StartTimer(TimeFrame, async (o, args) => await Tick());
 
             while (true)
             {
@@ -39,51 +49,55 @@ public class GeneralBot : IBot
         }
         finally
         {
-            Logger.Information("Bot ended at: {dateTime}", DateTime.UtcNow.ToString());
+            _logger.Information("Bot ended at: {dateTime}", DateTime.UtcNow.ToString());
         }
     }
 
     public async Task Tick()
     {
-        Logger.Information("Ticked at: {dateTime}", DateTime.UtcNow.ToString());
+        _logger.Information("Ticking at: {dateTime}", DateTime.UtcNow.ToString());
 
-        if (!await Strategy.CheckForSignal())
+        if (!await _strategy.CheckForSignal())
         {
-            Logger.Information("No signal");
+            _logger.Information("No signal");
+            OnTicked();
             return;
         }
 
-        TimeFrame = Strategy.GetTimeFrame();
+        TimeFrame = _strategy.GetTimeFrame();
 
-        if ((!Strategy.ShouldOpenPosition() && !Strategy.ShouldCloseAllPositions()) || (Strategy.ShouldOpenPosition() && Strategy.ShouldCloseAllPositions()))
+        if ((!_strategy.ShouldOpenPosition() && !_strategy.ShouldCloseAllPositions()) || (_strategy.ShouldOpenPosition() && _strategy.ShouldCloseAllPositions()))
         {
-            Logger.Information("Invalid signal, ShouldOpenPosition and ShouldCloseAllPositions variables are both true at the same time!");
+            _logger.Information("Invalid signal, ShouldOpenPosition and ShouldCloseAllPositions variables are both true at the same time!");
+            OnTicked();
             return;
         }
 
-        if (Strategy.ShouldCloseAllPositions())
+        if (_strategy.ShouldCloseAllPositions())
         {
-            Logger.Information("Closing all of the open positions...");
-            await Trade.CloseAllPositions();
-            Logger.Information("open positions are closed.");
+            _logger.Information("Closing all of the open positions...");
+            await _broker.CloseAllPositions();
+            _logger.Information("open positions are closed.");
+            OnTicked();
             return;
         }
 
-        if (!Strategy.IsParallelPositionsAllowed() && (await Trade.GetOpenPositions()).Any())
+        if (!_strategy.IsParallelPositionsAllowed() && (await _broker.GetOpenPositions()).Any())
         {
-            Logger.Information("Parallel positions is not allowed, skip until the position is closed.");
+            _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
+            OnTicked();
             return;
         }
 
-        Logger.Information("Opening a market position...");
+        _logger.Information("Opening a market position...");
 
-        await Trade.SetLeverage(Strategy.GetLeverage());
-
-        if (Strategy.GetTPPrice() is null)
-            await Trade.OpenMarketOrder(Strategy.GetMargin(), Strategy.GetDirection(), Strategy.GetSLPrice());
+        if (_strategy.GetTPPrice() is null)
+            await _broker.OpenMarketPosition(_strategy.GetMargin(), _strategy.GetLeverage(), _strategy.GetDirection(), _strategy.GetSLPrice());
         else
-            await Trade.OpenMarketOrder(Strategy.GetMargin(), Strategy.GetDirection(), Strategy.GetSLPrice(), (decimal)Strategy.GetTPPrice()!);
+            await _broker.OpenMarketPosition(_strategy.GetMargin(), _strategy.GetLeverage(), _strategy.GetDirection(), _strategy.GetSLPrice(), (decimal)_strategy.GetTPPrice()!);
 
-        Logger.Information("market position is opened.");
+        _logger.Information("market position is opened.");
+
+        OnTicked();
     }
 }

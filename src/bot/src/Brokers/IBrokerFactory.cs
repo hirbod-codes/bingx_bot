@@ -1,6 +1,9 @@
+using bot.src.Broker;
+
 namespace bot.src.Brokers;
 
 public interface IBrokerFactory
 {
-    public ITrade CreateTrader();
+    public IBroker CreateBroker();
+    public ITrade CreateTrade();
 }

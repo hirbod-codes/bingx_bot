@@ -10,7 +10,7 @@ namespace bot.src.MessageStores.Gmail;
 
 public static class GmailApiHelper
 {
-    public static (GmailService service, string accessToken, string refreshToken) Authenticate(MessageProviderOptions emailProviderOptions)
+    public static (GmailService service, string accessToken, string refreshToken) Authenticate(Models.MessageStoreOptions emailProviderOptions)
     {
         new FileDataStore(emailProviderOptions.DataStoreFolderAddress).ClearAsync().Wait();
 

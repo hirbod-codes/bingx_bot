@@ -1,70 +1,66 @@
 using bot.src.Brokers;
+using bot.src.Brokers.InMemory;
 using bot.src.Brokers.InMemory.Exceptions;
 using bot.src.Data;
 using bot.src.Data.Models;
+using Serilog;
 
 namespace bot.src.Broker.InMemory;
 
 public class Trade : ITrade
 {
-    private readonly IAccount _account;
+    private readonly BrokerOptions _brokerOptions;
     private readonly ICandleRepository _candleRepository;
     private readonly IPositionRepository _positionRepository;
-    public string Symbol { get; set; }
-    private Candle _currentCandle = null!;
-    private decimal _leverage;
+    private readonly ILogger _logger;
 
-    public Trade(IAccount account, ICandleRepository candleRepository, IPositionRepository positionRepository, string symbol)
+    public Trade(BrokerOptions brokerOptions, ICandleRepository candleRepository, IPositionRepository positionRepository, ILogger logger)
     {
-        _account = account;
+        _brokerOptions = brokerOptions;
         _candleRepository = candleRepository;
         _positionRepository = positionRepository;
-        Symbol = symbol;
+        _logger = logger.ForContext<Trade>();
     }
 
-    public async Task CloseAllPositions()
+    public async Task OpenMarketPosition(Position position) => await _positionRepository.CreatePosition(position);
+
+    public async Task CloseAllPositions(Candle candle) => await CloseAllPositions(candle.Close, candle.Date.AddSeconds(await _candleRepository.GetTimeFrame()));
+
+    public async Task CloseAllPositions(decimal closedPrice, DateTime closedAt)
     {
         IEnumerable<Position> openPositions = await GetOpenPositions();
 
         foreach (Position position in openPositions)
-            await ClosePosition(position.Id);
+            await ClosePosition(position.Id, closedPrice, closedAt);
     }
 
-    public async Task ClosePosition(string id)
+    public async Task ClosePosition(string id, decimal closedPrice, DateTime closedAt)
     {
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
+        position.ClosedPrice = closedPrice;
+        position.ClosedAt = closedAt;
 
-        if (position.PositionDirection == PositionDirection.LONG)
-            if (_currentCandle.Low <= position.SLPrice)
-                position.ClosedPrice = position.SLPrice;
-            else if (position.TPPrice != null && _currentCandle.High >= position.TPPrice)
-                position.ClosedPrice = position.TPPrice;
-            else if (position.TPPrice == null)
-                position.ClosedPrice = _currentCandle.Close;
-            else
-                throw new ClosePositionException();
-        else if (position.PositionDirection == PositionDirection.SHORT)
-            if (_currentCandle.High >= position.SLPrice)
-                position.ClosedPrice = position.SLPrice;
-            else if (position.TPPrice != null && _currentCandle.Low <= position.TPPrice)
-                position.ClosedPrice = position.TPPrice;
-            else if (position.TPPrice == null)
-                position.ClosedPrice = _currentCandle.Close;
-            else
-                throw new ClosePositionException();
-        else
-            throw new ClosePositionException();
-
-        position.ClosedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame());
         decimal? profit = (position.ClosedPrice - position.OpenedPrice) * position.Margin * position.Leverage / position.OpenedPrice;
         if (position.PositionDirection == PositionDirection.SHORT)
             profit *= -1;
         position.Profit = profit;
-        decimal commission = (decimal)(position.Commission * position.Margin * position.Leverage)!;
+        decimal commission = _brokerOptions.BrokerCommission * position.Margin * position.Leverage;
         position.Commission = commission;
         position.ProfitWithCommission = profit - commission;
 
         await _positionRepository.ReplacePosition(position);
+    }
+
+    public async Task CloseOpenPositions(Candle currentCandle)
+    {
+        IEnumerable<Position> openPositions = await _positionRepository.GetOpenedPositions();
+
+        foreach (Position openPosition in openPositions)
+        {
+            if (openPosition.PositionStatus != PositionStatus.OPENED)
+                continue;
+            await ClosePosition(openPosition.Id, currentCandle.Close, currentCandle.Date);
+        }
     }
 
     public async Task<IEnumerable<Position>> GetAllPositions() => await _positionRepository.GetPositions();
@@ -75,44 +71,14 @@ public class Trade : ITrade
 
     public async Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetClosedPositions(start, end);
 
-    public Task<decimal> GetLeverage() => Task.FromResult(_leverage);
-
     public async Task<IEnumerable<Position>> GetOpenPositions() => await _positionRepository.GetPositions();
 
     public async Task<IEnumerable<Position>> GetOpenPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetOpenedPositions(start, end);
 
     public async Task<Position?> GetPosition(string id) => await _positionRepository.GetPosition(id);
 
-    public Task<decimal> GetPrice() => Task.FromResult(_currentCandle.Close);
+}
 
-    public async Task OpenMarketOrder(decimal margin, bool direction, decimal slPrice, decimal tpPrice)
-    {
-        if ((await _account.GetBalance()) < margin)
-            throw new NotEnoughEquityException();
-
-        await _positionRepository.CreatePosition(_currentCandle.Close, margin, _leverage, slPrice, tpPrice, _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()));
-    }
-
-    public async Task OpenMarketOrder(decimal margin, bool direction, decimal slPrice)
-    {
-        if ((await _account.GetBalance()) < margin)
-            throw new NotEnoughEquityException();
-
-        await _positionRepository.CreatePosition(_currentCandle.Close, margin, _leverage, slPrice, _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()));
-    }
-
-    public Task SetLeverage(decimal leverage)
-    {
-        _leverage = leverage;
-        return Task.CompletedTask;
-    }
-
-    public Task<string> GetSymbol() => Task.FromResult(Symbol);
-
-    public Task SetSymbol(string symbol)
-    {
-        Symbol = symbol;
-
-        return Task.CompletedTask;
-    }
+internal class TradeOptions
+{
 }

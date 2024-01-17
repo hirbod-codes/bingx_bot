@@ -1,7 +1,6 @@
+namespace bot.src.Brokers.InMemory;
 
-namespace bot.src.Broker.InMemory;
-
-public record BrokerOptions
+public class BrokerOptions
 {
     public decimal BrokerCommission { get; set; }
     public string Symbol { get; set; } = null!;

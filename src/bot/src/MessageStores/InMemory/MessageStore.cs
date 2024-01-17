@@ -1,14 +1,17 @@
 using bot.src.Data;
+using Serilog;
 
 namespace bot.src.MessageStores.InMemory;
 
 public class MessageStore : IMessageStore
 {
     private readonly IMessageRepository _messageRepository;
+    private readonly ILogger _logger;
 
-    public MessageStore(IMessageRepository messageRepository)
+    public MessageStore(IMessageRepository messageRepository, ILogger logger)
     {
         _messageRepository = messageRepository;
+        _logger = logger;
     }
 
     public Task<bool> DeleteMessage(string id) => _messageRepository.DeleteMessage(id);
