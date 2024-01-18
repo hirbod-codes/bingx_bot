@@ -280,12 +280,12 @@ public class Trade : Api, ITrade
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<Position>> GetAllPositions()
+    public Task<IEnumerable<Position>> GetPositions()
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<Position>> GetAllPositions(DateTime start, DateTime? end = null)
+    public Task<IEnumerable<Position>> GetPositions(DateTime start, DateTime? end = null)
     {
         throw new NotImplementedException();
     }

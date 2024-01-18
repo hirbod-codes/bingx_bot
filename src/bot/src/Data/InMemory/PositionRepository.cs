@@ -4,12 +4,14 @@ namespace bot.src.Data.InMemory;
 
 public class PositionRepository : IPositionRepository
 {
+    private int _lastId = 0;
     private IEnumerable<Position> _positions = Array.Empty<Position>();
 
     public Task CreatePosition(Position position)
     {
-        position.Id = _positions.Any() ? (int.Parse(_positions.Last().Id) + 1).ToString() : "0";
+        position.Id = _lastId.ToString();
         _positions = _positions.Append(position);
+        _lastId++;
         return Task.CompletedTask;
     }
 

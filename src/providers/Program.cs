@@ -1,4 +1,7 @@
-﻿using bot;
+﻿using System.Globalization;
+using System.Reflection;
+using System.Reflection.Metadata;
+using bot;
 using bot.src;
 using bot.src.Bots;
 using bot.src.Broker;
@@ -13,6 +16,7 @@ using bot.src.MessageStores.Gmail.Models;
 using bot.src.Notifiers.InMemory;
 using bot.src.RiskManagement;
 using bot.src.Strategies;
+using CsvHelper;
 using Microsoft.Extensions.Configuration;
 using providers.src;
 using providers.src.IndicatorOptions;
@@ -84,5 +88,11 @@ public class Program
         IEnumerable<Position> pendingPositions = await positionRepository.GetPendingPositions();
 
         IEnumerable<IMessage> messages = await messageRepository.GetMessages();
+
+        using (var writer = new StreamWriter("/home/hirbod/projects/bingx_ut_bot/src/providers/positions.csv"))
+        using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csv.WriteRecords(await positionRepository.GetPositions());
+        }
     }
 }

@@ -83,7 +83,7 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         {
             _logger.Information("Candle is valid for a position, sending the message...");
 
-            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, (await _candleRepository.GetCandle((int)_index!)).Close, hasTPPrice: true);
+            IMessage message = await CreateOpenPositionMessage(isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, hasTPPrice: true);
             await _notifier.SendMessage(message);
             _logger.Information("Message sent.");
         }
@@ -135,7 +135,7 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         return _smma1.ElementAt(index).Smma >= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma >= _smma3.ElementAt(index).Smma;
     }
 
-    private async Task<IMessage> CreateOpenPositionMessage(string direction, decimal positionEntryPrice, bool hasTPPrice)
+    private async Task<IMessage> CreateOpenPositionMessage(string direction, bool hasTPPrice)
     {
         string message = IGeneralMessage.CreateMessageBody(
             openingPosition: true,
@@ -145,15 +145,15 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
             _riskManagement.GetLeverage(),
             _riskManagement.GetMargin(),
             await _candleRepository.GetTimeFrame(),
-            _riskManagement.GetSLPrice(direction, positionEntryPrice),
-            hasTPPrice ? _riskManagement.GetTPPrice(direction, positionEntryPrice) : null
+            _riskManagement.GetSLPrice(direction, (await GetClosedCandle()).Close),
+            hasTPPrice ? _riskManagement.GetTPPrice(direction, (await GetClosedCandle()).Close) : null
         );
 
         return new Message()
         {
             From = nameof(SmmaRsiStrategyProvider),
             Body = message,
-            SentAt = (await _candleRepository.GetCandle((int)_index!)).Date.AddSeconds(await _candleRepository.GetTimeFrame())
+            SentAt = (await GetClosedCandle()).Date.AddSeconds(await _candleRepository.GetTimeFrame())
         };
     }
 }

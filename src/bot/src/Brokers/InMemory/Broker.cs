@@ -88,40 +88,28 @@ public class Broker : IBroker
 
     public async Task<IEnumerable<Position>> GetOpenPositions() => await _trade.GetOpenPositions();
 
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
+    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice) => await _trade.OpenMarketPosition(new Position()
     {
-        if ((await _account.GetBalance()) < margin)
-            throw new NotEnoughEquityException();
+        Leverage = leverage,
+        Margin = margin,
+        OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
+        OpenedPrice = _currentCandle.Close,
+        SLPrice = slPrice,
+        TPPrice = tpPrice,
+        CommissionRatio = _brokerOptions.BrokerCommission,
+        Symbol = _brokerOptions.Symbol,
+        PositionDirection = direction,
+    });
 
-        await _trade.OpenMarketPosition(new Position()
-        {
-            Leverage = leverage,
-            Margin = margin,
-            OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
-            OpenedPrice = _currentCandle.Close,
-            SLPrice = slPrice,
-            TPPrice = tpPrice,
-            Commission = _brokerOptions.BrokerCommission,
-            Symbol = _brokerOptions.Symbol,
-            PositionDirection = direction,
-        });
-    }
-
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice) => await _trade.OpenMarketPosition(new Position()
     {
-        if ((await _account.GetBalance()) < margin)
-            throw new NotEnoughEquityException();
-
-        await _trade.OpenMarketPosition(new Position()
-        {
-            Leverage = leverage,
-            Margin = margin,
-            OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
-            OpenedPrice = _currentCandle.Close,
-            SLPrice = slPrice,
-            Commission = _brokerOptions.BrokerCommission,
-            Symbol = _brokerOptions.Symbol,
-            PositionDirection = direction,
-        });
-    }
+        Leverage = leverage,
+        Margin = margin,
+        OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
+        OpenedPrice = _currentCandle.Close,
+        SLPrice = slPrice,
+        CommissionRatio = _brokerOptions.BrokerCommission,
+        Symbol = _brokerOptions.Symbol,
+        PositionDirection = direction,
+    });
 }

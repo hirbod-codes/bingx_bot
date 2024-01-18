@@ -8,6 +8,7 @@ public class Position
     public decimal? ClosedPrice { get; set; }
     public decimal SLPrice { get; set; }
     public decimal? TPPrice { get; set; }
+    public decimal CommissionRatio { get; set; }
     public decimal? Commission { get; set; }
     public decimal? Profit { get; set; }
     public decimal? ProfitWithCommission { get; set; }

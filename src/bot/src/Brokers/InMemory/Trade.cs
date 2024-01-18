@@ -37,6 +37,10 @@ public class Trade : ITrade
     public async Task ClosePosition(string id, decimal closedPrice, DateTime closedAt)
     {
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
+
+        if (position.PositionStatus == PositionStatus.CLOSED)
+            throw new ClosingAClosedPosition();
+
         position.ClosedPrice = closedPrice;
         position.ClosedAt = closedAt;
 
@@ -53,21 +57,9 @@ public class Trade : ITrade
         await _positionRepository.ReplacePosition(position);
     }
 
-    public async Task CloseOpenPositions(Candle currentCandle)
-    {
-        IEnumerable<Position> openPositions = await _positionRepository.GetOpenedPositions();
+    public async Task<IEnumerable<Position>> GetPositions() => await _positionRepository.GetPositions();
 
-        foreach (Position openPosition in openPositions)
-        {
-            if (openPosition.PositionStatus != PositionStatus.OPENED)
-                continue;
-            await ClosePosition(openPosition.Id, currentCandle.Close, currentCandle.Date);
-        }
-    }
-
-    public async Task<IEnumerable<Position>> GetAllPositions() => await _positionRepository.GetPositions();
-
-    public async Task<IEnumerable<Position>> GetAllPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetPositions(start, end);
+    public async Task<IEnumerable<Position>> GetPositions(DateTime start, DateTime? end = null) => await _positionRepository.GetPositions(start, end);
 
     public async Task<IEnumerable<Position>> GetClosedPositions() => await _positionRepository.GetClosedPositions();
 
