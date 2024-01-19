@@ -1,4 +1,5 @@
 using bot.src.Brokers;
+using bot.src.Data.Models;
 using bot.src.Strategies;
 using bot.src.Util;
 using Serilog;
@@ -72,6 +73,16 @@ public class GeneralBot : IBot
         if (!_strategy.IsParallelPositionsAllowed() && (await _broker.GetOpenPositions()).Any())
         {
             _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
+            return;
+        }
+
+        IEnumerable<Position> positions = await _broker.GetOpenPositions();
+        if (
+            (_strategy.GetDirection() == PositionDirection.LONG && positions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
+            (_strategy.GetDirection() == PositionDirection.SHORT && positions.Any(o => o.PositionDirection == PositionDirection.LONG))
+        )
+        {
+            _logger.Information("There are open positions with opposite direction from the provided signal, skipping...");
             return;
         }
 

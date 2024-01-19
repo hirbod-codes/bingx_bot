@@ -6,6 +6,9 @@ public interface ICandleRepository
 {
     public Task<int> CandlesCount();
     public Task<Candles> GetCandles();
+    public Task<Candles> GetIndicatorsCandles();
+    public Candle GetCurrentCandle();
+    public void SetCurrentCandle(Candle candle);
     public Task<Candle> GetCandle(int index);
     public Task<int> GetTimeFrame();
 }

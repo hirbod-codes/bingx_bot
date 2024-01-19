@@ -1,25 +1,20 @@
-﻿using System.Globalization;
-using System.Reflection;
-using System.Reflection.Metadata;
+﻿using System.Text.Json;
 using bot;
-using bot.src;
 using bot.src.Bots;
-using bot.src.Broker;
-using bot.src.Broker.InMemory;
 using bot.src.Brokers;
 using bot.src.Brokers.InMemory;
 using bot.src.Data;
 using bot.src.Data.InMemory;
 using bot.src.Data.Models;
 using bot.src.MessageStores;
-using bot.src.MessageStores.Gmail.Models;
 using bot.src.Notifiers.InMemory;
+using bot.src.PnLAnalysis;
+using bot.src.PnLAnalysis.Models;
 using bot.src.RiskManagement;
 using bot.src.Strategies;
-using CsvHelper;
 using Microsoft.Extensions.Configuration;
 using providers.src;
-using providers.src.IndicatorOptions;
+using providers.src.Indicators;
 using providers.src.Providers;
 using Serilog;
 using Serilog.Settings.Configuration;
@@ -71,14 +66,14 @@ public class Program
 
         IRiskManagement riskManagement = new RiskManagement(riskManagementOptions);
         Candles candles = await candleRepository.GetCandles();
-        SmmaRsiStrategyProvider smmaRsiStrategyProvider = new(candleRepository, indicatorsOptions, candles.GetSmma(indicatorsOptions.Smma1.Period), candles.GetSmma(indicatorsOptions.Smma2.Period), candles.GetSmma(indicatorsOptions.Smma3.Period), candles.GetRsi(indicatorsOptions.Rsi.Period), notifier, riskManagement, _logger, time);
+        Candles _indicatorsCandles = await candleRepository.GetIndicatorsCandles();
+        SmmaRsiStrategyProvider smmaRsiStrategyProvider = new(candleRepository, indicatorsOptions, _indicatorsCandles.GetSmma(indicatorsOptions.Smma1.Period), _indicatorsCandles.GetSmma(indicatorsOptions.Smma2.Period), _indicatorsCandles.GetSmma(indicatorsOptions.Smma3.Period), _indicatorsCandles.GetRsi(indicatorsOptions.Rsi.Period), notifier, riskManagement, _logger, time);
 
         await smmaRsiStrategyProvider.Initiate();
 
         while (await smmaRsiStrategyProvider.TryMoveToNextCandle())
         {
-            Candle candle = await smmaRsiStrategyProvider.GetClosedCandle();
-            await broker.CandleClosed(candle);
+            await broker.CandleClosed();
             await bot.Tick();
         }
 
@@ -89,10 +84,9 @@ public class Program
 
         IEnumerable<IMessage> messages = await messageRepository.GetMessages();
 
-        using (var writer = new StreamWriter("/home/hirbod/projects/bingx_ut_bot/src/providers/positions.csv"))
-        using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-        {
-            csv.WriteRecords(await positionRepository.GetPositions());
-        }
+        StrategySummary strategySummary = await new PnLAnalysis(positionRepository).RunAnalysis();
+
+        await File.WriteAllTextAsync("./closed_positions.json", JsonSerializer.Serialize(closedPositions));
+        await File.WriteAllTextAsync("./pnl_results.json", JsonSerializer.Serialize(strategySummary));
     }
 }

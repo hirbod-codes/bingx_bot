@@ -4,7 +4,7 @@ using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
 using bot.src.Notifiers;
 using bot.src.RiskManagement;
-using providers.src.IndicatorOptions;
+using providers.src.Indicators;
 using Serilog;
 using Skender.Stock.Indicators;
 
@@ -47,7 +47,7 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
 
         _candlesCount = await _candleRepository.CandlesCount();
 
-        if (_smma1.Count() != _candlesCount || _smma2.Count() != _candlesCount || _smma3.Count() != _candlesCount || _rsi.Count() != _candlesCount)
+        if (_smma1.Count() < _candlesCount || _smma2.Count() < _candlesCount || _smma3.Count() < _candlesCount || _rsi.Count() < _candlesCount)
             throw new InvalidIndicatorException();
     }
 
@@ -89,6 +89,8 @@ public class SmmaRsiStrategyProvider : IStrategyProvider
         }
 
         Candle candle = await GetClosedCandle();
+
+        _candleRepository.SetCurrentCandle(candle);
 
         _time.SetUtcNow(candle.Date);
 

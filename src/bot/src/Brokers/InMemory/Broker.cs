@@ -12,7 +12,6 @@ public class Broker : IBroker
     private readonly ITrade _trade;
     private readonly ILogger _logger;
     private readonly BrokerOptions _brokerOptions;
-    private Candle _currentCandle = null!;
 
     public Broker(BrokerOptions brokerOptions, ITrade trade, IAccount account, ICandleRepository candleRepository, ILogger logger)
     {
@@ -23,12 +22,13 @@ public class Broker : IBroker
         _account = account;
     }
 
-    public async Task CandleClosed(Candle candle)
+    public async Task CandleClosed()
     {
-        _currentCandle = candle;
-
         _logger.Information("Getting open positions...");
         IEnumerable<Position> openPositions = await _trade.GetOpenPositions();
+
+        if (openPositions.FirstOrDefault(o => o.OpenedAt.TimeOfDay.TotalMinutes == (12 * 60) + 40) != null)
+            System.Console.WriteLine("aaa");
 
         if (!openPositions.Any())
         {
@@ -50,11 +50,11 @@ public class Broker : IBroker
     private bool ShouldClosePosition(Position position) =>
         (
             position.PositionDirection == PositionDirection.LONG &&
-            (_currentCandle.Low <= position.SLPrice || (position.TPPrice != null && _currentCandle.High >= position.TPPrice))
+            (GetCurrentCandle().Low <= position.SLPrice || (position.TPPrice != null && GetCurrentCandle().High >= position.TPPrice))
         ) ||
         (
             position.PositionDirection == PositionDirection.SHORT &&
-            (_currentCandle.High >= position.SLPrice || (position.TPPrice != null && _currentCandle.Low <= position.TPPrice))
+            (GetCurrentCandle().High >= position.SLPrice || (position.TPPrice != null && GetCurrentCandle().Low <= position.TPPrice))
         );
 
     private async Task ClosePosition(Position position)
@@ -62,29 +62,27 @@ public class Broker : IBroker
         decimal? closedPrice = null!;
         if (position.PositionDirection == PositionDirection.LONG)
         {
-            if (_currentCandle.Low <= position.SLPrice)
+            if (GetCurrentCandle().Low <= position.SLPrice)
                 closedPrice = position.SLPrice;
-            else if (position.TPPrice != null && _currentCandle.High >= position.TPPrice)
+            else if (position.TPPrice != null && GetCurrentCandle().High >= position.TPPrice)
                 closedPrice = (decimal)position.TPPrice;
         }
         else if (position.PositionDirection == PositionDirection.SHORT)
         {
-            if (_currentCandle.High >= position.SLPrice)
+            if (GetCurrentCandle().High >= position.SLPrice)
                 closedPrice = position.SLPrice;
-            else if (position.TPPrice != null && _currentCandle.Low <= position.TPPrice)
+            else if (position.TPPrice != null && GetCurrentCandle().Low <= position.TPPrice)
                 closedPrice = (decimal)position.TPPrice;
         }
         else
             throw new ClosePositionException();
 
-        await _trade.ClosePosition(position.Id, (decimal)closedPrice, _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()));
+        await _trade.ClosePosition(position.Id, (decimal)closedPrice, GetCurrentCandle().Date.AddSeconds(await _candleRepository.GetTimeFrame()));
     }
 
-    public async Task CandleClosed(int index) => await CandleClosed(await _candleRepository.GetCandle(index));
+    public Candle GetCurrentCandle() => _candleRepository.GetCurrentCandle();
 
-    public Candle GetCurrentCandle() => _currentCandle;
-
-    public async Task CloseAllPositions() => await _trade.CloseAllPositions(_currentCandle);
+    public async Task CloseAllPositions() => await _trade.CloseAllPositions(GetCurrentCandle());
 
     public async Task<IEnumerable<Position>> GetOpenPositions() => await _trade.GetOpenPositions();
 
@@ -92,8 +90,8 @@ public class Broker : IBroker
     {
         Leverage = leverage,
         Margin = margin,
-        OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
-        OpenedPrice = _currentCandle.Close,
+        OpenedAt = GetCurrentCandle().Date.AddSeconds(await _candleRepository.GetTimeFrame()),
+        OpenedPrice = GetCurrentCandle().Close,
         SLPrice = slPrice,
         TPPrice = tpPrice,
         CommissionRatio = _brokerOptions.BrokerCommission,
@@ -105,8 +103,8 @@ public class Broker : IBroker
     {
         Leverage = leverage,
         Margin = margin,
-        OpenedAt = _currentCandle.Date.AddSeconds(await _candleRepository.GetTimeFrame()),
-        OpenedPrice = _currentCandle.Close,
+        OpenedAt = GetCurrentCandle().Date.AddSeconds(await _candleRepository.GetTimeFrame()),
+        OpenedPrice = GetCurrentCandle().Close,
         SLPrice = slPrice,
         CommissionRatio = _brokerOptions.BrokerCommission,
         Symbol = _brokerOptions.Symbol,
