@@ -8,15 +8,10 @@ namespace bot.src.MessageStores;
 
 public static class MessageStoreFactory
 {
-    public static IMessageStore CreateMessageStore(string MessageStoreName, MessageStoreOptions messageStoreOptions, ILogger logger) => MessageStoreName switch
+    public static IMessageStore CreateMessageStore(string MessageStoreName, IMessageStoreOptions messageStoreOptions, IMessageRepository? messageRepository, ILogger logger) => MessageStoreName switch
     {
-        "Gmail" => new GmailMessageStore(messageStoreOptions, logger),
-        _ => throw new Exception()
-    };
-
-    public static IMessageStore CreateMessageStore(string MessageStoreName, IMessageRepository messageRepository, ILogger logger) => MessageStoreName switch
-    {
-        "InMemory" => new MessageStore(messageRepository, logger),
+        MessageStoreNames.GMAIL => new GmailMessageStore(messageStoreOptions, logger),
+        MessageStoreNames.IN_MEMORY => new MessageStore(messageRepository!, logger),
         _ => throw new Exception()
     };
 }

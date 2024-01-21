@@ -13,12 +13,12 @@ public class Broker : IBroker
     private readonly ILogger _logger;
     private readonly BrokerOptions _brokerOptions;
 
-    public Broker(BrokerOptions brokerOptions, ITrade trade, IAccount account, ICandleRepository candleRepository, ILogger logger)
+    public Broker(IBrokerOptions brokerOptions, ITrade trade, IAccount account, ICandleRepository candleRepository, ILogger logger)
     {
         _trade = trade;
         _candleRepository = candleRepository;
         _logger = logger.ForContext<Broker>();
-        _brokerOptions = brokerOptions;
+        _brokerOptions = (brokerOptions as BrokerOptions)!;
         _account = account;
     }
 

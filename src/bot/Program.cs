@@ -1,70 +1,70 @@
 ﻿using bot.src.Bots;
 using bot.src.Brokers;
 using bot.src.Data;
-using bot.src.Data.InMemory;
 using bot.src.MessageStores;
-using bot.src.MessageStores.Gmail.Models;
 using bot.src.Notifiers.NTFY;
-using bot.src.Strategies;
 using bot.src.Util;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Settings.Configuration;
-using BingxBrokerOptions = bot.src.Brokers.Bingx.BrokerOptions;
 
 namespace bot;
 
 public class Program
 {
-    private static IConfigurationRoot Configuration { get; set; } = null!;
-    private static ILogger Logger { get; set; } = null!;
+    private static IConfigurationRoot _configuration = null!;
+    private static ILogger _logger = null!;
 
     private static async Task Main(string[] args)
     {
         try
         {
-            Configuration = new ConfigurationBuilder()
+            _configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
                 .AddCommandLine(args)
                 .Build();
 
-            Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(Configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
+            _logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
             .CreateLogger();
 
-            BingxBrokerOptions brokerOptions = new();
-            Configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{Configuration[ConfigurationKeys.BROKER_NAME]}", brokerOptions);
+            IMessageStoreOptions messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!);
+            _configuration.Bind($"{_configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]}:{ConfigurationKeys.MESSAGE_STORE_NAME}", messageStoreOptions);
 
-            MessageStoreOptions messageStoreOptions = new();
-            Configuration.Bind($"{ConfigurationKeys.MESSAGE_STORE_NAME}:{Configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]}", messageStoreOptions);
+            IBrokerOptions brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(_configuration[ConfigurationKeys.BROKER_NAME]!);
+            _configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{_configuration[ConfigurationKeys.BROKER_NAME]}", brokerOptions);
 
-            ICandleRepository candleRepository = new CandleRepository();
+            IBotOptions botOptions = BotOptionsFactory.CreateBotOptions(_configuration[ConfigurationKeys.BOT_NAME]!);
+            _configuration.Bind($"{_configuration[ConfigurationKeys.BOT_OPTIONS]}:{ConfigurationKeys.BOT_NAME}", messageStoreOptions);
 
-            IAccount account = BrokerFactory.CreateAccount(Configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, Logger);
-            ITrade trade = BrokerFactory.CreateTrade(Configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, Logger);
-            IBroker broker = BrokerFactory.CreateBroker(Configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, candleRepository, Logger);
+            ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
+            IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
+            IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]!);
 
-            IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(Configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, Logger);
-            Notifier notifier = new(Logger);
+            IAccount account = BrokerFactory.CreateAccount(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger);
+            ITrade trade = BrokerFactory.CreateTrade(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, _logger);
+            IBroker broker = BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, candleRepository, _logger);
+
+            IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
+            Notifier notifier = new(_logger);
 
             ITime time = new Time();
-            IStrategy strategy = StrategyFactory.CreateStrategy(Configuration[ConfigurationKeys.STRATEGY_NAME]!, messageStore, messageStoreOptions.SignalProviderEmail, Logger, time);
 
-            await BotFactory.CreateBot(Configuration[ConfigurationKeys.BOT_NAME]!, broker, strategy, time, Logger).Run();
+            await BotFactory.CreateBot(_configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, _logger).Run();
         }
         catch (System.Exception ex)
         {
-            Logger.Error(ex, "An unhandled exception has been thrown.");
+            _logger.Error(ex, "An unhandled exception has been thrown.");
             try
             {
-                Logger.Information(ex, "Notifying listeners...");
-                await new Notifier(Logger).SendMessage($"FATAL: Unhandled exception: {ex.Message}");
-                Logger.Information(ex, "Listeners are notified.");
+                _logger.Information(ex, "Notifying listeners...");
+                await new Notifier(_logger).SendMessage($"FATAL: Unhandled exception: {ex.Message}");
+                _logger.Information(ex, "Listeners are notified.");
             }
             catch (System.Exception)
             {
-                Logger.Information(ex, "Failed to notify listeners.");
+                _logger.Information(ex, "Failed to notify listeners.");
                 throw;
             }
             return;

@@ -10,11 +10,12 @@ public partial class Api
     public string ApiSecret { get; set; }
     public string Symbol { get; set; }
 
-    public Api(string base_url, string apiKey, string apiSecret, string symbol)
+    public Api(IBrokerOptions brokerOptions)
     {
-        Base_Url = base_url;
-        ApiKey = apiKey;
-        ApiSecret = apiSecret;
-        Symbol = symbol;
+        BrokerOptions opt = (brokerOptions as BrokerOptions)!;
+        Base_Url = opt.BaseUrl;
+        ApiKey = opt.ApiKey;
+        ApiSecret = opt.ApiSecret;
+        Symbol = opt.Symbol;
     }
 }

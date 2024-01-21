@@ -7,10 +7,10 @@ namespace bot.src.Brokers.Bingx;
 
 public class Account : Api, IAccount
 {
-    private BingxUtilities Utilities { get; set; }
+    private IBingxUtilities Utilities { get; set; }
     private readonly ILogger _logger;
 
-    public Account(string base_url, string apiKey, string apiSecret, string symbol, BingxUtilities utilities, ILogger logger) : base(base_url, apiKey, apiSecret, symbol)
+    public Account(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
         Utilities = utilities;
         _logger = logger;

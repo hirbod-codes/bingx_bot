@@ -13,7 +13,7 @@ public class Trade : Api, ITrade
     private readonly ILogger _logger;
     private Candle _currentCandle = null!;
 
-    public Trade(string base_url, string apiKey, string apiSecret, string symbol, IBingxUtilities utilities, ILogger logger) : base(base_url, apiKey, apiSecret, symbol)
+    public Trade(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
         _utilities = utilities;
         _logger = logger.ForContext<Trade>();

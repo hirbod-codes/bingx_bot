@@ -14,9 +14,9 @@ public class Trade : ITrade
     private readonly IPositionRepository _positionRepository;
     private readonly ILogger _logger;
 
-    public Trade(BrokerOptions brokerOptions, ICandleRepository candleRepository, IPositionRepository positionRepository, ILogger logger)
+    public Trade(IBrokerOptions brokerOptions, ICandleRepository candleRepository, IPositionRepository positionRepository, ILogger logger)
     {
-        _brokerOptions = brokerOptions;
+        _brokerOptions = (brokerOptions as BrokerOptions)!;
         _candleRepository = candleRepository;
         _positionRepository = positionRepository;
         _logger = logger.ForContext<Trade>();

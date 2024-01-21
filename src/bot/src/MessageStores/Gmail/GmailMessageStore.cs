@@ -18,10 +18,10 @@ public class GmailMessageStore : IMessageStore
     private ILogger Logger { get; }
 
 
-    public GmailMessageStore(MessageStoreOptions messageProviderOptions, ILogger logger)
+    public GmailMessageStore(IMessageStoreOptions messageProviderOptions, ILogger logger)
     {
-        EmailProviderOptions = messageProviderOptions;
-        (GmailService service, string accessToken, string refreshToken) = GmailApiHelper.Authenticate(messageProviderOptions);
+        EmailProviderOptions = (messageProviderOptions as MessageStoreOptions)!;
+        (GmailService service, string accessToken, string refreshToken) = GmailApiHelper.Authenticate(EmailProviderOptions);
         Service = service;
         AccessToken = accessToken;
         RefreshToken = refreshToken;

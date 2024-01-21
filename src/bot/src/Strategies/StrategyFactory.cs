@@ -1,15 +1,18 @@
-using bot.src.MessageStores;
-using bot.src.Util;
+using bot.src.Data;
+using bot.src.Indicators;
+using bot.src.Notifiers;
+using bot.src.RiskManagement;
 using Serilog;
-using GeneralStrategyClass = bot.src.Strategies.GeneralStrategy.GeneralStrategy;
+using Skender.Stock.Indicators;
+using bot.src.Strategies.General;
 
 namespace bot.src.Strategies;
 
 public static class StrategyFactory
 {
-    public static IStrategy CreateStrategy(string strategyName, IMessageStore messageStore, string provider, ILogger logger, ITime time) => strategyName switch
+    public static IStrategy CreateStrategy(string strategyName, ICandleRepository candleRepository, IIndicatorsOptions indicatorsOptions, INotifier notifier, IRiskManagement riskManagement, ILogger logger) => strategyName switch
     {
-        "General" => new GeneralStrategyClass(provider, messageStore, logger, time),
-        _ => throw new Exception()
+        "SmmaRsi" => new SmmaRsiStrategy(candleRepository, indicatorsOptions, notifier, riskManagement, logger),
+        _ => throw new ArgumentException($"Invalid value for {nameof(strategyName)} parameter provider.")
     };
 }

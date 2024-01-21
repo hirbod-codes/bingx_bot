@@ -8,19 +8,19 @@ public class Notifier : INotifier
 {
     public event EventHandler<MessageSentEventArgs>? MessageSent;
 
-    private readonly IMessageRepository _messageStoreRepository;
+    private readonly IMessageRepository _messageRepository;
     private readonly ILogger _logger;
 
-    public Notifier(IMessageRepository messageStoreRepository, ILogger logger)
+    public Notifier(IMessageRepository messageRepository, ILogger logger)
     {
-        _messageStoreRepository = messageStoreRepository;
+        _messageRepository = messageRepository;
         _logger = logger.ForContext<Notifier>();
     }
 
     public async Task SendMessage(IMessage message)
     {
         _logger.Information("Sending the message: {@message}", message);
-        await _messageStoreRepository.CreateMessage(message);
+        await _messageRepository.CreateMessage(message);
         _logger.Information("The message sent.");
 
         OnMessageSent(message);
@@ -35,9 +35,9 @@ public class Notifier : INotifier
 
     public async Task SendMessage(string message)
     {
-        IMessage createdMessage = await _messageStoreRepository.CreateMessage(message);
+        IMessage createdMessage = await _messageRepository.CreateMessage(message);
         _logger.Information("Sending the message: {@message}", createdMessage);
-        await _messageStoreRepository.CreateMessage(createdMessage);
+        await _messageRepository.CreateMessage(createdMessage);
         _logger.Information("The message sent.");
 
         _logger.Information("Raising OnMessageSent event.");
