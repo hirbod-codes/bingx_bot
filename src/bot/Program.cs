@@ -40,7 +40,7 @@ public class Program
 
             ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
             IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
-            IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]!);
+            IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
 
             IAccount account = BrokerFactory.CreateAccount(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger);
             ITrade trade = BrokerFactory.CreateTrade(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, _logger);

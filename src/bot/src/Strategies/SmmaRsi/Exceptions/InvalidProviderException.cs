@@ -1,7 +1,7 @@
-namespace bot.src.Strategies.GeneralStrategy.Exceptions;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [System.Serializable]
-public class InvalidProviderException : GeneralStrategyException
+public class InvalidProviderException : SmmaRsiStrategyException
 {
     public InvalidProviderException() { }
     public InvalidProviderException(string message) : base(message) { }

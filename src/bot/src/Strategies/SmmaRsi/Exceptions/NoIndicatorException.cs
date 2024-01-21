@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace bot.src.Strategies.General;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [Serializable]
 public class NoIndicatorException : Exception

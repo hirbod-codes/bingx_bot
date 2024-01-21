@@ -1,7 +1,7 @@
-namespace bot.src.Strategies.GeneralStrategy.Exceptions;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [System.Serializable]
-public class InvalidSignalException : GeneralStrategyException
+public class InvalidSignalException : SmmaRsiStrategyException
 {
     public InvalidSignalException() { }
     public InvalidSignalException(string message) : base(message) { }

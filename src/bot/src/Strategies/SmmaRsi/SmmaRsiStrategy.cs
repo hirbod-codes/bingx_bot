@@ -8,13 +8,15 @@ using Serilog;
 using Skender.Stock.Indicators;
 using bot.src.Indicators;
 using bot.src.Indicators.SmmaRsi;
+using bot.src.Strategies.SmmaRsi.Exceptions;
 
-namespace bot.src.Strategies.General;
+namespace bot.src.Strategies.SmmaRsi;
 
 public class SmmaRsiStrategy : IStrategy
 {
     private readonly ICandleRepository _candleRepository;
     private readonly IndicatorsOptions _indicatorsOptions;
+    private readonly StrategyOptions _strategyOptions;
     private IEnumerable<SmmaResult> _smma1 = null!;
     private IEnumerable<SmmaResult> _smma2 = null!;
     private IEnumerable<SmmaResult> _smma3 = null!;
@@ -23,10 +25,11 @@ public class SmmaRsiStrategy : IStrategy
     private readonly IRiskManagement _riskManagement;
     private readonly ILogger _logger;
 
-    public SmmaRsiStrategy(ICandleRepository candleRepository, IIndicatorsOptions indicatorsOptions, INotifier notifier, IRiskManagement riskManagement, ILogger logger)
+    public SmmaRsiStrategy(ICandleRepository candleRepository, IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, IRiskManagement riskManagement, ILogger logger)
     {
         _candleRepository = candleRepository;
         _indicatorsOptions = (indicatorsOptions as IndicatorsOptions)!;
+        _strategyOptions = (strategyOptions as StrategyOptions)!;
         _notifier = notifier;
         _riskManagement = riskManagement;
 

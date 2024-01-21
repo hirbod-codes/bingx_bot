@@ -1,10 +1,10 @@
-namespace bot.src.Strategies.GeneralStrategy;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [System.Serializable]
-public class GeneralStrategyException : StrategyException
+public class SmmaRsiStrategyException : StrategyException
 {
-    public GeneralStrategyException() { }
-    public GeneralStrategyException(string message) : base(message) { }
-    public GeneralStrategyException(string message, System.Exception inner) : base(message, inner) { }
-    protected GeneralStrategyException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
+    public SmmaRsiStrategyException() { }
+    public SmmaRsiStrategyException(string message) : base(message) { }
+    public SmmaRsiStrategyException(string message, System.Exception inner) : base(message, inner) { }
+    protected SmmaRsiStrategyException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 }

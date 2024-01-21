@@ -1,7 +1,7 @@
-namespace bot.src.Strategies.GeneralStrategy;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [System.Serializable]
-public class ExpiredSignalException : GeneralStrategyException
+public class ExpiredSignalException : SmmaRsiStrategyException
 {
     public ExpiredSignalException() { }
     public ExpiredSignalException(string message) : base(message) { }

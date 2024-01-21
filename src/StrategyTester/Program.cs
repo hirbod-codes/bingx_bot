@@ -42,15 +42,18 @@ public class Program
         IBotOptions botOptions = BotOptionsFactory.CreateBotOptions(configuration[ConfigurationKeys.BOT_NAME]!);
         configuration.Bind($"{configuration[ConfigurationKeys.BOT_OPTIONS]}:{ConfigurationKeys.BOT_NAME}", botOptions);
 
-        IIndicatorsOptions indicatorsOptions = IndicatorsOptionsFactory.CreateIndicatorOptions(configuration[ConfigurationKeys.INDICATORS_OPTIONS_NAME]!);
-        configuration.Bind($"{configuration[ConfigurationKeys.INDICATORS_OPTIONS]}:{ConfigurationKeys.INDICATORS_OPTIONS_NAME}", indicatorsOptions);
-
         IRiskManagementOptions riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!);
         configuration.Bind($"{configuration[ConfigurationKeys.RISK_MANAGEMENT_OPTIONS]}:{ConfigurationKeys.RISK_MANAGEMENT_NAME}", riskManagementOptions);
 
+        IIndicatorsOptions indicatorsOptions = IndicatorsOptionsFactory.CreateIndicatorOptions(configuration[ConfigurationKeys.INDICATORS_OPTIONS_NAME]!);
+        configuration.Bind($"{configuration[ConfigurationKeys.INDICATORS_OPTIONS]}:{ConfigurationKeys.INDICATORS_OPTIONS_NAME}", indicatorsOptions);
+
+        IStrategyOptions  strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(configuration[ConfigurationKeys.STRATEGY_NAME]!);
+        configuration.Bind($"{configuration[ConfigurationKeys.INDICATORS_OPTIONS]}:{ConfigurationKeys.STRATEGY_NAME}", strategyOptions);
+
         ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
         IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
-        IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]!);
+        IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
 
         IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, logger);
 
@@ -66,7 +69,7 @@ public class Program
 
         IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions);
 
-        IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, candleRepository, indicatorsOptions, notifier, riskManagement, logger);
+        IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, candleRepository, strategyOptions, indicatorsOptions, notifier, riskManagement, logger);
 
         IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, logger);
 

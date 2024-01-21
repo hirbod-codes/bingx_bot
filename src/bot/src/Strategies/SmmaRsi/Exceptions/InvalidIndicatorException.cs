@@ -1,4 +1,4 @@
-namespace bot.src.Strategies.GeneralStrategy.Exceptions;
+namespace bot.src.Strategies.SmmaRsi.Exceptions;
 
 [System.Serializable]
 public class InvalidIndicatorException : Exception
