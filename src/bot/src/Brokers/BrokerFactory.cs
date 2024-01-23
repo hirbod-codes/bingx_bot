@@ -11,9 +11,9 @@ namespace bot.src.Brokers;
 
 public static class BrokerFactory
 {
-    public static IBroker CreateBroker(string brokerName,  IBrokerOptions brokerOptions, ITrade trade, IAccount account, ICandleRepository candleRepository, ILogger logger) => brokerName switch
+    public static IBroker CreateBroker(string brokerName,  IBrokerOptions brokerOptions, ITrade trade, IAccount account, IPositionRepository positionRepository, ICandleRepository candleRepository, ILogger logger) => brokerName switch
     {
-        BrokerNames.IN_MEMORY => new InMemoryBroker(brokerOptions, trade, account, candleRepository, logger),
+        BrokerNames.IN_MEMORY => new InMemoryBroker(brokerOptions, trade, account, positionRepository, candleRepository, logger),
         _ => throw new Exception()
     };
 

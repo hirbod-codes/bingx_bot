@@ -12,10 +12,10 @@ public static class ConfigurationKeys
     public const string NOTIFIER_NAME = "NotifierName";
     public const string STRATEGY_NAME = "StrategyName";
     public const string STRATEGY_OPTIONS = "StrategyOptions";
-    public const string INDICATORS_OPTIONS = "IndicatorsOptions";
     public const string INDICATORS_OPTIONS_NAME = "IndicatorsOptionsName";
-    public const string RISK_MANAGEMENT_OPTIONS = "RiskManagementOptions";
+    public const string INDICATORS_OPTIONS = "IndicatorsOptions";
     public const string RISK_MANAGEMENT_NAME = "RiskManagementName";
+    public const string RISK_MANAGEMENT_OPTIONS = "RiskManagementOptions";
     public const string POSITION_REPOSITORY_TYPE = "PositionRepositoryType";
     public const string CANDLE_REPOSITORY_TYPE = "CandleRepositoryType";
     public const string MESSAGE_REPOSITORY_TYPE = "MessageRepositoryType";

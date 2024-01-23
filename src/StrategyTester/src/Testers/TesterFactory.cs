@@ -9,9 +9,9 @@ namespace StrategyTester.src.Testers;
 
 public static class TesterFactory
 {
-    public static ITester CreateTester(string testerName, IPositionRepository positionRepository, ICandleRepository candleRepository, ITime time, IStrategy strategy, IBroker broker, IBot bot) => testerName switch
+    public static ITester CreateTester(string testerName, ICandleRepository candleRepository, ITime time, IStrategy strategy, IBroker broker, IBot bot) => testerName switch
     {
-        "SmmaRsi" => new SmmaRsiTester(positionRepository, candleRepository, time, strategy, broker, bot),
+        "SmmaRsi" => new SmmaRsiTester(candleRepository, time, strategy, broker, bot),
         _ => throw new Exception()
     };
 }

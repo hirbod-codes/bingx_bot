@@ -3,12 +3,12 @@ using bot.src.Data.Models;
 using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
 using bot.src.Notifiers;
-using bot.src.RiskManagement;
 using Serilog;
 using Skender.Stock.Indicators;
 using bot.src.Indicators;
 using bot.src.Indicators.SmmaRsi;
 using bot.src.Strategies.SmmaRsi.Exceptions;
+using bot.src.Bots.General.Models;
 
 namespace bot.src.Strategies.SmmaRsi;
 
@@ -22,16 +22,14 @@ public class SmmaRsiStrategy : IStrategy
     private IEnumerable<SmmaResult> _smma3 = null!;
     private IEnumerable<RsiResult> _rsi = null!;
     private readonly INotifier _notifier;
-    private readonly IRiskManagement _riskManagement;
     private readonly ILogger _logger;
 
-    public SmmaRsiStrategy(ICandleRepository candleRepository, IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, IRiskManagement riskManagement, ILogger logger)
+    public SmmaRsiStrategy(ICandleRepository candleRepository, IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, ILogger logger)
     {
         _candleRepository = candleRepository;
         _indicatorsOptions = (indicatorsOptions as IndicatorsOptions)!;
         _strategyOptions = (strategyOptions as StrategyOptions)!;
         _notifier = notifier;
-        _riskManagement = riskManagement;
 
         _logger = logger.ForContext<SmmaRsiStrategy>();
     }
@@ -40,12 +38,16 @@ public class SmmaRsiStrategy : IStrategy
     {
         Candles candles = await _candleRepository.GetCandles();
         _smma1 = candles.GetSmma(_indicatorsOptions.Smma1.Period);
+        _smma2 = candles.GetSmma(_indicatorsOptions.Smma2.Period);
+        _smma3 = candles.GetSmma(_indicatorsOptions.Smma3.Period);
+        _rsi = candles.GetRsi(_indicatorsOptions.Rsi.Period);
     }
 
     public async Task HandleCandle(Candle candle, int index)
     {
         if (_smma1 == null && _smma2 == null && _smma3 == null && _rsi == null)
             throw new NoIndicatorException();
+
         bool isUpTrend = IsUpTrend(index);
         bool isDownTrend = IsDownTrend(index);
         bool isInTrend = isUpTrend || isDownTrend;
@@ -62,7 +64,7 @@ public class SmmaRsiStrategy : IStrategy
         {
             _logger.Information("Candle is valid for a position, sending the message...");
 
-            IMessage message = await CreateOpenPositionMessage(candle, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, hasTPPrice: true);
+            IMessage message = await CreateOpenPositionMessage(candle, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, isUpTrend ? candle.Close - _strategyOptions.SLDifference : candle.Close + _strategyOptions.SLDifference, isUpTrend ? candle.Close + _strategyOptions.TPDifference : candle.Close - _strategyOptions.TPDifference);
             await _notifier.SendMessage(message);
             _logger.Information("Message sent.");
         }
@@ -108,18 +110,15 @@ public class SmmaRsiStrategy : IStrategy
         return _smma1.ElementAt(index).Smma >= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma >= _smma3.ElementAt(index).Smma;
     }
 
-    private async Task<IMessage> CreateOpenPositionMessage(Candle candle, string direction, bool hasTPPrice)
+    private async Task<IMessage> CreateOpenPositionMessage(Candle candle, string direction, decimal slPrice, decimal? tpPrice)
     {
         string message = IGeneralMessage.CreateMessageBody(
             openingPosition: true,
             allowingParallelPositions: true,
             closingAllPositions: false,
             direction,
-            _riskManagement.GetLeverage(),
-            _riskManagement.GetMargin(),
-            await _candleRepository.GetTimeFrame(),
-            _riskManagement.GetSLPrice(direction, candle.Close),
-            hasTPPrice ? _riskManagement.GetTPPrice(direction, candle.Close) : null
+            slPrice,
+            tpPrice
         );
 
         return new Message()

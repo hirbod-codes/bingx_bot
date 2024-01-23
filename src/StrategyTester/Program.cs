@@ -48,7 +48,7 @@ public class Program
         IIndicatorsOptions indicatorsOptions = IndicatorsOptionsFactory.CreateIndicatorOptions(configuration[ConfigurationKeys.INDICATORS_OPTIONS_NAME]!);
         configuration.Bind($"{configuration[ConfigurationKeys.INDICATORS_OPTIONS]}:{ConfigurationKeys.INDICATORS_OPTIONS_NAME}", indicatorsOptions);
 
-        IStrategyOptions  strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(configuration[ConfigurationKeys.STRATEGY_NAME]!);
+        IStrategyOptions strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(configuration[ConfigurationKeys.STRATEGY_NAME]!);
         configuration.Bind($"{configuration[ConfigurationKeys.INDICATORS_OPTIONS]}:{ConfigurationKeys.STRATEGY_NAME}", strategyOptions);
 
         ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
@@ -61,23 +61,23 @@ public class Program
 
         IAccount account = BrokerFactory.CreateAccount(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, logger);
         ITrade trade = BrokerFactory.CreateTrade(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, logger);
-        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, candleRepository, logger);
+        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, positionRepository, candleRepository, logger);
 
         await BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, logger).Run();
 
         INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
 
-        IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions);
+        IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time);
 
         IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, candleRepository, strategyOptions, indicatorsOptions, notifier, riskManagement, logger);
 
         IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, logger);
 
-        await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, positionRepository, candleRepository, time, strategy, broker, bot).Test();
+        await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, candleRepository, time, strategy, broker, bot).Test();
 
-        StrategySummary strategySummary = await new PnLAnalysis(positionRepository).RunAnalysis();
+        AnalysisSummary analysisSummary = PnLAnalysis.RunAnalysis(await positionRepository.GetClosedPositions());
 
         await File.WriteAllTextAsync("./closed_positions.json", JsonSerializer.Serialize(await positionRepository.GetClosedPositions()));
-        await File.WriteAllTextAsync("./pnl_results.json", JsonSerializer.Serialize(strategySummary));
+        await File.WriteAllTextAsync("./pnl_results.json", JsonSerializer.Serialize(analysisSummary));
     }
 }

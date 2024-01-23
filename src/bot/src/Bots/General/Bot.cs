@@ -1,7 +1,8 @@
+using bot.src.Bots.General.Models;
 using bot.src.Brokers;
 using bot.src.Data.Models;
 using bot.src.MessageStores;
-using bot.src.MessageStores.Models;
+using bot.src.RiskManagement;
 using bot.src.Util;
 using Serilog;
 
@@ -14,16 +15,17 @@ public class Bot : IBot
     private readonly ITime _time;
     private readonly IMessageStore _messageStore;
     private readonly BotOptions _generalBotOptions;
+    private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
-    private int TimeFrame = 60;
 
-    public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, ILogger logger, IMessageStore messageStore)
+    public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
         _logger = logger.ForContext<Bot>();
         _time = time;
         _broker = broker;
         _messageStore = messageStore;
         _generalBotOptions = (generalBotOptions as BotOptions)!;
+        _riskManagement = riskManagement;
     }
 
     public async Task Run()
@@ -32,7 +34,7 @@ public class Bot : IBot
         {
             _logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
 
-            await _time.StartTimer(TimeFrame, async (o, args) => await Tick());
+            await _time.StartTimer(_generalBotOptions.TimeFrame, async (o, args) => await Tick());
 
             while (true)
             {
@@ -56,8 +58,6 @@ public class Bot : IBot
             _logger.Information("No signal");
             return;
         }
-
-        TimeFrame = generalMessage.TimeFrame;
 
         if ((!generalMessage.OpeningPosition && !generalMessage.ClosingAllPositions) || (generalMessage.OpeningPosition && generalMessage.ClosingAllPositions))
         {
@@ -89,12 +89,21 @@ public class Bot : IBot
             return;
         }
 
+        if (!await _riskManagement.PermitOpenPosition())
+        {
+            _logger.Information("Risk management rejects opening a position, skipping...");
+            return;
+        }
+
+        decimal margin = _riskManagement.GetMargin();
+        decimal leverage = _riskManagement.GetLeverage((await _broker.GetCurrentCandle()).Close, generalMessage.SlPrice);
+
         _logger.Information("Opening a market position...");
 
         if (generalMessage.TpPrice is null)
-            await _broker.OpenMarketPosition(generalMessage.Margin, generalMessage.Leverage, generalMessage.Direction, generalMessage.SlPrice);
+            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
         else
-            await _broker.OpenMarketPosition(generalMessage.Margin, generalMessage.Leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
+            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
 
         _logger.Information("market position is opened.");
     }
@@ -111,12 +120,22 @@ public class Bot : IBot
             return null;
         }
 
-        IGeneralMessage? message = IGeneralMessage.CreateMessage(new GeneralMessage(), rawMessage);
+        IGeneralMessage? message = IGeneralMessage.CreateMessage(new GeneralBotMessage(), rawMessage);
+
+        if (!ValidateMessage(message))
+            return null;
+
+        _logger.Information("Signal received.");
+        return message;
+    }
+
+    private bool ValidateMessage(IGeneralMessage? message)
+    {
 
         if (message is null)
         {
             _logger.Information("Message has no signal!");
-            return null;
+            return false;
         }
 
         if (message.From != _generalBotOptions.Provider)
@@ -128,7 +147,7 @@ public class Bot : IBot
         if (message.Id == _previousMessageId)
         {
             _logger.Information("This message is already processed.");
-            return null;
+            return false;
         }
         else
             _previousMessageId = message.Id;
@@ -140,14 +159,13 @@ public class Bot : IBot
             throw ex;
         }
 
-        if (message.SentAt.AddSeconds(message.TimeFrame) < _time.GetUtcNow())
+        if (message.SentAt.AddSeconds(_generalBotOptions.TimeFrame) < _time.GetUtcNow())
         {
             ExpiredSignalException ex = new();
             _logger.Error(ex, "This message is expired(too old for this time frame).");
             throw new ExpiredSignalException();
         }
 
-        _logger.Information("Signal received.");
-        return message;
+        return true;
     }
 }

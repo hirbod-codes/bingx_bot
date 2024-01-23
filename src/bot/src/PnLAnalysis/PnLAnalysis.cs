@@ -1,48 +1,112 @@
-using bot.src.Data;
 using bot.src.Data.Models;
+using bot.src.PnLAnalysis.Exceptions;
 using bot.src.PnLAnalysis.Models;
 
 namespace bot.src.PnLAnalysis;
 
-public class PnLAnalysis
+public static class PnLAnalysis
 {
-    private readonly IPositionRepository _positionRepository;
-
-    public PnLAnalysis(IPositionRepository positionRepository) => _positionRepository = positionRepository;
-
-    public async Task<StrategySummary> RunAnalysis()
+    public static AnalysisSummary RunAnalysis(IEnumerable<Position> closedPositions)
     {
-        IEnumerable<Position> closedPositions = await _positionRepository.GetClosedPositions();
-
-        StrategySummary strategySummary = new();
+        AnalysisSummary analysisSummary = new();
 
         foreach (Position position in closedPositions)
         {
-            strategySummary.NetProfit += (decimal)position.ProfitWithCommission!;
+            analysisSummary.NetProfit += (decimal)position.ProfitWithCommission!;
 
-            if (strategySummary.NetProfit > strategySummary.HighestNetProfit)
-                strategySummary.HighestNetProfit = strategySummary.NetProfit;
+            if (analysisSummary.NetProfit > analysisSummary.HighestNetProfit)
+                analysisSummary.HighestNetProfit = analysisSummary.NetProfit;
 
-            strategySummary.DraDown += strategySummary.HighestNetProfit - strategySummary.NetProfit;
+            analysisSummary.DrawDown = analysisSummary.HighestNetProfit - analysisSummary.NetProfit;
 
-            if (strategySummary.DraDown > strategySummary.HighestDrawDown)
-                strategySummary.HighestDrawDown = strategySummary.DraDown;
+            if (analysisSummary.DrawDown > analysisSummary.HighestDrawDown)
+                analysisSummary.HighestDrawDown = analysisSummary.DrawDown;
 
             if (position.PositionDirection == PositionDirection.LONG)
                 if (position.ProfitWithCommission > 0)
-                    strategySummary.LongGrossProfit += (decimal)position.ProfitWithCommission;
+                    analysisSummary.LongGrossProfit += (decimal)position.ProfitWithCommission;
                 else
-                    strategySummary.LongGrossLoss += (decimal)position.ProfitWithCommission;
+                    analysisSummary.LongGrossLoss += (decimal)position.ProfitWithCommission;
             else
                 if (position.ProfitWithCommission > 0)
-                strategySummary.ShortGrossProfit += (decimal)position.ProfitWithCommission;
+                analysisSummary.ShortGrossProfit += (decimal)position.ProfitWithCommission;
             else
-                strategySummary.ShortGrossLoss += (decimal)position.ProfitWithCommission;
+                analysisSummary.ShortGrossLoss += (decimal)position.ProfitWithCommission;
         }
 
-        strategySummary.GrossProfit = strategySummary.LongGrossProfit + strategySummary.ShortGrossProfit;
-        strategySummary.GrossLoss = strategySummary.LongGrossLoss + strategySummary.ShortGrossLoss;
+        analysisSummary.GrossProfit = analysisSummary.LongGrossProfit + analysisSummary.ShortGrossProfit;
+        analysisSummary.GrossLoss = analysisSummary.LongGrossLoss + analysisSummary.ShortGrossLoss;
 
-        return strategySummary;
+        return analysisSummary;
+    }
+
+    public static decimal GetNetProfit(IEnumerable<Position> closedPositions) => GetLongNetProfit(closedPositions) + GetShortNetProfit(closedPositions);
+
+    public static decimal GetLongNetProfit(IEnumerable<Position> closedPositions) => GetLongGrossProfit(closedPositions) - GetLongGrossLoss(closedPositions);
+
+    public static decimal GetShortNetProfit(IEnumerable<Position> closedPositions) => GetShortGrossProfit(closedPositions) - GetShortGrossLoss(closedPositions);
+
+    public static decimal GetGrossProfit(IEnumerable<Position> closedPositions) => GetLongGrossProfit(closedPositions) + GetShortGrossProfit(closedPositions);
+
+    public static decimal GetGrossLoss(IEnumerable<Position> closedPositions) => GetLongGrossLoss(closedPositions) + GetShortGrossLoss(closedPositions);
+
+    public static decimal GetLongGrossProfit(IEnumerable<Position> closedPositions)
+    {
+        decimal grossProfit = 0;
+        foreach (Position position in closedPositions)
+        {
+            if (position.PositionStatus != PositionStatus.CLOSED)
+                throw new InvalidPositionException();
+
+            if (position.PositionDirection == PositionDirection.LONG && position.ProfitWithCommission > 0)
+                grossProfit += (decimal)position.ProfitWithCommission!;
+        }
+
+        return grossProfit;
+    }
+
+    public static decimal GetShortGrossProfit(IEnumerable<Position> closedPositions)
+    {
+        decimal grossProfit = 0;
+        foreach (Position position in closedPositions)
+        {
+            if (position.PositionStatus != PositionStatus.CLOSED)
+                throw new InvalidPositionException();
+
+            if (position.PositionDirection == PositionDirection.SHORT && position.ProfitWithCommission > 0)
+                grossProfit += (decimal)position.ProfitWithCommission!;
+        }
+
+        return grossProfit;
+    }
+
+    public static decimal GetLongGrossLoss(IEnumerable<Position> closedPositions)
+    {
+        decimal grossLoss = 0;
+        foreach (Position position in closedPositions)
+        {
+            if (position.PositionStatus != PositionStatus.CLOSED)
+                throw new InvalidPositionException();
+
+            if (position.PositionDirection == PositionDirection.LONG && position.ProfitWithCommission < 0)
+                grossLoss += Math.Abs((decimal)position.ProfitWithCommission!);
+        }
+
+        return grossLoss;
+    }
+
+    public static decimal GetShortGrossLoss(IEnumerable<Position> closedPositions)
+    {
+        decimal grossLoss = 0;
+        foreach (Position position in closedPositions)
+        {
+            if (position.PositionStatus != PositionStatus.CLOSED)
+                throw new InvalidPositionException();
+
+            if (position.PositionDirection == PositionDirection.SHORT && position.ProfitWithCommission < 0)
+                grossLoss += Math.Abs((decimal)position.ProfitWithCommission!);
+        }
+
+        return grossLoss;
     }
 }
