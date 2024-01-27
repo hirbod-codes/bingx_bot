@@ -17,6 +17,7 @@ public class Bot : IBot
     private readonly BotOptions _generalBotOptions;
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
+    private string _previousRawMessageId = "";
 
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
@@ -119,6 +120,14 @@ public class Bot : IBot
             _logger.Information("No message found.");
             return null;
         }
+
+        if (rawMessage.Id == _previousRawMessageId)
+        {
+            _logger.Information("This message is already processed.");
+            return null;
+        }
+
+        _previousRawMessageId = rawMessage.Id;
 
         IGeneralMessage? message = IGeneralMessage.CreateMessage(new GeneralBotMessage(), rawMessage);
 
