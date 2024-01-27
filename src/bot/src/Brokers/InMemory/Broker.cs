@@ -27,6 +27,7 @@ public class Broker : IBroker
     public async Task CandleClosed()
     {
         _logger.Information("Getting open positions...");
+
         IEnumerable<Position> openPositions = await _trade.GetOpenPositions();
 
         if (!openPositions.Any())
@@ -35,7 +36,8 @@ public class Broker : IBroker
             return;
         }
 
-        _logger.Information("Closing open positions that suppose to be closed.");
+        _logger.Information("Closing open positions that are suppose to be closed.");
+
         int closedPositionsCount = 0;
         foreach (Position position in openPositions)
             if (await ShouldClosePosition(position))

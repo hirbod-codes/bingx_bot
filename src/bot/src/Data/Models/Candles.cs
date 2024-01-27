@@ -50,7 +50,9 @@ public class Candles : IEnumerable<Candle>
         if (_timeFrame == 0)
             _timeFrame = (int)(_candles.ElementAt(0).Date - _candles.ElementAt(1).Date).TotalSeconds;
 
-        if (_timeFrame != 0 && (_candles.Last().Date - candle.Date).TotalSeconds != _timeFrame)
+        double totalSeconds = (_candles.Last().Date - candle.Date).TotalSeconds;
+
+        if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
             throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
 
         _candles = _candles.Append(candle);
