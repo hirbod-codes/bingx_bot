@@ -9,9 +9,9 @@ namespace bot.src.Strategies;
 
 public static class StrategyFactory
 {
-    public static IStrategy CreateStrategy(string strategyName, ICandleRepository candleRepository, IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, IRiskManagement riskManagement, ILogger logger) => strategyName switch
+    public static IStrategy CreateStrategy(string strategyName, ICandleRepository candleRepository, IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, ILogger logger) => strategyName switch
     {
-        "SmmaRsi" => new SmmaRsiStrategy(candleRepository, strategyOptions, indicatorsOptions, notifier, riskManagement, logger),
+        "SmmaRsi" => new SmmaRsiStrategy(candleRepository, strategyOptions, indicatorsOptions, notifier, logger),
         _ => throw new ArgumentException($"Invalid value for {nameof(strategyName)} parameter provider.")
     };
 }

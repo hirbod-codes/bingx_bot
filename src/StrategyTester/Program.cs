@@ -63,21 +63,24 @@ public class Program
         ITrade trade = BrokerFactory.CreateTrade(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, logger);
         IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, positionRepository, candleRepository, logger);
 
-        await BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, logger).Run();
-
         INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
 
         IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time);
 
-        IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, candleRepository, strategyOptions, indicatorsOptions, notifier, riskManagement, logger);
+        IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, candleRepository, strategyOptions, indicatorsOptions, notifier, logger);
 
-        IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, time, logger);
+        IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, logger);
 
         await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, candleRepository, time, strategy, broker, bot).Test();
 
         AnalysisSummary analysisSummary = PnLAnalysis.RunAnalysis(await positionRepository.GetClosedPositions());
 
-        await File.WriteAllTextAsync("./closed_positions.json", JsonSerializer.Serialize(await positionRepository.GetClosedPositions()));
-        await File.WriteAllTextAsync("./pnl_results.json", JsonSerializer.Serialize(analysisSummary));
+        string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions());
+        string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary);
+
+        await File.WriteAllTextAsync("./closed_positions.json", closedPositionsJson);
+        await File.WriteAllTextAsync("./src/UI/Results/closed_positions.js", "var closedPositions = " + closedPositionsJson);
+        await File.WriteAllTextAsync("./pnl_results.json", analysisSummaryJson);
+        await File.WriteAllTextAsync("./src/UI/Results/pnl_results.js", "var pnlResults = " + analysisSummaryJson);
     }
 }

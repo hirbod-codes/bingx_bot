@@ -1,7 +1,5 @@
 using bot.src.Brokers;
-using bot.src.Data;
 using bot.src.Data.Models;
-using bot.src.PnLAnalysis;
 using bot.src.RiskManagement.SmmaRsi.Exceptions;
 using bot.src.Util;
 
@@ -26,6 +24,9 @@ public class RiskManagement : IRiskManagement
 
     public async Task<bool> PermitOpenPosition()
     {
+        if (_riskManagementOptions.GrossProfitInterval == 0 && _riskManagementOptions.GrossLossInterval == 0 && _riskManagementOptions.NumberOfConcurrentPositions == 0)
+            return true;
+
         decimal grossLossPerPosition = _riskManagementOptions.Margin * (_riskManagementOptions.SLPercentages / 100m);
 
         if (_riskManagementOptions.GrossLossLimit < grossLossPerPosition)
