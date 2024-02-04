@@ -3,6 +3,7 @@ using bot.src.Brokers;
 using bot.src.Data;
 using bot.src.Data.Models;
 using bot.src.Strategies;
+using Serilog;
 using StrategyTester.src.Utils;
 
 namespace StrategyTester.src.Testers.General;
@@ -14,14 +15,16 @@ public class GeneralTester : ITester
     private readonly IStrategy _strategy;
     private readonly IBroker _broker;
     private readonly IBot _bot;
+    private readonly ILogger _logger;
 
-    public GeneralTester(ICandleRepository candleRepository, ITime time, IStrategy strategy, IBroker broker, IBot bot)
+    public GeneralTester(ICandleRepository candleRepository, ITime time, IStrategy strategy, IBroker broker, IBot bot, ILogger logger)
     {
         _candleRepository = candleRepository;
         _time = time;
         _strategy = strategy;
         _broker = broker;
         _bot = bot;
+        _logger = logger.ForContext<GeneralTester>();
     }
 
     public async Task Test()
@@ -31,8 +34,12 @@ public class GeneralTester : ITester
 
         _strategy.InitializeIndicators(candles);
 
+        _logger.Information($"number of candles: {candles.Count()}");
+
         for (int i = candles.Count() - 1; i > -1; i--)
         {
+            _logger.Information($"candle index: {i}");
+
             Candle candle = candles.ElementAt(i);
 
             await _broker.SetCurrentCandle(candle);

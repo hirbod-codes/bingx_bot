@@ -4,6 +4,7 @@ namespace bot.src.Brokers;
 
 public interface IBroker
 {
+    public Task<Candle?> GetCandle(int index);
     public Task<Candle> GetCurrentCandle();
     public Task SetCurrentCandle(Candle candle);
     public Task CandleClosed();

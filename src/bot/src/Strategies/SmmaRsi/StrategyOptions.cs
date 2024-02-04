@@ -20,4 +20,6 @@ public class StrategyOptions : IStrategyOptions
     /// Can be left empty.
     /// </summary>
     public IEnumerable<DateTimePeriod> InvalidDatePeriods { get; set; } = Array.Empty<DateTimePeriod>();
+    public int NaturalTrendIndicatorLength { get; set; } = 0;
+    public decimal NaturalTrendIndicatorLimit { get; set; } = 0;
 }

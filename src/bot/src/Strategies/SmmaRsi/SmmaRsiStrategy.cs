@@ -1,4 +1,3 @@
-using bot.src.Data;
 using bot.src.Data.Models;
 using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
@@ -9,6 +8,7 @@ using bot.src.Indicators;
 using bot.src.Indicators.SmmaRsi;
 using bot.src.Strategies.SmmaRsi.Exceptions;
 using bot.src.Bots.General.Models;
+using bot.src.Brokers;
 
 namespace bot.src.Strategies.SmmaRsi;
 
@@ -20,13 +20,15 @@ public class SmmaRsiStrategy : IStrategy
     private IEnumerable<SmmaResult> _smma2 = null!;
     private IEnumerable<SmmaResult> _smma3 = null!;
     private IEnumerable<RsiResult> _rsi = null!;
+    private readonly IBroker _broker;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
 
-    public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, INotifier notifier, ILogger logger)
+    public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, IBroker broker, INotifier notifier, ILogger logger)
     {
         _indicatorsOptions = (indicatorsOptions as IndicatorsOptions)!;
         _strategyOptions = (strategyOptions as StrategyOptions)!;
+        _broker = broker;
         _notifier = notifier;
 
         _logger = logger.ForContext<SmmaRsiStrategy>();
@@ -60,7 +62,33 @@ public class SmmaRsiStrategy : IStrategy
                 if (!_strategyOptions.InvalidWeekDays.Any() || (_strategyOptions.InvalidWeekDays.Any() && !_strategyOptions.InvalidWeekDays.Where(invalidDate => candleCloseDate.DayOfWeek == invalidDate).Any()))
                     if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
                         if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
-                            shouldOpenPosition = true;
+                        {
+                            if (_strategyOptions.NaturalTrendIndicatorLength == 0 || _strategyOptions.NaturalTrendIndicatorLimit == 0)
+                                shouldOpenPosition = true;
+                            else
+                            {
+                                decimal highestHigh = candle.High;
+                                decimal lowestLow = candle.Low;
+                                for (int i = 1; i <= _strategyOptions.NaturalTrendIndicatorLength; i++)
+                                {
+                                    Candle? c = await _broker.GetCandle(index + i);
+
+                                    if (c == null)
+                                    {
+                                        shouldOpenPosition = true;
+                                        break;
+                                    }
+
+                                    if (c.High > highestHigh)
+                                        highestHigh = c.High;
+                                    if (c.Low < lowestLow)
+                                        lowestLow = c.Low;
+                                }
+
+                                if (!shouldOpenPosition && (highestHigh - lowestLow) > _strategyOptions.NaturalTrendIndicatorLimit)
+                                    shouldOpenPosition = true;
+                            }
+                        }
 
         if (shouldOpenPosition)
         {

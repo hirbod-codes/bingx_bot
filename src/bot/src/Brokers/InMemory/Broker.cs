@@ -121,4 +121,6 @@ public class Broker : IBroker
     public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null) => _positionRepository.GetClosedPositions(start, end);
 
     public Task<IEnumerable<Position>> GetOpenedPositions() => _positionRepository.GetOpenedPositions();
+
+    public async Task<Candle?> GetCandle(int index) => await _candleRepository.GetCandle(index);
 }
