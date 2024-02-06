@@ -36,16 +36,16 @@ public class Program
             try
             {
                 IMessageStoreOptions messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!);
-                configuration.Bind($"{configuration[ConfigurationKeys.MESSAGE_STORE_OPTIONS]}:{configuration["GmailProviderName"]!}:{ConfigurationKeys.MESSAGE_STORE_NAME}", messageStoreOptions);
+                configuration.Bind($"{ConfigurationKeys.MESSAGE_STORE_OPTIONS}:{configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!}", messageStoreOptions);
 
                 IBrokerOptions brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(configuration[ConfigurationKeys.BROKER_NAME]!);
-                configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{configuration[ConfigurationKeys.BROKER_NAME]}", brokerOptions);
+                configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{configuration[ConfigurationKeys.BROKER_NAME]!}", brokerOptions);
 
                 IBotOptions botOptions = BotOptionsFactory.CreateBotOptions(configuration[ConfigurationKeys.BOT_NAME]!);
-                configuration.Bind($"{configuration[ConfigurationKeys.BOT_OPTIONS]}:{ConfigurationKeys.BOT_NAME}", messageStoreOptions);
+                configuration.Bind($"{ConfigurationKeys.BOT_OPTIONS}:{configuration[ConfigurationKeys.BOT_NAME]!}", botOptions);
 
                 IRiskManagementOptions riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!);
-                configuration.Bind($"{configuration[ConfigurationKeys.RISK_MANAGEMENT_OPTIONS]}:{ConfigurationKeys.RISK_MANAGEMENT_NAME}", riskManagementOptions);
+                configuration.Bind($"{ConfigurationKeys.RISK_MANAGEMENT_OPTIONS}:{configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!}", riskManagementOptions);
 
                 IAccount account = BrokerFactory.CreateAccount(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, logger);
                 ITrade trade = BrokerFactory.CreateTrade(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, logger);

@@ -36,7 +36,11 @@ public class Bot : IBot
         {
             _logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
 
-            await _time.StartTimer(_botOptions.TimeFrame, async (o, args) => await Tick());
+            await _time.StartTimer(_botOptions.TimeFrame, async (o, args) =>
+            {
+                await _time.Sleep(5000);
+                await Tick();
+            });
 
             while (true)
             {
@@ -57,7 +61,7 @@ public class Bot : IBot
 
         if (utBotMessage is null)
         {
-            _logger.Information("No signal");
+            _logger.Information("No signal.");
             return;
         }
 
@@ -68,13 +72,14 @@ public class Bot : IBot
         }
 
         decimal margin = _riskManagement.GetMargin();
-        decimal leverage = _riskManagement.GetLeverage((await _broker.GetCurrentCandle()).Close, utBotMessage.SlPrice);
+        decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), utBotMessage.SlPrice);
 
         _logger.Information("Opening a market position...");
 
+        await _broker.CloseAllPositions();
         await _broker.OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
 
-        _logger.Information("market position is opened.");
+        _logger.Information("A market position has opened.");
     }
 
     private async Task<IUtBotMessage?> CheckForSignal()
@@ -100,17 +105,16 @@ public class Bot : IBot
 
     private bool ValidateMessage(IUtBotMessage? message)
     {
-
         if (message is null)
         {
             _logger.Information("Message has no signal!");
             return false;
         }
 
-        if (message.From != _botOptions.Provider)
+        if (!message.From.Contains(_botOptions.Provider))
         {
-            _logger.Information("Received a message with invalid provider.");
-            throw new InvalidProviderException();
+            _logger.Information("Received a message with invalid provider. message provider:{messageProvider}, bot provider:{botProvider}", message.From, _botOptions.Provider);
+            return false;
         }
 
         if (message.Id == _secondMessageId)
@@ -119,22 +123,21 @@ public class Bot : IBot
             return false;
         }
 
-        if (message.Direction != PositionDirection.SHORT || message.Direction != PositionDirection.LONG)
+        if (message.Direction != PositionDirection.SHORT && message.Direction != PositionDirection.LONG)
         {
             _logger.Information("Invalid position direction provided by the message.");
+            return false;
+        }
+
+        if (_time.GetUtcNow().AddSeconds(-1 * _botOptions.TimeFrame) > message.SentAt)
+        {
+            _logger.Information("This message is expired(too old for this time frame), skipping...");
             return false;
         }
 
         _firstMessageDirection = _secondMessageDirection;
         _secondMessageId = message.Id;
         _secondMessageDirection = message.Direction;
-
-        if (message.SentAt.AddSeconds(_botOptions.TimeFrame) < _time.GetUtcNow())
-        {
-            ExpiredSignalException ex = new();
-            _logger.Error(ex, "This message is expired(too old for this time frame).");
-            throw new ExpiredSignalException();
-        }
 
         return _firstMessageDirection == _secondMessageDirection;
     }

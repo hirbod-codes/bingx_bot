@@ -290,10 +290,6 @@ public class Trade : Api, ITrade
         throw new NotImplementedException();
     }
 
-    public Candle GetCurrentCandle() => _currentCandle;
-
-    public void SetCurrentCandle(Candle candle) => _currentCandle = candle;
-
     public Task OpenMarketPosition(Position position)
     {
         throw new NotImplementedException();

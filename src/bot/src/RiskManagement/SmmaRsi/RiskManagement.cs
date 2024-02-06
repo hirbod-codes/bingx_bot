@@ -34,7 +34,7 @@ public class RiskManagement : IRiskManagement
 
         Task<IEnumerable<Position>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossLossInterval)));
         Task<IEnumerable<Position>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossProfitInterval)));
-        Task<IEnumerable<Position>> openedPositionsTask = _broker.GetOpenedPositions();
+        Task<IEnumerable<Position>> openedPositionsTask = _broker.GetOpenPositions();
         await Task.WhenAll(closedPositionsForLossTask, closedPositionsForProfitTask, openedPositionsTask);
         IEnumerable<Position> closedPositionsForLoss = closedPositionsForLossTask.Result;
         IEnumerable<Position> closedPositionsForProfit = closedPositionsForProfitTask.Result;

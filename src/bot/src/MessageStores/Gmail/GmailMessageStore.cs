@@ -60,7 +60,12 @@ public class GmailMessageStore : IMessageStore
 
         IMessage? message = await GetLastMessage(listRequest);
 
-        Logger.Information("Finished getting the last message... {@message}", JsonSerializer.Serialize(message));
+        if (message != null)
+            Logger.Information("The last message (at: {@messageSentAt}): {@message}", message.SentAt, JsonSerializer.Serialize(message));
+        else
+            Logger.Information("no message found.");
+
+        Logger.Information("Finished getting the last message...");
         return message;
     }
 
@@ -175,11 +180,12 @@ public class GmailMessageStore : IMessageStore
         string subject = string.Empty;
         string mailBody;
         string base64DecodedMailBody;
+        var t = message.Payload.Headers;
 
         foreach (MessagePartHeader header in message.Payload.Headers)
             switch (header.Name)
             {
-                case "Form":
+                case "From":
                     fromAddress = header.Value;
                     break;
                 case "Date":

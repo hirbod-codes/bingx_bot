@@ -11,7 +11,6 @@ public interface IUtBotMessage : IMessage
     public string Direction { get; set; }
     public bool OpeningPosition { get; set; }
     public decimal SlPrice { get; set; }
-    public decimal? TpPrice { get; set; }
 
     public static string CreateMessageBody(bool openingPosition, string direction, decimal slPrice, decimal? tpPrice = null)
     {
@@ -24,12 +23,6 @@ public interface IUtBotMessage : IMessage
         message += $"{FIELD_DELIMITER}";
 
         message += $"{nameof(SlPrice)}{KEY_VALUE_PAIR_DELIMITER}{slPrice}";
-
-        if (tpPrice != null)
-        {
-            message += $"{FIELD_DELIMITER}";
-            message += $"{nameof(TpPrice)}{KEY_VALUE_PAIR_DELIMITER}{tpPrice}";
-        }
 
         message += $"{MESSAGE_DELIMITER}";
 
@@ -59,8 +52,8 @@ public interface IUtBotMessage : IMessage
         }).ToDictionary(keySelector: o => o.Key, elementSelector: o => o.Value);
 
         // Parse
-        if (fields.TryGetValue(nameof(Direction), out string? direction) && (direction == PositionDirection.LONG || direction == PositionDirection.SHORT))
-            generalMessage.Direction = direction;
+        if (fields.TryGetValue(nameof(Direction), out string? direction) && (direction == PositionDirection.LONG || direction == PositionDirection.SHORT || direction == "0" || direction == "1"))
+            generalMessage.Direction = direction == "1" ? PositionDirection.LONG : (direction == "0" ? PositionDirection.SHORT : direction);
         else
             throw new MessageParseException();
 
@@ -72,11 +65,6 @@ public interface IUtBotMessage : IMessage
         if (fields.TryGetValue(nameof(SlPrice), out string? slPriceString) && decimal.TryParse(slPriceString, out decimal slPrice) && slPrice > 0)
             generalMessage.SlPrice = slPrice;
         else
-            throw new MessageParseException();
-
-        if (fields.TryGetValue(nameof(TpPrice), out string? tpPriceString) && tpPriceString is not null && decimal.TryParse(tpPriceString, out decimal tpPrice) && tpPrice > 0)
-            generalMessage.TpPrice = tpPrice;
-        else if (tpPriceString is not null)
             throw new MessageParseException();
 
         return generalMessage;
