@@ -1,8 +1,9 @@
 using System.Runtime.Serialization;
+using AbstractBrokerException = bot.src.Brokers.BrokerException;
 
 namespace bot.src.Brokers.InMemory.Exceptions;
 
-public class BrokerException : Exception
+public class BrokerException : AbstractBrokerException
 {
     public BrokerException() { }
 

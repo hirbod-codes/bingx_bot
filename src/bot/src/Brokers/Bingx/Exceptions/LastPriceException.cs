@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace bot.src.Brokers.Bingx.Exceptions;
 
 [Serializable]
-public class LastPriceException : Exception
+public class LastPriceException : BingxException
 {
     public LastPriceException() { }
 

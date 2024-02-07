@@ -2,6 +2,7 @@ using bot.src.Bots.UtBot.Models;
 using bot.src.Brokers;
 using bot.src.Data.Models;
 using bot.src.MessageStores;
+using bot.src.Notifiers;
 using bot.src.RiskManagement;
 using bot.src.Util;
 using Serilog;
@@ -12,6 +13,7 @@ public class Bot : IBot
 {
     private readonly IBroker _broker;
     private readonly ILogger _logger;
+    private readonly INotifier _notifier;
     private readonly ITime _time;
     private readonly IMessageStore _messageStore;
     private readonly BotOptions _botOptions;
@@ -20,7 +22,7 @@ public class Bot : IBot
     private string? _secondMessageId = null;
     private string? _secondMessageDirection = null;
 
-    public Bot(IBotOptions botOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
+    public Bot(IBotOptions botOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger, INotifier notifier)
     {
         _logger = logger.ForContext<Bot>();
         _time = time;
@@ -28,6 +30,7 @@ public class Bot : IBot
         _messageStore = messageStore;
         _botOptions = (botOptions as BotOptions)!;
         _riskManagement = riskManagement;
+        _notifier = notifier;
     }
 
     public async Task Run()
@@ -35,6 +38,7 @@ public class Bot : IBot
         try
         {
             _logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
+            await _notifier.SendMessage($"Bot started at: {DateTime.UtcNow}");
 
             await _time.StartTimer(_botOptions.TimeFrame, async (o, args) =>
             {
@@ -50,7 +54,11 @@ public class Bot : IBot
                     return;
             }
         }
-        finally { _logger.Information("Bot ended at: {dateTime}", DateTime.UtcNow.ToString()); }
+        finally
+        {
+            _logger.Information("Bot terminated at: {dateTime}", DateTime.UtcNow.ToString());
+            await _notifier.SendMessage($"Bot terminated at: {DateTime.UtcNow}");
+        }
     }
 
     public async Task Tick()
@@ -76,8 +84,8 @@ public class Bot : IBot
 
         _logger.Information("Opening a market position...");
 
-        await _broker.CloseAllPositions();
-        await _broker.OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
+        await CloseAllPositions();
+        await OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
 
         _logger.Information("A market position has opened.");
     }
@@ -86,7 +94,7 @@ public class Bot : IBot
     {
         _logger.Information("Checking for signals.");
 
-        IMessage? rawMessage = await _messageStore.GetLastMessage(from: _botOptions.Provider);
+        IMessage? rawMessage = await GetLastMessage(from: _botOptions.Provider);
 
         if (rawMessage is null)
         {
@@ -101,6 +109,24 @@ public class Bot : IBot
 
         _logger.Information("Signal received.");
         return message;
+    }
+
+    private async Task<IMessage?> GetLastMessage(string from)
+    {
+        Exception? exception = null;
+
+        for (int i = 0; i < _botOptions.MessageStoreFailureRetryCount; i++)
+            try { return await _messageStore.GetLastMessage(from); }
+            catch (MessageStoreException ex)
+            {
+                exception = ex;
+                _logger.Error(ex, "A message store failure encountered, retrying...");
+            }
+
+        string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
+        _logger.Error(errorMessage);
+        await _notifier.SendMessage(errorMessage);
+        throw exception!;
     }
 
     private bool ValidateMessage(IUtBotMessage? message)
@@ -140,5 +166,61 @@ public class Bot : IBot
         _secondMessageDirection = message.Direction;
 
         return _firstMessageDirection == _secondMessageDirection;
+    }
+
+    private async Task CloseAllPositions()
+    {
+        bool failure = false;
+        Exception? exception = null;
+
+        for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
+            try
+            {
+                await _broker.CloseAllPositions();
+                failure = false;
+                break;
+            }
+            catch (BrokerException ex)
+            {
+                failure = true;
+                exception = ex;
+                _logger.Error(ex, "A broker failure encountered, retrying...");
+            }
+
+        if (failure)
+        {
+            string message = "failure in broker api has exceeded the configured retry count, terminating...";
+            _logger.Error(message);
+            await _notifier.SendMessage(message);
+            throw exception!;
+        }
+    }
+
+    private async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    {
+        bool failure = false;
+        Exception? exception = null;
+
+        for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
+            try
+            {
+                await _broker.OpenMarketPosition(margin, leverage, direction, slPrice);
+                failure = false;
+                break;
+            }
+            catch (BrokerException ex)
+            {
+                failure = true;
+                exception = ex;
+                _logger.Error(ex, "A broker failure encountered, retrying...");
+            }
+
+        if (failure)
+        {
+            string message = "failure in broker api has exceeded the configured retry count, terminating...";
+            _logger.Error(message);
+            await _notifier.SendMessage(message);
+            throw exception!;
+        }
     }
 }
