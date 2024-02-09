@@ -180,7 +180,6 @@ public class GmailMessageStore : IMessageStore
         string subject = string.Empty;
         string mailBody;
         string base64DecodedMailBody;
-        var t = message.Payload.Headers;
 
         foreach (MessagePartHeader header in message.Payload.Headers)
             switch (header.Name)

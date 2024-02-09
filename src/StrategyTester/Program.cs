@@ -69,7 +69,7 @@ public class Program
 
         IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, logger);
 
-        IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, logger);
+        IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, logger);
 
         await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, candleRepository, time, strategy, broker, bot, logger).Test();
 

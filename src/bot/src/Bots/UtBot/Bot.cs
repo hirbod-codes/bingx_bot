@@ -42,7 +42,7 @@ public class Bot : IBot
 
             await _time.StartTimer(_botOptions.TimeFrame, async (o, args) =>
             {
-                await _time.Sleep(5000);
+                await _time.Sleep(7000);
                 await Tick();
             });
 
@@ -82,12 +82,35 @@ public class Bot : IBot
         decimal margin = _riskManagement.GetMargin();
         decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), utBotMessage.SlPrice);
 
-        _logger.Information("Opening a market position...");
-
         await CloseAllPositions();
         await OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
 
-        _logger.Information("A market position has opened.");
+        await DeleteMessages(_botOptions.Provider);
+    }
+
+    private async Task DeleteMessages(string from)
+    {
+        _logger.Information("Deleting messages...");
+
+        Exception? exception = null;
+
+        for (int i = 0; i < _botOptions.MessageStoreFailureRetryCount; i++)
+            try
+            {
+                await _messageStore.DeleteMessages(from);
+                _logger.Information("Messages has been deleted...");
+            }
+            catch (MessageStoreException ex)
+            {
+                exception = ex;
+                _logger.Error(ex, "A message store failure encountered, retrying...");
+                await _time.Sleep(1000);
+            }
+
+        string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
+        _logger.Error(errorMessage);
+        await _notifier.SendMessage(errorMessage);
+        throw exception!;
     }
 
     private async Task<IUtBotMessage?> CheckForSignal()
@@ -121,6 +144,7 @@ public class Bot : IBot
             {
                 exception = ex;
                 _logger.Error(ex, "A message store failure encountered, retrying...");
+                await _time.Sleep(1000);
             }
 
         string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
@@ -170,57 +194,52 @@ public class Bot : IBot
 
     private async Task CloseAllPositions()
     {
-        bool failure = false;
+        _logger.Information("Closing all market positions...");
         Exception? exception = null;
 
         for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
             try
             {
                 await _broker.CloseAllPositions();
-                failure = false;
-                break;
+                _logger.Information("All market positions has been closed...");
+                return;
             }
             catch (BrokerException ex)
             {
-                failure = true;
                 exception = ex;
                 _logger.Error(ex, "A broker failure encountered, retrying...");
+                await _time.Sleep(1000);
             }
 
-        if (failure)
-        {
-            string message = "failure in broker api has exceeded the configured retry count, terminating...";
-            _logger.Error(message);
-            await _notifier.SendMessage(message);
-            throw exception!;
-        }
+        string message = "failure in broker api has exceeded the configured retry count, terminating...";
+        _logger.Error(message);
+        await _notifier.SendMessage(message);
+        throw exception!;
     }
 
     private async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
     {
-        bool failure = false;
+        _logger.Information("Opening a market position...");
+
         Exception? exception = null;
 
         for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
             try
             {
                 await _broker.OpenMarketPosition(margin, leverage, direction, slPrice);
-                failure = false;
-                break;
+                _logger.Information("A market position has opened.");
+                return;
             }
             catch (BrokerException ex)
             {
-                failure = true;
                 exception = ex;
                 _logger.Error(ex, "A broker failure encountered, retrying...");
+                await _time.Sleep(1000);
             }
 
-        if (failure)
-        {
-            string message = "failure in broker api has exceeded the configured retry count, terminating...";
-            _logger.Error(message);
-            await _notifier.SendMessage(message);
-            throw exception!;
-        }
+        string message = "failure in broker api has exceeded the configured retry count, terminating...";
+        _logger.Error(message);
+        await _notifier.SendMessage(message);
+        throw exception!;
     }
 }
