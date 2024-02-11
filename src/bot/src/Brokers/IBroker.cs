@@ -5,11 +5,12 @@ namespace bot.src.Brokers;
 public interface IBroker
 {
     public Task<decimal> GetLastPrice();
-    public Task<Candle?> GetCandle(int index);
-    public Task<Candle> GetCurrentCandle();
-    public Task SetCurrentCandle(Candle candle);
+    public Task<Candle> GetCandle(int indexFromEnd = 0);
+    public Task InitiateCandles(int candlesCount = 5000);
+    public Task<Candles> GetCandles();
     public Task CandleClosed();
     public Task CloseAllPositions();
+    public Task ClosePosition(Position position);
     public Task<IEnumerable<Position>> GetOpenPositions();
     public Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice);
     public Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice);

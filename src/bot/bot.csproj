@@ -26,5 +26,7 @@
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="Google.Apis.Gmail.v1" Version="1.64.0.3231" />
         <PackageReference Include="Skender.Stock.Indicators" Version="2.5.0" />
+        <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+        <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
     </ItemGroup>
 </Project>

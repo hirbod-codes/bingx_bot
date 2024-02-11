@@ -23,6 +23,8 @@ public class Candles : IEnumerable<Candle>
 
     public void SetCandles(IEnumerable<Candle> candles)
     {
+        _candles = Array.Empty<Candle>();
+
         if (!candles.Any())
             throw new ArgumentException("No candle provided.");
 
@@ -33,10 +35,12 @@ public class Candles : IEnumerable<Candle>
         }
 
         if (_timeFrame == 0)
-            _timeFrame = (int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds;
+            _timeFrame = Math.Abs((int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds);
 
-        foreach (Candle candle in candles)
-            AddCandle(candle);
+        Candle[] candlesArray = candles.ToArray();
+
+        for (int i = 0; i < candlesArray.Length; i++)
+            AddCandle(candlesArray[i]);
     }
 
     public void AddCandle(Candle candle)
@@ -48,9 +52,12 @@ public class Candles : IEnumerable<Candle>
         }
 
         if (_timeFrame == 0)
-            _timeFrame = (int)(_candles.ElementAt(0).Date - _candles.ElementAt(1).Date).TotalSeconds;
+            _timeFrame = Math.Abs((int)(_candles.ElementAt(0).Date - _candles.ElementAt(1).Date).TotalSeconds);
 
-        double totalSeconds = (_candles.Last().Date - candle.Date).TotalSeconds;
+        double totalSeconds = Math.Abs((_candles.Last().Date - candle.Date).TotalSeconds);
+
+        int v = _candles.Count();
+        Candle candle1 = _candles.Last();
 
         if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
             throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
@@ -58,6 +65,11 @@ public class Candles : IEnumerable<Candle>
         _candles = _candles.Append(candle);
         return;
     }
+
+    public void Skip(int num) => _candles = _candles.Skip(num);
+    public void SkipLast(int num) => _candles = _candles.SkipLast(num);
+    public void Take(int num) => _candles = _candles.Take(num);
+    public void TakeLast(int num) => _candles = _candles.TakeLast(num);
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

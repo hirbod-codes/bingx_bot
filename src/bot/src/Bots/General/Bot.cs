@@ -96,7 +96,7 @@ public class Bot : IBot
         }
 
         decimal margin = _riskManagement.GetMargin();
-        decimal leverage = _riskManagement.GetLeverage((await _broker.GetCurrentCandle()).Close, generalMessage.SlPrice);
+        decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), generalMessage.SlPrice);
 
         _logger.Information("Opening a market position...");
 

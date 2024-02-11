@@ -1,4 +1,5 @@
-using System.ComponentModel;
+using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using bot.src.Brokers.Bingx.DTOs;
 using bot.src.Brokers.Bingx.Exceptions;
@@ -10,51 +11,37 @@ namespace bot.src.Brokers.Bingx;
 
 public class Broker : Api, IBroker
 {
-    private readonly ITrade _trade;
     private readonly IBingxUtilities _utilities;
     private readonly ILogger _logger;
+    private Candles _candles = new();
 
-    public Broker(IBrokerOptions brokerOptions, ITrade trade, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
+    public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
-        _trade = trade;
         _utilities = utilities;
-        _logger = logger.ForContext<Trade>();
+        _logger = logger.ForContext<Broker>();
     }
 
     public async Task<decimal> GetLastPrice()
     {
-        try
+        _logger.Information("Getting last price of the symbol...");
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/quote/price", "GET", ApiKey, ApiSecret, new
         {
-            _logger.Information("Getting last price of the symbol...");
+            symbol = Symbol,
+        });
+        await _utilities.EnsureSuccessfulBingxResponse(httpResponseMessage);
 
-            HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/quote/price", "GET", ApiKey, ApiSecret, new
-            {
-                symbol = Symbol,
-            });
-            await _utilities.EnsureSuccessfulBingxResponse(httpResponseMessage);
+        string response = await httpResponseMessage.Content.ReadAsStringAsync();
 
-            string response = await httpResponseMessage.Content.ReadAsStringAsync();
+        Dictionary<string, JsonElement?>? dictionary = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(response);
 
-            Dictionary<string, JsonElement?>? dictionary = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(response);
+        Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value);
 
-            Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value);
+        decimal lastPrice = decimal.Parse(data!["price"]!.Value.GetString()!);
+        _logger.Information($"last price => {lastPrice}");
 
-            decimal lastPrice = decimal.Parse(data!["price"]!.Value.GetString()!);
-            _logger.Information($"last price => {lastPrice}");
-
-            _logger.Information("Got last symbol price...");
-            return lastPrice;
-        }
-        catch (LastPriceException ex)
-        {
-            _logger.Error(ex, "Failure while trying to get the {symbol} last price", Symbol);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failure while trying to get the {symbol} last price", Symbol);
-            throw new LastPriceException();
-        }
+        _logger.Information("Got last symbol price...");
+        return lastPrice;
     }
 
     public Task CandleClosed()
@@ -75,9 +62,206 @@ public class Broker : Api, IBroker
         return;
     }
 
-    public Task<Candle?> GetCandle(int index)
+    private async Task<IEnumerable<BingxCandle>> GetKline(string interval, int? limit, long? startTime = null, long? endTime = null)
     {
-        throw new NotImplementedException();
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v3/quote/klines", "GET", ApiKey, ApiSecret, new
+        {
+            symbol = Symbol,
+            interval,
+            limit,
+            startTime,
+            endTime
+        });
+
+        string response = await httpResponseMessage.Content.ReadAsStringAsync();
+        BingxResponse<IEnumerable<BingxCandle>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxCandle>>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new Exception("Failure while trying to fetch historical candles.");
+
+        if (bingxResponse.Data == null)
+            throw new Exception("Failure while trying to fetch historical candles.");
+
+        return bingxResponse.Data;
+    }
+
+    public async Task InitiateCandles(int candlesCount = 5000)
+    {
+        if (candlesCount < 1)
+            throw new Exception();
+
+        long? endTime = null;
+        while (_candles.Count() < candlesCount)
+        {
+            IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), null, endTime);
+
+            if (!bingxCandles.Any() || (_candles.Any() && _candles.First().Date <= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime))
+                throw new BingxException("Server does not provide new candles.");
+
+            if (_candles.Any())
+            {
+                for (int i = 0; i < bingxCandles.Count(); i++)
+                    if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == _candles.First().Date)
+                    {
+                        bingxCandles = bingxCandles.Skip(i + 1);
+                        break;
+                    }
+            }
+
+            if ((_candles.Count() + bingxCandles.Count()) > candlesCount)
+                bingxCandles = bingxCandles.Take(candlesCount - _candles.Count());
+
+            endTime = bingxCandles.Last().Time;
+
+            List<Candle> convertedCandles = bingxCandles.Reverse().ToList().ConvertAll(o => new Candle()
+            {
+                Open = decimal.Parse(o.Open),
+                Close = decimal.Parse(o.Close),
+                High = decimal.Parse(o.High),
+                Low = decimal.Parse(o.Low),
+                Volume = decimal.Parse(o.Volume),
+                Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
+            });
+
+            IEnumerable<Candle> concatenatedCandles = convertedCandles.Concat(_candles);
+
+            _candles = new Candles();
+            _candles.SetCandles(concatenatedCandles);
+        }
+
+        long startTime = DateTimeOffset.Parse(_candles.Last().Date.ToString()).ToUnixTimeMilliseconds();
+        DateTime now = DateTime.UtcNow;
+        now = now.AddSeconds(-1 * now.Second);
+        while ((now - _candles.Last().Date).TotalSeconds >= 1)
+        {
+            IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), startTime);
+
+            if (!bingxCandles.Any() || (_candles.Any() && _candles.Last().Date >= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.First().Time).DateTime))
+                throw new BingxException("Server does not provide new candles.");
+
+            if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime)
+                bingxCandles = bingxCandles.SkipLast(1);
+            else
+            {
+                for (int i = 0; i < bingxCandles.Count(); i++)
+                    if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == _candles.Last().Date)
+                    {
+                        bingxCandles = bingxCandles.Take(i);
+                        break;
+                    }
+            }
+
+            startTime = bingxCandles.First().Time;
+
+            _candles.Skip(bingxCandles.Count());
+
+            IEnumerable<Candle> concatenatedCandles = _candles.Concat(bingxCandles
+            .Reverse()
+            .ToList()
+            .ConvertAll(o => new Candle()
+            {
+                Open = decimal.Parse(o.Open),
+                Close = decimal.Parse(o.Close),
+                High = decimal.Parse(o.High),
+                Low = decimal.Parse(o.Low),
+                Volume = decimal.Parse(o.Volume),
+                Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
+            }));
+            _candles = new Candles();
+            _candles.SetCandles(concatenatedCandles);
+
+            now = DateTime.UtcNow;
+            now = now.AddSeconds(-1 * now.Second);
+        }
+    }
+
+    public async Task<Candles> GetCandles()
+    {
+        if (!_candles.Any())
+            await InitiateCandles();
+        return _candles;
+    }
+
+    public async Task<Candle> GetCandle(int indexFromEnd = 0) => _candles.ElementAt((await GetCandles()).Count() - indexFromEnd - 1);
+
+    public async Task ListenForCandles()
+    {
+        ClientWebSocket ws = new();
+
+        await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
+
+        string id = Guid.NewGuid().ToString();
+        while (true)
+        {
+            if (ws.State != WebSocketState.Open)
+                continue;
+
+            await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+            {
+                id,
+                reqType = "sub",
+                dataType = "BTC-USDT@kline_1m"
+            }))), WebSocketMessageType.Text, true, CancellationToken.None);
+
+            break;
+        }
+
+        byte[] buffer = new byte[1024 * 4];
+        DateTime start = DateTime.UtcNow;
+        while ((DateTime.UtcNow - start).TotalSeconds <= 120)
+        {
+            if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
+                continue;
+
+            if (ws.State == WebSocketState.Closed || ws.State == WebSocketState.Aborted || ws.State == WebSocketState.CloseReceived)
+            {
+                string state = ws.State switch
+                {
+                    WebSocketState.CloseReceived => "CloseReceived",
+                    WebSocketState.Closed => "Closed",
+                    WebSocketState.Aborted => "Aborted",
+                    _ => throw new Exception("!")
+                };
+                _logger.Information(state);
+                break;
+            }
+
+            WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            if (result.MessageType == WebSocketMessageType.Close)
+                break;
+
+            byte[] bytes = await _utilities.DecompressBytes(buffer);
+
+            string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+
+            if (message == "Ping")
+            {
+                await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("Pong")), WebSocketMessageType.Binary, true, CancellationToken.None);
+                buffer = new byte[1024 * 4];
+                continue;
+            }
+
+            BingxWsResponse? wsResponse = JsonSerializer.Deserialize<BingxWsResponse>(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            if (wsResponse != null && wsResponse.Id != null && wsResponse.Id != id)
+                throw new BingxException("Invalid id provided by the server.");
+
+            if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
+                continue;
+
+            if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data.ElementAt(0).T).DateTime)
+                continue;
+
+            _candles.AddCandle(new()
+            {
+                Open = decimal.Parse(wsResponse.Data!.ElementAt(0).o),
+                Close = decimal.Parse(wsResponse.Data!.ElementAt(0).c),
+                High = decimal.Parse(wsResponse.Data!.ElementAt(0).h),
+                Low = decimal.Parse(wsResponse.Data!.ElementAt(0).l),
+                Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.ElementAt(0).T).DateTime,
+                Volume = decimal.Parse(wsResponse.Data!.ElementAt(0).v)
+            });
+        }
+
+        await ws.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
     }
 
     public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null)
@@ -85,14 +269,9 @@ public class Broker : Api, IBroker
         throw new NotImplementedException();
     }
 
-    public Task<Candle> GetCurrentCandle()
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<IEnumerable<Position>> GetOpenPositions()
     {
-        _logger.Information("Closing all the open positions...");
+        _logger.Information("Getting all the open positions...");
 
         HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOrders", "GET", ApiKey, ApiSecret, new
         {
@@ -105,7 +284,7 @@ public class Broker : Api, IBroker
 
         BingxResponse<IEnumerable<BingxPositionDto>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPositionDto>>>(await httpResponseMessage.Content.ReadAsStringAsync(), new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
 
-        _logger.Information("Finished Closing all the open positions...");
+        _logger.Information("Finished getting all the open positions...");
         return bingxResponse.Data!.ToList().ConvertAll(bp => new Position()
         {
             Id = bp.PositionId,
@@ -164,11 +343,6 @@ public class Broker : Api, IBroker
         throw new NotImplementedException();
     }
 
-    public Task SetCurrentCandle(Candle candle)
-    {
-        throw new NotImplementedException();
-    }
-
     private async Task<int> GetLeverage()
     {
         _logger.Information("Getting the leverage...");
@@ -220,5 +394,10 @@ public class Broker : Api, IBroker
 
         _logger.Information("Finished setting leverage...");
         return;
+    }
+
+    public Task ClosePosition(Position position)
+    {
+        throw new NotImplementedException();
     }
 }

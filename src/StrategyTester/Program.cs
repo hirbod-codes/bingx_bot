@@ -59,9 +59,7 @@ public class Program
 
         ITime time = new Time();
 
-        IAccount account = BrokerFactory.CreateAccount(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, logger);
-        ITrade trade = BrokerFactory.CreateTrade(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, logger);
-        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, positionRepository, candleRepository, logger);
+        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
 
         INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
 

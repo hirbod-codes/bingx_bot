@@ -9,7 +9,7 @@ public class CandleRepository : ICandleRepository
         throw new NotImplementedException();
     }
 
-    public Task<Candle?> GetCandle(int index)
+    public Task<Candle> GetCandle(int index = 0)
     {
         throw new NotImplementedException();
     }

@@ -42,8 +42,6 @@ public class GeneralTester : ITester
 
             Candle candle = candles.ElementAt(i);
 
-            await _broker.SetCurrentCandle(candle);
-
             _time.SetUtcNow(candle.Date);
 
             await _strategy.HandleCandle(candle, i, timeFrame);

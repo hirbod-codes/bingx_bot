@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using bot.src.Brokers.Bingx.Exceptions;
@@ -101,74 +102,14 @@ public class BingxUtilities : IBingxUtilities
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
     }
 
-    // class HistoricalPositions
-    // {
-    //     public IEnumerable<Position> Positions { get; set; } = null!;
-    // }
+    public async Task<byte[]> DecompressBytes(byte[] bytes) => await DecompressBytesAsync(bytes);
+    public async Task<byte[]> DecompressBytesAsync(byte[] bytes, CancellationToken cancel = default)
+    {
+        using var inputStream = new MemoryStream(bytes);
+        using var outputStream = new MemoryStream();
+        using (var compressionStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            await compressionStream.CopyToAsync(outputStream, cancel);
 
-    // class FinancialPerformanceReport
-    // {
-    //     public DateTime StartingDateTime { get; set; }
-    //     public float TotalProfit { get; set; }
-    //     public float Commission { get; set; }
-    //     public int OrdersCount { get; set; }
-    // }
-
-    // public async Task CalculateFinancialPerformance(DateTime startDateTime, ITrade trade)
-    // {
-    //     Logger.Information("Calculating financial performance...");
-
-    //     IEnumerable<Position> positions = await trade.GetAllPositions(startDateTime);
-    //     if (!positions.Any())
-    //     {
-    //         Logger.Information("Finished calculating financial performance.(No orders found)");
-    //         return;
-    //     }
-
-    //     IEnumerable<Position> filteredPositions = FilterCancelledPositions(positions);
-    //     (float profit, float commission) = CalculateProfitAndCommission(filteredPositions);
-
-    //     Logger.Information("Financial performance report: {FinancialPerformanceReport}", JsonSerializer.Serialize(new FinancialPerformanceReport()
-    //     {
-    //         StartingDateTime = startDateTime,
-    //         TotalProfit = profit,
-    //         Commission = commission,
-    //         OrdersCount = positions.Count()
-    //     }));
-
-    //     Logger.Information("Finished calculating financial performance.");
-    // }
-
-    // private IEnumerable<Position> FilterCancelledPositions(IEnumerable<Position> positions)
-    // {
-    //     IEnumerable<Position> filteredPositions = Array.Empty<Position>();
-    //     for (int i = 0; i < positions.Count(); i++)
-    //     {
-    //         if (positions.ElementAt(i).Status == "CANCELLED")
-    //             continue;
-    //         filteredPositions = filteredPositions.Append(positions.ElementAt(i));
-    //     }
-
-    //     return filteredPositions;
-    // }
-
-    // private (float profit, float commission) CalculateProfitAndCommission(IEnumerable<Position> positions)
-    // {
-    //     float totalProfit = 0, commission = 0;
-
-    //     for (int i = 0; i < positions.Count(); i++)
-    //     {
-    //         if (positions.ElementAt(i).Status == "CANCELLED")
-    //             continue;
-
-    //         totalProfit += float.Parse(positions.ElementAt(i).Profit);
-    //         totalProfit += float.Parse(positions.ElementAt(i).Commission);
-
-    //         commission += float.Parse(positions.ElementAt(i).Commission);
-    //     }
-
-    //     if (commission < 0) commission *= -1;
-
-    //     return (totalProfit, commission);
-    // }
+        return outputStream.ToArray();
+    }
 }

@@ -4,8 +4,6 @@ namespace bot.src.Data.Models;
 
 public class Candle : IQuote, ISeries
 {
-    // DateTime ISeries.Date => OpenedAt;
-
     public decimal Open { get; set; }
     public decimal Close { get; set; }
     public decimal High { get; set; }

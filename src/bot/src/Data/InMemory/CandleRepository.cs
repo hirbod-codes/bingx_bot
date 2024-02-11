@@ -14,7 +14,7 @@ public class CandleRepository : ICandleRepository
 
     public async Task<int> CandlesCount() => !_candles.Any() ? (await GetCandles()).Count() : _candles!.Count();
 
-    public async Task<Candle?> GetCandle(int index) => !_candles.Any() ? (await GetCandles()).ElementAtOrDefault(index) : _candles!.ElementAtOrDefault(index);
+    public async Task<Candle> GetCandle(int index) => !_candles.Any() ? (await GetCandles()).ElementAt(index) : _candles!.ElementAt(index);
 
     public Task<Candles> GetCandles()
     {

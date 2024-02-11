@@ -47,9 +47,7 @@ public class Program
                 IRiskManagementOptions riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!);
                 configuration.Bind($"{ConfigurationKeys.RISK_MANAGEMENT_OPTIONS}:{configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!}", riskManagementOptions);
 
-                IAccount account = BrokerFactory.CreateAccount(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, logger);
-                ITrade trade = BrokerFactory.CreateTrade(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, candleRepository, positionRepository, logger);
-                IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, trade, account, positionRepository, candleRepository, logger);
+                IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
 
                 IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, logger);
 
