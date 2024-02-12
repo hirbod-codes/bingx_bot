@@ -21,7 +21,7 @@ public class Broker : IBroker
         _positionRepository = positionRepository;
     }
 
-    public Task InitiateCandles(int candlesCount = 5000)
+    public Task InitiateCandleStore(int candlesCount = 10000)
     {
         throw new NotImplementedException();
     }

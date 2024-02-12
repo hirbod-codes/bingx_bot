@@ -14,6 +14,8 @@ public class Broker : Api, IBroker
     private readonly IBingxUtilities _utilities;
     private readonly ILogger _logger;
     private Candles _candles = new();
+    private bool _areCandlesFetched = false;
+    private bool _isListeningForCandles = false;
 
     public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
@@ -74,36 +76,56 @@ public class Broker : Api, IBroker
         });
 
         string response = await httpResponseMessage.Content.ReadAsStringAsync();
-        BingxResponse<IEnumerable<BingxCandle>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxCandle>>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new Exception("Failure while trying to fetch historical candles.");
+        BingxResponse<IEnumerable<BingxCandle>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxCandle>>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new BingxException("Failure while trying to fetch historical candles.");
 
         if (bingxResponse.Data == null)
-            throw new Exception("Failure while trying to fetch historical candles.");
+            throw new BingxException("Failure while trying to fetch historical candles.");
 
         return bingxResponse.Data;
     }
 
-    public async Task InitiateCandles(int candlesCount = 5000)
+    public async Task InitiateCandleStore(int candlesCount = 10000)
     {
+        RunConcurrently(ListenForCandles());
+
+        // ListenForCandles method must be ready before FetchCandles finishes execution.(_isListeningForCandles must become true)
+        await Task.Delay(3000);
+
+        await FetchCandles(candlesCount);
+
+        if (!_isListeningForCandles)
+            throw new BingxException("System is not listening for new candles.");
+
+        if (_candles.Count() < candlesCount)
+            throw new BingxException("System failed to fetch enough candles.");
+
+        _areCandlesFetched = true;
+    }
+
+    private async Task FetchCandles(int candlesCount = 10000)
+    {
+        _logger.Information("Fetching candles...");
+        _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
+
         if (candlesCount < 1)
-            throw new Exception();
+            throw new BingxException();
 
         long? endTime = null;
         while (_candles.Count() < candlesCount)
         {
+            _logger.Information($"{nameof(_candles)} Count: {{candlesCount}}", _candles.Count());
             IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), null, endTime);
 
             if (!bingxCandles.Any() || (_candles.Any() && _candles.First().Date <= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime))
                 throw new BingxException("Server does not provide new candles.");
 
             if (_candles.Any())
-            {
                 for (int i = 0; i < bingxCandles.Count(); i++)
                     if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == _candles.First().Date)
                     {
                         bingxCandles = bingxCandles.Skip(i + 1);
                         break;
                     }
-            }
 
             if ((_candles.Count() + bingxCandles.Count()) > candlesCount)
                 bingxCandles = bingxCandles.Take(candlesCount - _candles.Count());
@@ -170,12 +192,14 @@ public class Broker : Api, IBroker
             now = DateTime.UtcNow;
             now = now.AddSeconds(-1 * now.Second);
         }
+
+        _logger.Information("Finished fetching candles...");
     }
 
     public async Task<Candles> GetCandles()
     {
         if (!_candles.Any())
-            await InitiateCandles();
+            await InitiateCandleStore();
         return _candles;
     }
 
@@ -204,8 +228,7 @@ public class Broker : Api, IBroker
         }
 
         byte[] buffer = new byte[1024 * 4];
-        DateTime start = DateTime.UtcNow;
-        while ((DateTime.UtcNow - start).TotalSeconds <= 120)
+        while (true)
         {
             if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
                 continue;
@@ -217,13 +240,15 @@ public class Broker : Api, IBroker
                     WebSocketState.CloseReceived => "CloseReceived",
                     WebSocketState.Closed => "Closed",
                     WebSocketState.Aborted => "Aborted",
-                    _ => throw new Exception("!")
+                    _ => throw new BingxException("!")
                 };
                 _logger.Information(state);
                 break;
             }
 
             WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            _isListeningForCandles = true;
 
             if (result.MessageType == WebSocketMessageType.Close)
                 break;
@@ -247,21 +272,30 @@ public class Broker : Api, IBroker
             if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
                 continue;
 
-            if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data.ElementAt(0).T).DateTime)
+            if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data.First().T).DateTime)
+                continue;
+
+            if (!_areCandlesFetched)
                 continue;
 
             _candles.AddCandle(new()
             {
-                Open = decimal.Parse(wsResponse.Data!.ElementAt(0).o),
-                Close = decimal.Parse(wsResponse.Data!.ElementAt(0).c),
-                High = decimal.Parse(wsResponse.Data!.ElementAt(0).h),
-                Low = decimal.Parse(wsResponse.Data!.ElementAt(0).l),
-                Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.ElementAt(0).T).DateTime,
-                Volume = decimal.Parse(wsResponse.Data!.ElementAt(0).v)
+                Open = decimal.Parse(wsResponse.Data!.First().o),
+                Close = decimal.Parse(wsResponse.Data!.First().c),
+                High = decimal.Parse(wsResponse.Data!.First().h),
+                Low = decimal.Parse(wsResponse.Data!.First().l),
+                Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
+                Volume = decimal.Parse(wsResponse.Data!.First().v)
             });
         }
 
         await ws.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
+    }
+
+    private static void RunConcurrently(Task task)
+    {
+        if (task.Status == TaskStatus.Created)
+            task.Start();
     }
 
     public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null)

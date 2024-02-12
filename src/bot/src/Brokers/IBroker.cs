@@ -6,7 +6,7 @@ public interface IBroker
 {
     public Task<decimal> GetLastPrice();
     public Task<Candle> GetCandle(int indexFromEnd = 0);
-    public Task InitiateCandles(int candlesCount = 5000);
+    public Task InitiateCandleStore(int candlesCount = 10000);
     public Task<Candles> GetCandles();
     public Task CandleClosed();
     public Task CloseAllPositions();
