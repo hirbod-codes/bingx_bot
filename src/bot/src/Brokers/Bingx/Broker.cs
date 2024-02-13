@@ -11,6 +11,7 @@ namespace bot.src.Brokers.Bingx;
 
 public class Broker : Api, IBroker
 {
+    private readonly IBrokerOptions _brokerOptions;
     private readonly IBingxUtilities _utilities;
     private readonly ILogger _logger;
     private Candles _candles = new();
@@ -19,6 +20,7 @@ public class Broker : Api, IBroker
 
     public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
+        _brokerOptions = brokerOptions;
         _utilities = utilities;
         _logger = logger.ForContext<Broker>();
     }
@@ -148,10 +150,12 @@ public class Broker : Api, IBroker
             _candles.SetCandles(concatenatedCandles);
         }
 
+        _candles.SkipLast(2);
+
         long startTime = DateTimeOffset.Parse(_candles.Last().Date.ToString()).ToUnixTimeMilliseconds();
         DateTime now = DateTime.UtcNow;
         now = now.AddSeconds(-1 * now.Second);
-        while ((now - _candles.Last().Date).TotalSeconds >= 1)
+        while (Math.Floor((now.AddMinutes(-1) - _candles.Last().Date).TotalSeconds) >= _brokerOptions.TimeFrame)
         {
             IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), startTime);
 
@@ -161,35 +165,38 @@ public class Broker : Api, IBroker
             if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime)
                 bingxCandles = bingxCandles.SkipLast(1);
             else
-            {
                 for (int i = 0; i < bingxCandles.Count(); i++)
                     if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == _candles.Last().Date)
                     {
                         bingxCandles = bingxCandles.Take(i);
                         break;
                     }
-            }
+
+            if (Math.Floor((DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.First().Time).DateTime).TotalSeconds) < _brokerOptions.TimeFrame)
+                bingxCandles = bingxCandles.Skip(1);
 
             startTime = bingxCandles.First().Time;
 
-            _candles.Skip(bingxCandles.Count());
+            List<Candle> convertedCandles = bingxCandles
+                          .Reverse()
+                          .ToList()
+                          .ConvertAll(o => new Candle()
+                          {
+                              Open = decimal.Parse(o.Open),
+                              Close = decimal.Parse(o.Close),
+                              High = decimal.Parse(o.High),
+                              Low = decimal.Parse(o.Low),
+                              Volume = decimal.Parse(o.Volume),
+                              Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
+                          });
 
-            IEnumerable<Candle> concatenatedCandles = _candles.Concat(bingxCandles
-            .Reverse()
-            .ToList()
-            .ConvertAll(o => new Candle()
-            {
-                Open = decimal.Parse(o.Open),
-                Close = decimal.Parse(o.Close),
-                High = decimal.Parse(o.High),
-                Low = decimal.Parse(o.Low),
-                Volume = decimal.Parse(o.Volume),
-                Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
-            }));
-            _candles = new Candles();
-            _candles.SetCandles(concatenatedCandles);
+            for (int i = 0; i < convertedCandles.Count(); i++)
+                _candles.AddCandle(convertedCandles.ElementAt(i));
 
             now = DateTime.UtcNow;
+
+            if (now.Second >= 30)
+                await Task.Delay((60 - now.Second + 1) * 1000);
             now = now.AddSeconds(-1 * now.Second);
         }
 
