@@ -17,6 +17,7 @@ public class Broker : Api, IBroker
     private Candles _candles = new();
     private bool _areCandlesFetched = false;
     private bool _isListeningForCandles = false;
+    private bool _areCandlesLocked = false;
 
     public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
     {
@@ -101,7 +102,7 @@ public class Broker : Api, IBroker
         if (!_isListeningForCandles)
             throw new BingxException("System is not listening for new candles.");
 
-        if (_candles.Count() < candlesCount)
+        if (_candles.Count() < candlesCount - 3)
             throw new BingxException("System failed to fetch enough candles.");
 
         _areCandlesFetched = true;
@@ -154,9 +155,11 @@ public class Broker : Api, IBroker
             candles = convertedCandles;
         }
 
+        _areCandlesLocked = true;
         _candles = new Candles();
         _candles.SetCandles(candles);
         _candles.SkipLast(2);
+        _areCandlesLocked = false;
 
         _logger.Information("Finished fetching historical candles...");
     }
@@ -204,8 +207,10 @@ public class Broker : Api, IBroker
                               Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
                           });
 
-            for (int i = 0; i < convertedCandles.Count(); i++)
+            _areCandlesLocked = true;
+            for (int i = 0; i < convertedCandles.Count; i++)
                 _candles.AddCandle(convertedCandles.ElementAt(i));
+            _areCandlesLocked = false;
 
             now = DateTime.UtcNow;
 
@@ -219,12 +224,30 @@ public class Broker : Api, IBroker
 
     public async Task<Candles> GetCandles()
     {
-        if (!_candles.Any())
-            await InitiateCandleStore();
-        return _candles;
+        while (true)
+        {
+            if (_areCandlesLocked)
+                continue;
+
+            if (!_candles.Any())
+                await InitiateCandleStore();
+
+            return _candles;
+        }
     }
 
-    public async Task<Candle> GetCandle(int indexFromEnd = 0) => _candles.ElementAt((await GetCandles()).Count() - indexFromEnd - 1);
+    public async Task<Candle> GetCandle(int indexFromEnd = 0)
+    {
+        while (true)
+        {
+            if (_areCandlesLocked)
+                continue;
+
+            Candle candle = _candles.ElementAt((await GetCandles()).Count() - indexFromEnd - 1);
+
+            return candle;
+        }
+    }
 
     public async Task ListenForCandles(int candlesCount)
     {
@@ -338,14 +361,21 @@ public class Broker : Api, IBroker
                 continue;
             }
 
+            _areCandlesLocked = true;
+
             if (previousCandle.Date != _candles.Last().Date)
             {
                 _candles.AddCandle(previousCandle);
                 _logger.Information("new candle added: {@candle}", candle);
+                _logger.Information("Candles count: {count}", _candles.Count());
             }
 
             if (candlesCount < _candles.Count())
+            {
                 _candles.Skip(_candles.Count() - candlesCount);
+            }
+
+            _areCandlesLocked = false;
 
             previousCandle = candle;
         }
