@@ -9,7 +9,7 @@ public class MessageRepository : IMessageRepository
         throw new NotImplementedException();
     }
 
-    public Task<IMessage> CreateMessage(string message)
+    public Task<IMessage> CreateMessage(string body, string from)
     {
         throw new NotImplementedException();
     }

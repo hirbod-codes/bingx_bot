@@ -88,6 +88,8 @@ public class Broker : Api, IBroker
 
     public async Task InitiateCandleStore(int candlesCount = 10000)
     {
+        _logger.Information("Initiating Candle Store...");
+
         RunConcurrently(ListenForCandles(candlesCount));
 
         // ListenForCandles method must be ready before FetchCandles finishes execution.(_isListeningForCandles must become true)
@@ -103,6 +105,8 @@ public class Broker : Api, IBroker
             throw new BingxException("System failed to fetch enough candles.");
 
         _areCandlesFetched = true;
+
+        _logger.Information("Finished Candle Store initiation.");
     }
 
     private async Task FetchHistoricalCandles(int candlesCount = 10000)

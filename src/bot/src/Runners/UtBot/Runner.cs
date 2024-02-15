@@ -28,7 +28,7 @@ public class Runner : IRunner
         _strategy = strategy;
         _time = time;
         _notifier = notifier;
-        _logger = logger;
+        _logger = logger.ForContext<Runner>();
     }
 
     public async Task Run()
@@ -61,24 +61,38 @@ public class Runner : IRunner
 
     private async Task Tick()
     {
+        _logger.Information("Runner's ticking...");
+
         if (!_hasBrokerInitiated)
         {
+            _logger.Information("The broker has not initiated, skipping...");
             _hasBrokerInitiated = true;
-            await _broker.InitiateCandleStore(30000);
+            await _broker.InitiateCandleStore(_runnerOptions.HistoricalCandlesCount);
             _isBrokerReady = true;
             return;
         }
         else if (_hasBrokerInitiated && !_isBrokerReady)
+        {
+            _logger.Information("The broker has not finished initiation, skipping...");
             return;
+        }
 
         Candle candle = await _broker.GetCandle();
 
+        _logger.Information("Candle: {@candle}", candle);
+
         DateTime now = DateTime.UtcNow;
         if ((candle.Date - now.AddSeconds(now.Second * -1).AddSeconds(_runnerOptions.TimeFrame * -1)).TotalSeconds >= 1)
+        {
+            _logger.Information("now: {now}", now);
+            _logger.Information("Candles missing, skipping...");
             return;
+        }
 
         await _strategy.HandleCandle(candle, _runnerOptions.TimeFrame);
 
         await _bot.Tick();
+
+        _logger.Information("Runner finished ticking.");
     }
 }
