@@ -17,7 +17,7 @@ public class Runner : IRunner
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
     private readonly RunnerOptions _runnerOptions;
-    private bool _isBrokerInitiated = false;
+    private bool _hasBrokerInitiated = false;
     private bool _isBrokerReady = false;
 
     public Runner(IRunnerOptions runnerOptions, IBot bot, IBroker broker, IStrategy strategy, ITime time, INotifier notifier, ILogger logger)
@@ -40,7 +40,7 @@ public class Runner : IRunner
 
             await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
             {
-                await _time.Sleep(2000);
+                await _time.Sleep(2500);
                 await Tick();
             });
 
@@ -61,21 +61,23 @@ public class Runner : IRunner
 
     private async Task Tick()
     {
-        if (!_isBrokerInitiated)
+        if (!_hasBrokerInitiated)
         {
-            _isBrokerInitiated = true;
-            await _broker.InitiateCandleStore();
+            _hasBrokerInitiated = true;
+            await _broker.InitiateCandleStore(30000);
             _isBrokerReady = true;
             return;
         }
-        else if (_isBrokerInitiated && !_isBrokerReady)
+        else if (_hasBrokerInitiated && !_isBrokerReady)
             return;
 
-        Candles candles = await _broker.GetCandles();
         Candle candle = await _broker.GetCandle();
 
-        _strategy.InitializeIndicators(candles);
-        // await _strategy.HandleCandle(candle);
+        DateTime now = DateTime.UtcNow;
+        if ((candle.Date - now.AddSeconds(now.Second * -1).AddSeconds(_runnerOptions.TimeFrame * -1)).TotalSeconds >= 1)
+            return;
+
+        await _strategy.HandleCandle(candle, _runnerOptions.TimeFrame);
 
         await _bot.Tick();
     }

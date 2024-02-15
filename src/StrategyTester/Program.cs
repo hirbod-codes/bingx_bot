@@ -23,62 +23,62 @@ public class Program
 {
     private static async Task Main(string[] args)
     {
-        IConfigurationRoot configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .AddEnvironmentVariables()
-            .AddCommandLine(args)
-            .Build();
+        // IConfigurationRoot configuration = new ConfigurationBuilder()
+        //     .AddJsonFile("appsettings.json")
+        //     .AddEnvironmentVariables()
+        //     .AddCommandLine(args)
+        //     .Build();
 
-        ILogger logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
-            .CreateLogger();
+        // ILogger logger = new LoggerConfiguration()
+        //     .ReadFrom.Configuration(configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
+        //     .CreateLogger();
 
-        IMessageStoreOptions messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.MESSAGE_STORE_OPTIONS}:{configuration[ConfigurationKeys.MESSAGE_STORE_NAME]}", messageStoreOptions);
+        // IMessageStoreOptions messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.MESSAGE_STORE_OPTIONS}:{configuration[ConfigurationKeys.MESSAGE_STORE_NAME]}", messageStoreOptions);
 
-        IBrokerOptions brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(configuration[ConfigurationKeys.BROKER_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{configuration[ConfigurationKeys.BROKER_NAME]}", brokerOptions);
+        // IBrokerOptions brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(configuration[ConfigurationKeys.BROKER_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.BROKER_OPTIONS}:{configuration[ConfigurationKeys.BROKER_NAME]}", brokerOptions);
 
-        IBotOptions botOptions = BotOptionsFactory.CreateBotOptions(configuration[ConfigurationKeys.BOT_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.BOT_OPTIONS}:{configuration[ConfigurationKeys.BOT_NAME]}", botOptions);
+        // IBotOptions botOptions = BotOptionsFactory.CreateBotOptions(configuration[ConfigurationKeys.BOT_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.BOT_OPTIONS}:{configuration[ConfigurationKeys.BOT_NAME]}", botOptions);
 
-        IRiskManagementOptions riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.RISK_MANAGEMENT_OPTIONS}:{configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]}", riskManagementOptions);
+        // IRiskManagementOptions riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.RISK_MANAGEMENT_OPTIONS}:{configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]}", riskManagementOptions);
 
-        IIndicatorsOptions indicatorsOptions = IndicatorsOptionsFactory.CreateIndicatorOptions(configuration[ConfigurationKeys.INDICATORS_OPTIONS_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.INDICATORS_OPTIONS}:{configuration[ConfigurationKeys.INDICATORS_OPTIONS_NAME]}", indicatorsOptions);
+        // IIndicatorOptions indicatorsOptions = IndicatorOptionsFactory.CreateIndicatorOptions(configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.INDICATOR_OPTIONS}:{configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME]}", indicatorsOptions);
 
-        IStrategyOptions strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(configuration[ConfigurationKeys.STRATEGY_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.STRATEGY_OPTIONS}:{configuration[ConfigurationKeys.STRATEGY_NAME]}", strategyOptions);
+        // IStrategyOptions strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(configuration[ConfigurationKeys.STRATEGY_NAME]!);
+        // configuration.Bind($"{ConfigurationKeys.STRATEGY_OPTIONS}:{configuration[ConfigurationKeys.STRATEGY_NAME]}", strategyOptions);
 
-        ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
-        IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
-        IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
+        // ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
+        // IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
+        // IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
 
-        IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, logger);
+        // IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, logger);
 
-        ITime time = new Time();
+        // ITime time = new Time();
 
-        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
+        // IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
 
-        INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
+        // INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
 
-        IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time);
+        // IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time);
 
-        IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, logger);
+        // IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, logger);
 
-        IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, logger);
+        // IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, logger);
 
-        await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, candleRepository, time, strategy, broker, bot, logger).Test();
+        // await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, candleRepository, time, strategy, broker, bot, logger).Test();
 
-        AnalysisSummary analysisSummary = PnLAnalysis.RunAnalysis(await positionRepository.GetClosedPositions());
+        // AnalysisSummary analysisSummary = PnLAnalysis.RunAnalysis(await positionRepository.GetClosedPositions());
 
-        string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions());
-        string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary);
+        // string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions());
+        // string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary);
 
-        await File.WriteAllTextAsync("./closed_positions.json", closedPositionsJson);
-        await File.WriteAllTextAsync("./src/UI/Results/closed_positions.js", "var closedPositions = " + closedPositionsJson);
-        await File.WriteAllTextAsync("./pnl_results.json", analysisSummaryJson);
-        await File.WriteAllTextAsync("./src/UI/Results/pnl_results.js", "var pnlResults = " + analysisSummaryJson);
+        // await File.WriteAllTextAsync("./closed_positions.json", closedPositionsJson);
+        // await File.WriteAllTextAsync("./src/UI/Results/closed_positions.js", "var closedPositions = " + closedPositionsJson);
+        // await File.WriteAllTextAsync("./pnl_results.json", analysisSummaryJson);
+        // await File.WriteAllTextAsync("./src/UI/Results/pnl_results.js", "var pnlResults = " + analysisSummaryJson);
     }
 }

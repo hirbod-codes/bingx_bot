@@ -9,12 +9,13 @@ using bot.src.Indicators.SmmaRsi;
 using bot.src.Strategies.SmmaRsi.Exceptions;
 using bot.src.Bots.General.Models;
 using bot.src.Brokers;
+using bot.src.Data;
 
 namespace bot.src.Strategies.SmmaRsi;
 
 public class SmmaRsiStrategy : IStrategy
 {
-    private readonly IndicatorsOptions _indicatorsOptions;
+    private readonly IndicatorOptions _indicatorsOptions;
     private readonly StrategyOptions _strategyOptions;
     private IEnumerable<SmmaResult> _smma1 = null!;
     private IEnumerable<SmmaResult> _smma2 = null!;
@@ -22,19 +23,20 @@ public class SmmaRsiStrategy : IStrategy
     private IEnumerable<RsiResult> _rsi = null!;
     private readonly IBroker _broker;
     private readonly INotifier _notifier;
+    private readonly IMessageRepository _messageRepository;
     private readonly ILogger _logger;
 
-    public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorsOptions indicatorsOptions, IBroker broker, INotifier notifier, ILogger logger)
+    public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
     {
-        _indicatorsOptions = (indicatorsOptions as IndicatorsOptions)!;
+        _indicatorsOptions = (indicatorsOptions as IndicatorOptions)!;
         _strategyOptions = (strategyOptions as StrategyOptions)!;
         _broker = broker;
         _notifier = notifier;
-
+        _messageRepository = messageRepository;
         _logger = logger.ForContext<SmmaRsiStrategy>();
     }
 
-    public void InitializeIndicators(Candles candles)
+    private void InitializeIndicators(Candles candles)
     {
         _smma1 = candles.GetSmma(_indicatorsOptions.Smma1.Period);
         _smma2 = candles.GetSmma(_indicatorsOptions.Smma2.Period);
@@ -42,17 +44,20 @@ public class SmmaRsiStrategy : IStrategy
         _rsi = candles.GetRsi(_indicatorsOptions.Rsi.Period);
     }
 
-    public async Task HandleCandle(Candle candle, int index, int timeFrame)
+    public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        if (_smma1 == null && _smma2 == null && _smma3 == null && _rsi == null)
+        Candles candles = await _broker.GetCandles();
+        InitializeIndicators(candles);
+
+        if (_smma1 == null || _smma2 == null || _smma3 == null || _rsi == null)
             throw new NoIndicatorException();
 
-        bool isUpTrend = IsUpTrend(index);
-        bool isDownTrend = IsDownTrend(index);
+        bool isUpTrend = IsUpTrend();
+        bool isDownTrend = IsDownTrend();
         bool isInTrend = isUpTrend || isDownTrend;
 
-        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand(index);
-        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand(index);
+        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand();
+        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand();
 
         DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
 
@@ -62,7 +67,6 @@ public class SmmaRsiStrategy : IStrategy
                 if (!_strategyOptions.InvalidWeekDays.Any() || (_strategyOptions.InvalidWeekDays.Any() && !_strategyOptions.InvalidWeekDays.Where(invalidDate => candleCloseDate.DayOfWeek == invalidDate).Any()))
                     if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
                         if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
-                        {
                             if (_strategyOptions.NaturalTrendIndicatorLength == 0 || _strategyOptions.NaturalTrendIndicatorLimit == 0)
                                 shouldOpenPosition = true;
                             else
@@ -71,7 +75,7 @@ public class SmmaRsiStrategy : IStrategy
                                 decimal lowestLow = candle.Low;
                                 for (int i = 1; i <= _strategyOptions.NaturalTrendIndicatorLength; i++)
                                 {
-                                    Candle? c = await _broker.GetCandle(index + i);
+                                    Candle? c = await _broker.GetCandle(1);
 
                                     if (c == null)
                                     {
@@ -88,21 +92,20 @@ public class SmmaRsiStrategy : IStrategy
                                 if (!shouldOpenPosition && (highestHigh - lowestLow) > _strategyOptions.NaturalTrendIndicatorLimit)
                                     shouldOpenPosition = true;
                             }
-                        }
 
         if (shouldOpenPosition)
         {
             _logger.Information("Candle is valid for a position, sending the message...");
 
             IMessage message = CreateOpenPositionMessage(candle, timeFrame, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, isUpTrend ? candle.Close - _strategyOptions.SLDifference : candle.Close + _strategyOptions.SLDifference, isUpTrend ? candle.Close + _strategyOptions.TPDifference : candle.Close - _strategyOptions.TPDifference);
-            await _notifier.SendMessage(message);
+            await _messageRepository.CreateMessage(message);
             _logger.Information("Message sent.");
         }
     }
 
-    private bool HasRsiCrossedUnderUpperBand(int index)
+    private bool HasRsiCrossedUnderUpperBand()
     {
-        index = _rsi.Count() - 1 - index;
+        int index = _rsi.Count() - 1;
 
         if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
@@ -110,9 +113,9 @@ public class SmmaRsiStrategy : IStrategy
         return _rsi.ElementAt(index - 1).Rsi > _indicatorsOptions.Rsi.UpperBand && _rsi.ElementAt(index).Rsi < _indicatorsOptions.Rsi.UpperBand;
     }
 
-    private bool HasRsiCrossedOverLowerBand(int index)
+    private bool HasRsiCrossedOverLowerBand()
     {
-        index = _rsi.Count() - 1 - index;
+        int index = _rsi.Count() - 1;
 
         if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
@@ -120,9 +123,9 @@ public class SmmaRsiStrategy : IStrategy
         return _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index).Rsi > _indicatorsOptions.Rsi.LowerBand;
     }
 
-    private bool IsDownTrend(int index)
+    private bool IsDownTrend()
     {
-        index = _smma1.Count() - 1 - index;
+        int index = _smma1.Count() - 1;
 
         if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
             return false;
@@ -130,9 +133,9 @@ public class SmmaRsiStrategy : IStrategy
         return _smma1.ElementAt(index).Smma <= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma <= _smma3.ElementAt(index).Smma;
     }
 
-    private bool IsUpTrend(int index)
+    private bool IsUpTrend()
     {
-        index = _smma1.Count() - 1 - index;
+        int index = _smma1.Count() - 1;
 
         if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
             return false;

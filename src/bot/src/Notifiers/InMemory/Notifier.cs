@@ -1,5 +1,4 @@
 using bot.src.Data;
-using bot.src.MessageStores;
 using Serilog;
 
 namespace bot.src.Notifiers.InMemory;
@@ -17,31 +16,20 @@ public class Notifier : INotifier
         _logger = logger.ForContext<Notifier>();
     }
 
-    public async Task SendMessage(IMessage message)
+    public Task SendMessage(string message)
     {
-        _logger.Information("Sending the message: {@message}", message);
-        await _messageRepository.CreateMessage(message);
+        _logger.Information("Sending the message: {message}", message);
         _logger.Information("The message sent.");
 
         OnMessageSent(message);
+
+        return Task.CompletedTask;
     }
 
-    private void OnMessageSent(IMessage message)
+    private void OnMessageSent(string message)
     {
         _logger.Information("Raising OnMessageSent event.");
         MessageSent?.Invoke(this, new MessageSentEventArgs(message));
-        _logger.Information("OnMessageSent event raised.");
-    }
-
-    public async Task SendMessage(string message)
-    {
-        IMessage createdMessage = await _messageRepository.CreateMessage(message);
-        _logger.Information("Sending the message: {@message}", createdMessage);
-        await _messageRepository.CreateMessage(createdMessage);
-        _logger.Information("The message sent.");
-
-        _logger.Information("Raising OnMessageSent event.");
-        OnMessageSent(createdMessage);
         _logger.Information("OnMessageSent event raised.");
     }
 }

@@ -1,4 +1,4 @@
-namespace bot.src.Indicators;
+namespace bot.src.Indicators.Models;
 
 public class RsiOptions
 {
