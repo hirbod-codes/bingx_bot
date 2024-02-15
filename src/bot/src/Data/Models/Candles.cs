@@ -37,10 +37,26 @@ public class Candles : IEnumerable<Candle>
         if (_timeFrame == 0)
             _timeFrame = Math.Abs((int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds);
 
-        Candle[] candlesArray = candles.ToArray();
+        Candle previousCandle = null!;
+        for (int i = 0; i < candles.Count(); i++)
+        {
+            if (i == 0)
+            {
+                previousCandle = candles.ElementAt(i);
+                continue;
+            }
 
-        for (int i = 0; i < candlesArray.Length; i++)
-            AddCandle(candlesArray[i]);
+            Candle candle = candles.ElementAt(i);
+
+            double totalSeconds = Math.Abs((candle.Date - previousCandle.Date).TotalSeconds);
+
+            if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
+                throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
+
+            _candles = _candles.Append(candle);
+
+            previousCandle = candle;
+        }
     }
 
     public void AddCandle(Candle candle)

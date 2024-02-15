@@ -111,31 +111,32 @@ public class Broker : Api, IBroker
 
     private async Task FetchHistoricalCandles(int candlesCount = 10000)
     {
-        _logger.Information("Fetching candles...");
+        _logger.Information("Fetching historical candles...");
         _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
 
         if (candlesCount < 1)
             throw new BingxException();
 
         long? endTime = null;
-        while (_candles.Count() < candlesCount)
+        List<Candle> candles = new();
+        while (candles.Count < candlesCount)
         {
-            _logger.Information($"{nameof(_candles)} Count: {{candlesCount}}", _candles.Count());
+            _logger.Information($"{nameof(candles)} Count: {{candlesCount}}", candles.Count);
             IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), null, endTime);
 
-            if (!bingxCandles.Any() || (_candles.Any() && _candles.First().Date <= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime))
+            if (!bingxCandles.Any() || (candles.Any() && candles.First().Date <= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime))
                 throw new BingxException("Server does not provide new candles.");
 
-            if (_candles.Any())
+            if (candles.Any())
                 for (int i = 0; i < bingxCandles.Count(); i++)
-                    if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == _candles.First().Date)
+                    if (DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.ElementAt(i).Time).DateTime == candles.First().Date)
                     {
                         bingxCandles = bingxCandles.Skip(i + 1);
                         break;
                     }
 
-            if ((_candles.Count() + bingxCandles.Count()) > candlesCount)
-                bingxCandles = bingxCandles.Take(candlesCount - _candles.Count());
+            if ((candles.Count + bingxCandles.Count()) > candlesCount)
+                bingxCandles = bingxCandles.Take(candlesCount - candles.Count);
 
             endTime = bingxCandles.Last().Time;
 
@@ -149,19 +150,22 @@ public class Broker : Api, IBroker
                 Date = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime
             });
 
-            IEnumerable<Candle> concatenatedCandles = convertedCandles.Concat(_candles);
-
-            _candles = new Candles();
-            _candles.SetCandles(concatenatedCandles);
+            convertedCandles.AddRange(candles);
+            candles = convertedCandles;
         }
 
+        _candles = new Candles();
+        _candles.SetCandles(candles);
         _candles.SkipLast(2);
 
-        _logger.Information("Finished fetching candles...");
+        _logger.Information("Finished fetching historical candles...");
     }
 
     public async Task FetchRecentCandles(int candlesCount)
     {
+        _logger.Information("Fetching recent candles...");
+        _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
+
         long startTime = DateTimeOffset.Parse(_candles.Last().Date.ToString()).ToUnixTimeMilliseconds();
         DateTime now = DateTime.UtcNow;
         now = now.AddSeconds(-1 * now.Second);
@@ -209,6 +213,8 @@ public class Broker : Api, IBroker
                 await Task.Delay((60 - now.Second + 1) * 1000);
             now = now.AddSeconds(-1 * now.Second);
         }
+
+        _logger.Information("Finished fetching recent candles...");
     }
 
     public async Task<Candles> GetCandles()
@@ -222,6 +228,8 @@ public class Broker : Api, IBroker
 
     public async Task ListenForCandles(int candlesCount)
     {
+        _logger.Information("Listening for candles...");
+
         ClientWebSocket ws = new();
 
         await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
@@ -315,6 +323,8 @@ public class Broker : Api, IBroker
 
             if (previousCandle.Date.AddSeconds(-1 * _brokerOptions.TimeFrame) != _candles.Last().Date)
             {
+                _logger.Information("Missing candles detected!");
+
                 previousCandle = candle;
 
                 _areCandlesFetched = false;
@@ -329,7 +339,10 @@ public class Broker : Api, IBroker
             }
 
             if (previousCandle.Date != _candles.Last().Date)
+            {
                 _candles.AddCandle(previousCandle);
+                _logger.Information("new candle added: {@candle}", candle);
+            }
 
             if (candlesCount < _candles.Count())
                 _candles.Skip(_candles.Count() - candlesCount);
@@ -338,6 +351,8 @@ public class Broker : Api, IBroker
         }
 
         await ws.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
+
+        _logger.Information("Finished listening for candles...");
     }
 
     private static void RunConcurrently(Task task)

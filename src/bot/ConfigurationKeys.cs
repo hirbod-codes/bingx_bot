@@ -22,4 +22,5 @@ public static class ConfigurationKeys
     public const string CANDLE_REPOSITORY_TYPE = "CandleRepositoryType";
     public const string MESSAGE_REPOSITORY_TYPE = "MessageRepositoryType";
     public const string TESTER_NAME = "TesterName";
+    public const string TESTER_OPTIONS = "TesterOptions";
 }
