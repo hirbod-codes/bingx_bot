@@ -36,7 +36,7 @@ public class SmmaRsiStrategy : IStrategy
         _logger = logger.ForContext<SmmaRsiStrategy>();
     }
 
-    private void InitializeIndicators(Candles candles)
+    public void PrepareIndicators(Candles candles)
     {
         _smma1 = candles.GetSmma(_indicatorsOptions.Smma1.Period);
         _smma2 = candles.GetSmma(_indicatorsOptions.Smma2.Period);
@@ -46,9 +46,6 @@ public class SmmaRsiStrategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        Candles candles = await _broker.GetCandles();
-        InitializeIndicators(candles);
-
         if (_smma1 == null || _smma2 == null || _smma3 == null || _rsi == null)
             throw new NoIndicatorException();
 

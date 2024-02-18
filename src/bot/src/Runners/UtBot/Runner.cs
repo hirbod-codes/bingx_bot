@@ -89,6 +89,8 @@ public class Runner : IRunner
             return;
         }
 
+        _strategy.PrepareIndicators(await _broker.GetCandles());
+
         await _strategy.HandleCandle(candle, _runnerOptions.TimeFrame);
 
         await _bot.Tick();

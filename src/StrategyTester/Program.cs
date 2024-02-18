@@ -1,6 +1,5 @@
 ﻿using bot;
 using bot.src.Bots;
-using bot.src.Brokers;
 using bot.src.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +15,9 @@ using bot.src.RiskManagement;
 using bot.src.PnLAnalysis;
 using bot.src.PnLAnalysis.Models;
 using System.Text.Json;
+using bot.src.Brokers;
+using BrokerOptionsFactory = StrategyTester.src.Brokers.BrokerOptionsFactory;
+using BrokerFactory = StrategyTester.src.Brokers.BrokerFactory;
 
 namespace StrategyTester;
 
@@ -52,7 +54,7 @@ public class Program
         configuration.Bind($"{ConfigurationKeys.STRATEGY_OPTIONS}:{configuration[ConfigurationKeys.STRATEGY_NAME]}", strategyOptions);
 
         ITesterOptions testerOptions = TesterOptionsFactory.CreateTesterOptions(configuration[ConfigurationKeys.TESTER_NAME]!);
-        configuration.Bind($"{ConfigurationKeys.TESTER_OPTIONS}:{configuration[ConfigurationKeys.TESTER_NAME]}", testerOptions);
+        configuration.Bind($"{ConfigurationKeys.TESTER_OPTIONS}:{configuration[ConfigurationKeys.TESTER_NAME]!}", testerOptions);
 
         ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
         IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
@@ -62,7 +64,7 @@ public class Program
 
         ITime time = new Time();
 
-        IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
+        src.Brokers.IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, time, logger);
 
         INotifier notifier = NotifierFactory.CreateNotifier(configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, logger);
 

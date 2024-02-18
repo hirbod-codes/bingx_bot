@@ -14,7 +14,7 @@ public class Broker : Api, IBroker
     private readonly BrokerOptions _brokerOptions;
     private readonly IBingxUtilities _utilities;
     private readonly ILogger _logger;
-    private Candles _candles = new();
+    private Candles _candles = null!;
     private bool _areCandlesFetched = false;
     private bool _isListeningForCandles = false;
     private bool _areCandlesLocked = false;
@@ -156,8 +156,7 @@ public class Broker : Api, IBroker
         }
 
         _areCandlesLocked = true;
-        _candles = new Candles();
-        _candles.SetCandles(candles);
+        _candles = new Candles(candles);
         _candles.SkipLast(2);
         _areCandlesLocked = false;
 
@@ -209,7 +208,7 @@ public class Broker : Api, IBroker
 
             _areCandlesLocked = true;
             for (int i = 0; i < convertedCandles.Count; i++)
-                _candles.AddCandle(convertedCandles.ElementAt(i));
+                _candles.Add(convertedCandles.ElementAt(i));
             _areCandlesLocked = false;
 
             now = DateTime.UtcNow;
@@ -246,6 +245,17 @@ public class Broker : Api, IBroker
             Candle candle = _candles.ElementAt((await GetCandles()).Count() - indexFromEnd - 1);
 
             return candle;
+        }
+    }
+
+    public Task<int> GetLastCandleIndex()
+    {
+        while (true)
+        {
+            if (_areCandlesLocked)
+                continue;
+
+            return Task.FromResult(_candles.Count() - 1);
         }
     }
 
@@ -365,7 +375,7 @@ public class Broker : Api, IBroker
 
             if (previousCandle.Date != _candles.Last().Date)
             {
-                _candles.AddCandle(previousCandle);
+                _candles.Add(previousCandle);
                 _logger.Information("new candle added: {@candle}", candle);
                 _logger.Information("Candles count: {count}", _candles.Count());
             }

@@ -19,18 +19,30 @@ public class Candles : IEnumerable<Candle>
         }
     }
 
-    private IEnumerable<Candle> _candles = Array.Empty<Candle>();
+    private List<Candle> _candles;
 
-    public void SetCandles(IEnumerable<Candle> candles)
+    public Candles(IEnumerable<Candle> candles)
     {
-        _candles = Array.Empty<Candle>();
+        Validate(candles.ToList());
+        _candles = candles.ToList();
+    }
+
+    public Candles(List<Candle> candles)
+    {
+        Validate(candles);
+        _candles = candles;
+    }
+
+    private void Validate(List<Candle> candles)
+    {
+        _candles = new();
 
         if (!candles.Any())
             throw new ArgumentException("No candle provided.");
 
-        if (candles.Count() == 1)
+        if (candles.Count == 1)
         {
-            _candles = candles;
+            _candles = candles.ToList();
             return;
         }
 
@@ -38,32 +50,34 @@ public class Candles : IEnumerable<Candle>
             _timeFrame = Math.Abs((int)(candles.ElementAt(0).Date - candles.ElementAt(1).Date).TotalSeconds);
 
         Candle previousCandle = null!;
-        for (int i = 0; i < candles.Count(); i++)
+        int count = candles.Count;
+        for (int i = 0; i < count; i++)
         {
+            Candle candle = candles.ElementAt(i);
+
             if (i == 0)
             {
                 previousCandle = candles.ElementAt(i);
+                _candles.Add(candle);
                 continue;
             }
-
-            Candle candle = candles.ElementAt(i);
 
             double totalSeconds = Math.Abs((candle.Date - previousCandle.Date).TotalSeconds);
 
             if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
                 throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
 
-            _candles = _candles.Append(candle);
+            _candles.Add(candle);
 
             previousCandle = candle;
         }
     }
 
-    public void AddCandle(Candle candle)
+    public void Add(Candle candle)
     {
         if (_candles.Count() < 2)
         {
-            _candles = _candles.Append(candle);
+            _candles.Add(candle);
             return;
         }
 
@@ -78,20 +92,33 @@ public class Candles : IEnumerable<Candle>
         if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
             throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
 
-        _candles = _candles.Append(candle);
+        _candles.Add(candle);
         return;
     }
 
-    public void Skip(int num) => _candles = _candles.Skip(num);
-    public void SkipLast(int num) => _candles = _candles.SkipLast(num);
-    public void Take(int num) => _candles = _candles.Take(num);
-    public void TakeLast(int num) => _candles = _candles.TakeLast(num);
+    public IEnumerable<Candle> Prepend(IEnumerable<Candle> candles)
+    {
+        foreach (var x in candles)
+            yield return x;
+
+        foreach (var x in _candles)
+            yield return x;
+    }
+
+    public IEnumerable<Candle> Prepend(Candle candle)
+    {
+        yield return candle;
+
+        foreach (var x in _candles)
+            yield return x;
+    }
+
+    public void Skip(int num) => _candles = _candles.Skip(num).ToList();
+    public void SkipLast(int num) => _candles = _candles.SkipLast(num).ToList();
+    public void Take(int num) => _candles = _candles.Take(num).ToList();
+    public void TakeLast(int num) => _candles = _candles.TakeLast(num).ToList();
+
+    public IEnumerator<Candle> GetEnumerator() => _candles.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    public IEnumerator<Candle> GetEnumerator()
-    {
-        foreach (Candle candle in _candles)
-            yield return candle;
-    }
 }

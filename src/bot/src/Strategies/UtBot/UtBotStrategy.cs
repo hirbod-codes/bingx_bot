@@ -32,15 +32,24 @@ public class UtBotStrategy : IStrategy
         _logger = logger.ForContext<UtBotStrategy>();
     }
 
-    private void CreateIndicators(Candles candles)
+    public void PrepareIndicators(Candles candles)
     {
         _logger.Information("Creating indicators...");
+
+        int candlesCount = candles.Count();
+
+        // adding one to the atr stop indicator because this strategy needs previous values of this indicator.
+        if (candlesCount <= _indicatorOptions.AtrPeriod1.Period + 1 || candlesCount <= _indicatorOptions.EmaPeriod1.Period || candlesCount <= _indicatorOptions.AtrPeriod2.Period + 1 || candlesCount <= _indicatorOptions.EmaPeriod2.Period)
+            throw new NotEnoughCandlesException();
 
         _atrStop1 = candles.GetAtrStop(_indicatorOptions.AtrPeriod1.Period, _indicatorOptions.AtrMultiplier1);
         _ema1 = candles.GetEma(_indicatorOptions.EmaPeriod1.Period);
 
         _atrStop2 = candles.GetAtrStop(_indicatorOptions.AtrPeriod2.Period, _indicatorOptions.AtrMultiplier2);
         _ema2 = candles.GetEma(_indicatorOptions.EmaPeriod2.Period);
+
+        if (_atrStop1.Count() != candlesCount || _ema1.Count() != candlesCount || _atrStop2.Count() != candlesCount || _ema2.Count() != candlesCount)
+            throw new StrategyException();
 
         _logger.Information("Indicators created...");
     }
@@ -51,10 +60,10 @@ public class UtBotStrategy : IStrategy
         _logger.Information("candle: {@candle}", candle);
         _logger.Information("Time Frame: {@timeFrame}", timeFrame);
 
-        CreateIndicators(await _broker.GetCandles());
+        int index = await _broker.GetLastCandleIndex();
 
-        Signal1(candle, out bool buy1, out bool sell1);
-        Signal2(candle, out bool buy2, out bool sell2);
+        Signal1(candle, index, out bool buy1, out bool sell1);
+        Signal2(candle, index, out bool buy2, out bool sell2);
 
         bool buy = buy1 || buy2;
         bool sell = sell1 || sell2;
@@ -88,26 +97,91 @@ public class UtBotStrategy : IStrategy
         _logger.Information("Finished handling the candle...");
     }
 
-    private void Signal1(Candle candle, out bool buy, out bool sell)
+    private void Signal1(Candle candle, int index, out bool buy, out bool sell)
     {
-        bool above = HasCrossedOver(_ema1, _atrStop1);
-        bool below = HasCrossedUnder(_ema1, _atrStop1);
+        bool above = HasCrossedOver(_ema1, _atrStop1, index);
+        bool below = HasCrossedUnder(_ema1, _atrStop1, index);
 
-        buy = (double)candle.Close > (double)_atrStop1.Last().AtrStop! && above;
-        sell = (double)candle.Close < (double)_atrStop1.Last().AtrStop! && below;
+        buy = (double)candle.Close > (double)_atrStop1.ElementAt(index).AtrStop! && above;
+        sell = (double)candle.Close < (double)_atrStop1.ElementAt(index).AtrStop! && below;
 
         _logger.Information("Signal1 ==> above: {above}, below: {below}, buy: {buy}, sell: {sell}", above, below, buy, sell);
     }
 
-    private void Signal2(Candle candle, out bool buy, out bool sell)
+    private void Signal2(Candle candle, int index, out bool buy, out bool sell)
     {
-        bool above = HasCrossedOver(_ema2, _atrStop2);
-        bool below = HasCrossedUnder(_ema2, _atrStop2);
+        bool above = HasCrossedOver(_ema2, _atrStop2, index);
+        bool below = HasCrossedUnder(_ema2, _atrStop2, index);
 
-        buy = (double)candle.Close > (double)_atrStop2.Last().AtrStop! && above;
-        sell = (double)candle.Close < (double)_atrStop2.Last().AtrStop! && below;
+        buy = (double)candle.Close > (double)_atrStop2.ElementAt(index).AtrStop! && above;
+        sell = (double)candle.Close < (double)_atrStop2.ElementAt(index).AtrStop! && below;
 
         _logger.Information("Signal2 ==> above: {above}, below: {below}, buy: {buy}, sell: {sell}", above, below, buy, sell);
+    }
+
+    public bool HasCrossedOver(IEnumerable<IReusableResult> ema, IEnumerable<AtrStopResult> atrStop, int index)
+    {
+        try
+        {
+            double previousEma = (double)ema.ElementAt(index - 1).Value!;
+            double lastEma = (double)ema.ElementAt(index).Value!;
+            double previousAtrStop = (double)atrStop.ElementAt(index - 1).AtrStop!;
+            double lastAtrStop = (double)atrStop.ElementAt(index).AtrStop!;
+
+            _logger.Information("previousEma: {previousEma}, lastEma: {lastEma}, previousAtrStop: {previousAtrStop}, lastAtrStop: {lastAtrStop}", previousEma, lastEma, previousAtrStop, lastAtrStop);
+
+            return previousEma <= previousAtrStop && lastEma > lastAtrStop;
+        }
+        catch (Exception)
+        {
+            Candle candle = _broker.GetCandle().GetAwaiter().GetResult();
+            int atrStopCount = atrStop.Count();
+            int emaCount = ema.Count();
+            int _atrStop1Count = _atrStop1.Count();
+            int _ema1Count = _ema1.Count();
+            int _atrStop2Count = _atrStop2.Count();
+            int _ema2Count = _ema2.Count();
+
+            AtrStopResult atrStopLast = atrStop.ElementAt(index);
+            IReusableResult emaLast = ema.ElementAt(index);
+            AtrStopResult _atrStop1Last = _atrStop1.ElementAt(index);
+            EmaResult _ema1Last = _ema1.ElementAt(index);
+            AtrStopResult _atrStop2Last = _atrStop2.ElementAt(index);
+            EmaResult _ema2Last = _ema2.ElementAt(index);
+            throw;
+        }
+    }
+
+    public bool HasCrossedUnder(IEnumerable<IReusableResult> ema, IEnumerable<AtrStopResult> atrStop, int index)
+    {
+        try
+        {
+            double previousEma = (double)ema.ElementAt(index - 1).Value!;
+            double lastEma = (double)ema.ElementAt(index).Value!;
+            double previousAtrStop = (double)atrStop.ElementAt(index - 1).AtrStop!;
+            double lastAtrStop = (double)atrStop.ElementAt(index).AtrStop!;
+
+            _logger.Information("previousEma: {previousEma}, lastEma: {lastEma}, previousAtrStop: {previousAtrStop}, lastAtrStop: {lastAtrStop}", previousEma, lastEma, previousAtrStop, lastAtrStop);
+            return previousEma >= previousAtrStop && lastEma < lastAtrStop;
+        }
+        catch (Exception)
+        {
+            Candle candle = _broker.GetCandle().GetAwaiter().GetResult();
+            int atrStopCount = atrStop.Count();
+            int emaCount = ema.Count();
+            int _atrStop1Count = _atrStop1.Count();
+            int _ema1Count = _ema1.Count();
+            int _atrStop2Count = _atrStop2.Count();
+            int _ema2Count = _ema2.Count();
+
+            AtrStopResult atrStopLast = atrStop.ElementAt(index);
+            IReusableResult emaLast = ema.ElementAt(index);
+            AtrStopResult _atrStop1Last = _atrStop1.ElementAt(index);
+            EmaResult _ema1Last = _ema1.ElementAt(index);
+            AtrStopResult _atrStop2Last = _atrStop2.ElementAt(index);
+            EmaResult _ema2Last = _ema2.ElementAt(index);
+            throw;
+        }
     }
 
     private IMessage CreateOpenPositionMessage(Candle candle, int timeFrame, string direction, decimal slPrice, decimal? tpPrice) => new Message()
@@ -120,26 +194,4 @@ public class UtBotStrategy : IStrategy
             ),
         SentAt = candle.Date.AddSeconds(timeFrame)
     };
-    public bool HasCrossedOver(IEnumerable<IReusableResult> ema, IEnumerable<AtrStopResult> atrStop)
-    {
-        double previousEma = (double)ema.ElementAt(ema.Count() - 2).Value!;
-        double lastEma = (double)ema.Last().Value!;
-        double previousAtrStop = (double)atrStop.ElementAt(atrStop.Count() - 2).AtrStop!;
-        double lastAtrStop = (double)atrStop.Last().AtrStop!;
-
-        _logger.Information("previousEma: {previousEma}, lastEma: {lastEma}, previousAtrStop: {previousAtrStop}, lastAtrStop: {lastAtrStop}", previousEma, lastEma, previousAtrStop, lastAtrStop);
-
-        return previousEma <= previousAtrStop && lastEma > lastAtrStop;
-    }
-
-    public bool HasCrossedUnder(IEnumerable<IReusableResult> ema, IEnumerable<AtrStopResult> atrStop)
-    {
-        double previousEma = (double)ema.ElementAt(ema.Count() - 2).Value!;
-        double lastEma = (double)ema.Last().Value!;
-        double previousAtrStop = (double)atrStop.ElementAt(atrStop.Count() - 2).AtrStop!;
-        double lastAtrStop = (double)atrStop.Last().AtrStop!;
-
-        _logger.Information("previousEma: {previousEma}, lastEma: {lastEma}, previousAtrStop: {previousAtrStop}, lastAtrStop: {lastAtrStop}", previousEma, lastEma, previousAtrStop, lastAtrStop);
-        return previousEma >= previousAtrStop && lastEma < lastAtrStop;
-    }
 }
