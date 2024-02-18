@@ -6,12 +6,15 @@ namespace bot.src.PnLAnalysis;
 
 public static class PnLAnalysis
 {
-    public static AnalysisSummary RunAnalysis(IEnumerable<Position> closedPositions)
+    public static AnalysisSummary RunAnalysis(IEnumerable<Position?> closedPositions)
     {
         AnalysisSummary analysisSummary = new();
 
-        foreach (Position position in closedPositions)
+        foreach (Position? position in closedPositions)
         {
+            if (position == null)
+                continue;
+
             analysisSummary.NetProfit += (decimal)position.ProfitWithCommission!;
 
             if (analysisSummary.NetProfit > analysisSummary.HighestNetProfit)

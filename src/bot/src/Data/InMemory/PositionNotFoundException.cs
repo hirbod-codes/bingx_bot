@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace StrategyTester.src.Brokers.InMemory.Exceptions;
+namespace bot.src.Brokers.InMemory.Exceptions;
 
 [Serializable]
 public class PositionNotFoundException : BrokerException

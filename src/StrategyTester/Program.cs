@@ -27,6 +27,7 @@ public class Program
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
+            .AddJsonFile("SmmaRsi.json")
             .AddEnvironmentVariables()
             .AddCommandLine(args)
             .Build();

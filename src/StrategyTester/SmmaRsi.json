@@ -1,0 +1,113 @@
+{
+    "MessageStoreName": "InMemory",
+    "MessageStoreOptions": {
+        "InMemory": {}
+    },
+    "BrokerName": "InMemory",
+    "BrokerOptions": {
+        "InMemory": {
+            "BrokerCommission": 0.01,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 60
+        }
+    },
+    "RiskManagementName": "SmmaRsi",
+    "RiskManagementOptions": {
+        "SmmaRsi": {
+            "Margin": 100,
+            "SLPercentages": 50,
+            "NumberOfConcurrentPositions": 0,
+            "GrossLossLimit": 170,
+            "GrossLossInterval": 86400,
+            "GrossProfitLimit": 0,
+            "GrossProfitInterval": 0
+        },
+        "UtBot": {
+            "Margin": 10,
+            "SLPercentages": 70
+        }
+    },
+    "IndicatorOptionsName": "SmmaRsi",
+    "IndicatorOptions": {
+        "SmmaRsi": {
+            "Smma1": {
+                "Period": 10,
+                "Source": "close"
+            },
+            "Smma2": {
+                "Period": 20,
+                "Source": "close"
+            },
+            "Smma3": {
+                "Period": 50,
+                "Source": "close"
+            },
+            "Rsi": {
+                "Period": 14,
+                "Source": "close",
+                "UpperBand": 55,
+                "LowerBand": 45
+            }
+        },
+        "UtBot": {
+            "EmaPeriod1": {
+                "Period": 1,
+                "Source": "close"
+            },
+            "AtrPeriod1": {
+                "Period": 200,
+                "Source": "close"
+            },
+            "AtrMultiplier1": 2,
+            "EmaPeriod2": {
+                "Period": 1,
+                "Source": "close"
+            },
+            "AtrPeriod2": {
+                "Period": 10,
+                "Source": "close"
+            },
+            "AtrMultiplier2": 3
+        }
+    },
+    "StrategyName": "SmmaRsi",
+    "StrategyOptions": {
+        "SmmaRsi": {
+            "ProviderName": "SmmaRsiStrategy",
+            "SLDifference": 230,
+            "TPDifference": 460,
+            "InvalidWeekDays": [
+                0,
+                6
+            ]
+        },
+        "UtBot": {
+            "ProviderName": "UtBotSignalProvider",
+            "SLDifference": 200
+        }
+    },
+    "BotName": "General",
+    "BotOptions": {
+        "General": {
+            "Provider": "SmmaRsiStrategy",
+            "TimeFrame": 60
+        },
+        "UtBot": {
+            "Provider": "UtBotSignalProvider",
+            "TimeFrame": 60
+        }
+    },
+    "TesterName": "General",
+    "TesterOptions": {
+        "General": {
+            "TimeFrame": 60
+        }
+    },
+    "NotifierName": "InMemory",
+    "PositionRepositoryType": "InMemory",
+    "CandleRepositoryType": "InMemory",
+    "MessageRepositoryType": "InMemory"
+}

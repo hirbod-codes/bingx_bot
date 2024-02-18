@@ -73,13 +73,14 @@ public class Bot : IBot
             return;
         }
 
-        if (!generalMessage.AllowingParallelPositions && (await _broker.GetOpenPositions()).Any())
+        IEnumerable<Position> positions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
+
+        if (!generalMessage.AllowingParallelPositions && positions.Any())
         {
             _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
             return;
         }
 
-        IEnumerable<Position> positions = await _broker.GetOpenPositions();
         if (
             (generalMessage.Direction == PositionDirection.LONG && positions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
             (generalMessage.Direction == PositionDirection.SHORT && positions.Any(o => o.PositionDirection == PositionDirection.LONG))
@@ -100,7 +101,7 @@ public class Bot : IBot
 
         _logger.Information("Opening a market position...");
 
-        if (generalMessage.TpPrice is null)
+        if (generalMessage.TpPrice == null)
             await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
         else
             await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
@@ -131,7 +132,6 @@ public class Bot : IBot
 
     private bool ValidateMessage(IGeneralMessage? message)
     {
-
         if (message is null)
         {
             _logger.Information("Message has no signal!");

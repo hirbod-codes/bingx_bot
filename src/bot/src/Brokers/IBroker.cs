@@ -11,9 +11,9 @@ public interface IBroker
     public Task CandleClosed();
     public Task CloseAllPositions();
     public Task ClosePosition(Position position);
-    public Task<IEnumerable<Position>> GetOpenPositions();
+    public Task<IEnumerable<Position?>> GetOpenPositions();
     public Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice);
     public Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice);
-    public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null);
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null);
     public Task<int> GetLastCandleIndex();
 }
