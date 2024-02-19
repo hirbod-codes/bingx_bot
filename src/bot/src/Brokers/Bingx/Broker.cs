@@ -401,12 +401,12 @@ public class Broker : Api, IBroker
             task.Start();
     }
 
-    public Task<IEnumerable<Position>> GetClosedPositions(DateTime start, DateTime? end = null)
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position>> GetOpenPositions()
+    public async Task<IEnumerable<Position?>> GetOpenPositions()
     {
         _logger.Information("Getting all the open positions...");
 

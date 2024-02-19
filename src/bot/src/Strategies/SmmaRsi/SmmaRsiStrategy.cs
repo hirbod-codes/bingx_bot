@@ -26,6 +26,8 @@ public class SmmaRsiStrategy : IStrategy
     private readonly IMessageRepository _messageRepository;
     private readonly ILogger _logger;
 
+    private int _signalCount = 0;
+
     public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
     {
         _indicatorsOptions = (indicatorsOptions as IndicatorOptions)!;
@@ -49,12 +51,14 @@ public class SmmaRsiStrategy : IStrategy
         if (_smma1 == null || _smma2 == null || _smma3 == null || _rsi == null)
             throw new NoIndicatorException();
 
-        bool isUpTrend = IsUpTrend();
-        bool isDownTrend = IsDownTrend();
+        int index = await _broker.GetLastCandleIndex();
+
+        bool isUpTrend = IsUpTrend(index);
+        bool isDownTrend = IsDownTrend(index);
         bool isInTrend = isUpTrend || isDownTrend;
 
-        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand();
-        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand();
+        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand(index);
+        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand(index);
 
         DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
 
@@ -97,43 +101,38 @@ public class SmmaRsiStrategy : IStrategy
             IMessage message = CreateOpenPositionMessage(candle, timeFrame, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, isUpTrend ? candle.Close - _strategyOptions.SLDifference : candle.Close + _strategyOptions.SLDifference, isUpTrend ? candle.Close + _strategyOptions.TPDifference : candle.Close - _strategyOptions.TPDifference);
             await _messageRepository.CreateMessage(message);
             _logger.Information("Message sent.");
+
+            _signalCount++;
+            _logger.Information("Number of created signals: {signals}", _signalCount);
         }
     }
 
-    private bool HasRsiCrossedUnderUpperBand()
+    private bool HasRsiCrossedUnderUpperBand(int index)
     {
-        int index = _rsi.Count() - 1;
-
         if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
 
         return _rsi.ElementAt(index - 1).Rsi > _indicatorsOptions.Rsi.UpperBand && _rsi.ElementAt(index).Rsi < _indicatorsOptions.Rsi.UpperBand;
     }
 
-    private bool HasRsiCrossedOverLowerBand()
+    private bool HasRsiCrossedOverLowerBand(int index)
     {
-        int index = _rsi.Count() - 1;
-
         if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
             return false;
 
         return _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index).Rsi > _indicatorsOptions.Rsi.LowerBand;
     }
 
-    private bool IsDownTrend()
+    private bool IsDownTrend(int index)
     {
-        int index = _smma1.Count() - 1;
-
         if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
             return false;
 
         return _smma1.ElementAt(index).Smma <= _smma2.ElementAt(index).Smma && _smma2.ElementAt(index).Smma <= _smma3.ElementAt(index).Smma;
     }
 
-    private bool IsUpTrend()
+    private bool IsUpTrend(int index)
     {
-        int index = _smma1.Count() - 1;
-
         if (_smma1.ElementAt(index).Smma is null || _smma2.ElementAt(index).Smma is null || _smma3.ElementAt(index).Smma is null)
             return false;
 

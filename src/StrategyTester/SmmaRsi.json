@@ -6,7 +6,7 @@
     "BrokerName": "InMemory",
     "BrokerOptions": {
         "InMemory": {
-            "BrokerCommission": 0.01,
+            "BrokerCommission": 0.001,
             "Symbol": "BTC-USDT",
             "AccountOptions": {
                 "Balance": 10000

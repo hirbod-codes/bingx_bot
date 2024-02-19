@@ -18,7 +18,7 @@ public class RiskManagement : IRiskManagement
         _time = time;
     }
 
-    public decimal GetLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / (100m * Math.Abs(entryPrice - slPrice));
+    public decimal GetLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / (100.0m * Math.Abs(entryPrice - slPrice));
 
     public decimal GetMargin() => _riskManagementOptions.Margin;
 
@@ -32,13 +32,13 @@ public class RiskManagement : IRiskManagement
         if (_riskManagementOptions.GrossLossLimit < grossLossPerPosition)
             throw new InvalidRiskManagementException();
 
-        Task<IEnumerable<Position>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossLossInterval)));
-        Task<IEnumerable<Position>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossProfitInterval)));
-        Task<IEnumerable<Position>> openedPositionsTask = _broker.GetOpenPositions();
+        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossLossInterval)));
+        Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossProfitInterval)));
+        Task<IEnumerable<Position?>> openedPositionsTask = _broker.GetOpenPositions();
         await Task.WhenAll(closedPositionsForLossTask, closedPositionsForProfitTask, openedPositionsTask);
-        IEnumerable<Position> closedPositionsForLoss = closedPositionsForLossTask.Result;
-        IEnumerable<Position> closedPositionsForProfit = closedPositionsForProfitTask.Result;
-        IEnumerable<Position> openedPositions = openedPositionsTask.Result;
+        IEnumerable<Position> closedPositionsForLoss = closedPositionsForLossTask.Result.Where(o => o != null)!;
+        IEnumerable<Position> closedPositionsForProfit = closedPositionsForProfitTask.Result.Where(o => o != null)!;
+        IEnumerable<Position> openedPositions = openedPositionsTask.Result.Where(o => o != null)!;
 
         if (_riskManagementOptions.NumberOfConcurrentPositions != 0 && _riskManagementOptions.NumberOfConcurrentPositions >= openedPositions.Count())
             return false;
@@ -55,7 +55,7 @@ public class RiskManagement : IRiskManagement
         {
             decimal openedPositionsMaximumLoss = openedPositions.Count() * grossLossPerPosition;
 
-            if (openedPositionsMaximumLoss >= _riskManagementOptions.GrossLossLimit)
+            if (openedPositionsMaximumLoss + grossLossPerPosition >= _riskManagementOptions.GrossLossLimit)
                 return false;
 
             decimal grossLoss = PnLAnalysis.PnLAnalysis.GetGrossLoss(closedPositionsForLoss) + openedPositionsMaximumLoss;

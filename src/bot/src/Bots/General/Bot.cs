@@ -18,6 +18,9 @@ public class Bot : IBot
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
 
+    private int _shortSignalCount = 0;
+    private int _longSignalCount = 0;
+
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
         _logger = logger.ForContext<Bot>();
@@ -73,7 +76,7 @@ public class Bot : IBot
             return;
         }
 
-        IEnumerable<Position> positions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
+        IEnumerable<Position?> positions = await _broker.GetOpenPositions();
 
         if (!generalMessage.AllowingParallelPositions && positions.Any())
         {
@@ -81,14 +84,14 @@ public class Bot : IBot
             return;
         }
 
-        if (
-            (generalMessage.Direction == PositionDirection.LONG && positions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
-            (generalMessage.Direction == PositionDirection.SHORT && positions.Any(o => o.PositionDirection == PositionDirection.LONG))
-        )
-        {
-            _logger.Information("There are open positions with opposite direction from the provided signal, skipping...");
-            return;
-        }
+        // if (
+        //     (generalMessage.Direction == PositionDirection.LONG && positions.Any(o => o != null && o.PositionDirection == PositionDirection.SHORT)) ||
+        //     (generalMessage.Direction == PositionDirection.SHORT && positions.Any(o => o != null && o.PositionDirection == PositionDirection.LONG))
+        // )
+        // {
+        //     _logger.Information("There are open positions with opposite direction from the provided signal, skipping...");
+        //     return;
+        // }
 
         if (!await _riskManagement.PermitOpenPosition())
         {
@@ -100,6 +103,13 @@ public class Bot : IBot
         decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), generalMessage.SlPrice);
 
         _logger.Information("Opening a market position...");
+
+        if (generalMessage.Direction == PositionDirection.SHORT)
+            _shortSignalCount++;
+        if (generalMessage.Direction == PositionDirection.LONG)
+            _longSignalCount++;
+        _logger.Information("Number of valid short signals: {signals}", _shortSignalCount);
+        _logger.Information("Number of valid long signals: {signals}", _longSignalCount);
 
         if (generalMessage.TpPrice == null)
             await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice);

@@ -93,19 +93,50 @@ public class Broker : IBroker
 
         _logger.Information("Closing open positions that are suppose to be closed.");
 
-        List<(string id, decimal price)> positionsUpperBand = _positionsUpperBand.SkipWhile(t => candle.High >= t.price).ToList();
-        int upperBandSkipped = _positionsUpperBand.Count - positionsUpperBand.Count;
-        for (int i = 0; i < upperBandSkipped; i++)
-            await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsUpperBand[i].id))!);
-        _positionsUpperBand = positionsUpperBand;
+        int closedPositionsCount = 0;
+        if (_positionsUpperBand.Count != 0)
+        {
+            int i = 0;
+            if (candle.High >= _positionsUpperBand.Last().price)
+                i = _positionsUpperBand.Count;
+            else
+                for (; i < _positionsUpperBand.Count; i++)
+                    if (candle.High < _positionsUpperBand[i].price)
+                        break;
 
-        List<(string id, decimal price)> positionsLowerBand = _positionsLowerBand.SkipWhile(t => candle.Low <= t.price).ToList();
-        int lowerBandSkipped = _positionsLowerBand.Count - positionsLowerBand.Count;
-        for (int i = 0; i < lowerBandSkipped; i++)
-            await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsLowerBand[i].id))!);
-        _positionsLowerBand = positionsLowerBand;
+            for (int j = 0; j < i; j++)
+            {
+                await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsUpperBand[j].id))!);
+                closedPositionsCount++;
 
-        _logger.Information("{closedPositionsCount} positions closed.", upperBandSkipped + lowerBandSkipped);
+                _positionsLowerBand = _positionsLowerBand.Where(o => o.id != _positionsUpperBand[j].id).ToList();
+            }
+
+            _positionsUpperBand = _positionsUpperBand.Skip(i).ToList();
+        }
+
+        if (_positionsLowerBand.Count != 0)
+        {
+            int i = 0;
+            if (candle.Low <= _positionsLowerBand.Last().price)
+                i = _positionsLowerBand.Count;
+            else
+                for (; i < _positionsLowerBand.Count; i++)
+                    if (candle.Low > _positionsLowerBand[i].price)
+                        break;
+
+            for (int j = 0; j < i; j++)
+            {
+                await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsLowerBand[j].id))!);
+                closedPositionsCount++;
+
+                _positionsUpperBand = _positionsUpperBand.Where(o => o.id != _positionsLowerBand[j].id).ToList();
+            }
+
+            _positionsLowerBand = _positionsLowerBand.Skip(i).ToList();
+        }
+
+        _logger.Information("{closedPositionsCount} positions closed.", closedPositionsCount);
     }
 
     public async Task ClosePosition(Position position)
@@ -132,24 +163,7 @@ public class Broker : IBroker
         await ClosePosition(position.Id, (decimal)closedPrice, candle.Date.AddSeconds(_brokerOptions.TimeFrame));
     }
 
-    public async Task ClosePosition(string id, decimal closedPrice, DateTime closedAt)
-    {
-        await _positionRepository.ClosePosition(id, closedPrice, closedAt, _brokerOptions.BrokerCommission);
-
-        if (_positionsLowerBand.Count != 0)
-        {
-            int lowerBandIndex = _positionsLowerBand.FindIndex(t => t.id == id);
-            if (lowerBandIndex != -1)
-                _positionsLowerBand.RemoveAt(lowerBandIndex);
-        }
-
-        if (_positionsUpperBand.Count != 0)
-        {
-            int upperBandIndex = _positionsUpperBand.FindIndex(t => t.id == id);
-            if (upperBandIndex != -1)
-                _positionsUpperBand.RemoveAt(upperBandIndex);
-        }
-    }
+    public async Task ClosePosition(string id, decimal closedPrice, DateTime closedAt) => await _positionRepository.ClosePosition(id, closedPrice, closedAt, _brokerOptions.BrokerCommission);
 
     public async Task CloseAllPositions()
     {

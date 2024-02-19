@@ -77,7 +77,7 @@ public class Program
 
         await TesterFactory.CreateTester(configuration[ConfigurationKeys.TESTER_NAME]!, testerOptions, time, strategy, broker, bot, logger).Test();
 
-        AnalysisSummary analysisSummary = PnLAnalysis.RunAnalysis(await positionRepository.GetClosedPositions());
+        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository);
 
         string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions());
         string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary);
