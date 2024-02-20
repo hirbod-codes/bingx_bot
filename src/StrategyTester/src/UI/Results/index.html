@@ -18,7 +18,9 @@
         integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- <script src="./closed_positions_10_20_50_100_60_2_50.js" defer></script> -->
     <script src="./closed_positions.js" defer></script>
+    <!-- <script src="./pnl_results_10_20_50_100_60_2_50.js" defer></script> -->
     <script src="./pnl_results.js" defer></script>
     <script src="./app.js" defer></script>
 </head>
@@ -26,23 +28,33 @@
 <body style="background-color: #ccc;">
     <div class="list-group">
         <div class="list-group-item" id="netProfit"></div>
-        <div class="list-group-item" id="grossProfit"></div>
-        <div class="list-group-item" id="grossLoss"></div>
-        <div class="list-group-item" id="highestDrawDown"></div>
         <div class="list-group-item" id="highestNetProfit"></div>
-        <div class="list-group-item" id="positionsCount"></div>
-        <div class="list-group-item" id="longPositionsCount"></div>
+        <div class="list-group-item" id="highestDrawDown"></div>
+
+        <div class="list-group-item" id="grossProfit"></div>
         <div class="list-group-item" id="longGrossProfit"></div>
-        <div class="list-group-item" id="longGrossLoss"></div>
-        <div class="list-group-item" id="shortPositionsCount"></div>
         <div class="list-group-item" id="shortGrossProfit"></div>
+
+        <div class="list-group-item" id="grossLoss"></div>
+        <div class="list-group-item" id="longGrossLoss"></div>
         <div class="list-group-item" id="shortGrossLoss"></div>
-        <div class="list-group-item" id="shortPositionCount"></div>
+
         <div class="list-group-item" id="longPositionCount"></div>
+        <div class="list-group-item" id="longWins"></div>
+        <div class="list-group-item" id="longLosses"></div>
+
+        <div class="list-group-item" id="shortPositionCount"></div>
+        <div class="list-group-item" id="shortWins"></div>
+        <div class="list-group-item" id="shortLosses"></div>
+
+        <div class="list-group-item" id="wins"></div>
+        <div class="list-group-item" id="losses"></div>
+        <div class="list-group-item" id="winLossRatio"></div>
+
+        <div class="list-group-item" id="closedPositions"></div>
         <div class="list-group-item" id="openedPositions"></div>
         <div class="list-group-item" id="pendingPositions"></div>
         <div class="list-group-item" id="cancelledPositions"></div>
-        <div class="list-group-item" id="closedPositions"></div>
     </div>
 
     <div style="margin: 10px;border: 1px solid red;">

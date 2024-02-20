@@ -41,17 +41,38 @@ public static class PnLAnalysis
             if (analysisSummary.DrawDown > analysisSummary.HighestDrawDown)
                 analysisSummary.HighestDrawDown = analysisSummary.DrawDown;
 
-            if (position.PositionDirection == PositionDirection.LONG)
-                if (position.ProfitWithCommission > 0)
+            if (position.ProfitWithCommission > 0)
+            {
+                if (position.PositionDirection == PositionDirection.LONG)
+                {
                     analysisSummary.LongGrossProfit += (decimal)position.ProfitWithCommission;
+                    analysisSummary.LongWins++;
+                }
                 else
+                {
+                    analysisSummary.ShortGrossProfit += (decimal)position.ProfitWithCommission;
+                    analysisSummary.ShortWins++;
+                }
+                analysisSummary.Wins++;
+            }
+            else
+            {
+                if (position.PositionDirection == PositionDirection.LONG)
+                {
                     analysisSummary.LongGrossLoss += (decimal)position.ProfitWithCommission;
-            else
-                if (position.ProfitWithCommission > 0)
-                analysisSummary.ShortGrossProfit += (decimal)position.ProfitWithCommission;
-            else
-                analysisSummary.ShortGrossLoss += (decimal)position.ProfitWithCommission;
+                    analysisSummary.LongLosses++;
+                }
+                else
+                {
+                    analysisSummary.ShortGrossLoss += (decimal)position.ProfitWithCommission;
+                    analysisSummary.ShortLosses++;
+                }
+                analysisSummary.Losses++;
+            }
         }
+
+        try { analysisSummary.WinLossRatio = (decimal)((decimal)analysisSummary.Wins / (decimal)(analysisSummary.Losses + analysisSummary.Wins)); }
+        catch (DivideByZeroException) { }
 
         analysisSummary.GrossProfit = analysisSummary.LongGrossProfit + analysisSummary.ShortGrossProfit;
         analysisSummary.GrossLoss = analysisSummary.LongGrossLoss + analysisSummary.ShortGrossLoss;

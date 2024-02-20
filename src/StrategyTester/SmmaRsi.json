@@ -21,13 +21,9 @@
             "SLPercentages": 50,
             "NumberOfConcurrentPositions": 0,
             "GrossLossLimit": 170,
-            "GrossLossInterval": 86400,
+            "GrossLossInterval": 0,
             "GrossProfitLimit": 0,
             "GrossProfitInterval": 0
-        },
-        "UtBot": {
-            "Margin": 10,
-            "SLPercentages": 70
         }
     },
     "IndicatorOptionsName": "SmmaRsi",
@@ -48,55 +44,25 @@
             "Rsi": {
                 "Period": 14,
                 "Source": "close",
-                "UpperBand": 55,
-                "LowerBand": 45
+                "UpperBand": 50,
+                "LowerBand": 50
             }
-        },
-        "UtBot": {
-            "EmaPeriod1": {
-                "Period": 1,
-                "Source": "close"
-            },
-            "AtrPeriod1": {
-                "Period": 200,
-                "Source": "close"
-            },
-            "AtrMultiplier1": 2,
-            "EmaPeriod2": {
-                "Period": 1,
-                "Source": "close"
-            },
-            "AtrPeriod2": {
-                "Period": 10,
-                "Source": "close"
-            },
-            "AtrMultiplier2": 3
         }
     },
     "StrategyName": "SmmaRsi",
     "StrategyOptions": {
         "SmmaRsi": {
             "ProviderName": "SmmaRsiStrategy",
-            "SLDifference": 230,
-            "TPDifference": 460,
+            "SLDifference": 460,
+            "TPDifference": 230,
             "InvalidWeekDays": [
-                0,
-                6
             ]
-        },
-        "UtBot": {
-            "ProviderName": "UtBotSignalProvider",
-            "SLDifference": 200
         }
     },
     "BotName": "General",
     "BotOptions": {
         "General": {
             "Provider": "SmmaRsiStrategy",
-            "TimeFrame": 60
-        },
-        "UtBot": {
-            "Provider": "UtBotSignalProvider",
             "TimeFrame": 60
         }
     },

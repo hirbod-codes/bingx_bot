@@ -50,14 +50,14 @@ public class GeneralTester : ITester
 
             _time.SetUtcNow(candle.Date.AddSeconds(_testerOptions.TimeFrame));
 
+            await _broker.CandleClosed();
+
             try { await _strategy.HandleCandle(candle, _testerOptions.TimeFrame); }
             catch (NotEnoughCandlesException)
             {
                 _broker.NextCandle();
                 continue;
             }
-
-            await _broker.CandleClosed();
 
             await _bot.Tick();
 

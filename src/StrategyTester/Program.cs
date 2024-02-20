@@ -79,8 +79,8 @@ public class Program
 
         AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository);
 
-        string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions());
-        string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary);
+        string closedPositionsJson = JsonSerializer.Serialize(await positionRepository.GetClosedPositions(), new JsonSerializerOptions() { WriteIndented = true });
+        string analysisSummaryJson = JsonSerializer.Serialize(analysisSummary, new JsonSerializerOptions() { WriteIndented = true });
 
         await File.WriteAllTextAsync("./closed_positions.json", closedPositionsJson);
         await File.WriteAllTextAsync("./src/UI/Results/closed_positions.js", "var closedPositions = " + closedPositionsJson);

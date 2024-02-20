@@ -4,6 +4,8 @@ namespace bot.src.Data.None;
 
 public class PositionRepository : IPositionRepository
 {
+    public Task<bool> AnyOpenedPosition() => throw new NotImplementedException();
+
     public Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission) => throw new NotImplementedException();
 
     public Task<Position> CreatePosition(Position position) => throw new NotImplementedException();

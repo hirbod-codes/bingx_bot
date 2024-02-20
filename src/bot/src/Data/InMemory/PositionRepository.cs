@@ -8,6 +8,7 @@ public class PositionRepository : IPositionRepository
     private int _lastId = 0;
     private List<Position> _positions = new();
     private readonly List<Position?> _openPositions = new();
+    private bool _anyOpenedPosition = false;
     private readonly List<Position?> _cancelledPositions = new();
     private readonly List<Position?> _closedPositions = new();
     private readonly List<Position?> _pendingPositions = new();
@@ -16,13 +17,20 @@ public class PositionRepository : IPositionRepository
     {
         position.Id = _lastId.ToString();
         _positions.Add(position);
+
         _openPositions.Add(position);
+        _anyOpenedPosition = true;
+
         _cancelledPositions.Add(null);
         _closedPositions.Add(null);
         _pendingPositions.Add(null);
+
         _lastId++;
+
         return Task.FromResult(position);
     }
+
+    public Task<bool> AnyOpenedPosition() => Task.FromResult(_anyOpenedPosition);
 
     public Task<Position?> GetCancelledPosition(string id) => Task.FromResult(_cancelledPositions[int.Parse(id)])!;
 
@@ -79,7 +87,7 @@ public class PositionRepository : IPositionRepository
 
     public async Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission)
     {
-        Position position = await GetOpenedPosition(id) ?? throw new PositionNotFoundException();
+        Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
 
         if (position.PositionStatus == PositionStatus.CLOSED)
             throw new ClosingAClosedPosition();
@@ -116,5 +124,8 @@ public class PositionRepository : IPositionRepository
         position.PositionStatus = PositionStatus.CLOSED;
 
         _closedPositions[int.Parse(position.Id)] = position;
+
+        if (!_openPositions.Where(o => o != null).Any())
+            _anyOpenedPosition = false;
     }
 }

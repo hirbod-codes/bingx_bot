@@ -4,6 +4,8 @@ var netProfit = 0
 
 // closedPositions = closedPositions.slice(closedPositions.length - 73)
 
+closedPositions = closedPositions.filter(e => e != null)
+
 var formattedData = closedPositions.map((e, i) => {
     netProfit += e.ProfitWithCommission
 
@@ -40,11 +42,8 @@ document.getElementById('grossProfit').innerText = "Gross profit: " + pnlResults
 document.getElementById('grossLoss').innerText = "Gross loss: " + pnlResults.GrossLoss.toString()
 document.getElementById('highestDrawDown').innerText = "Highest draw down: " + pnlResults.HighestDrawDown.toString()
 document.getElementById('highestNetProfit').innerText = "Highest net profit: " + pnlResults.HighestNetProfit.toString()
-document.getElementById('positionsCount').innerText = "Positions count: " + closedPositions.length.toString()
-document.getElementById('longPositionsCount').innerText = "Long positions count: " + closedPositions.filter(e => e.PositionDirection == "long").length.toString()
 document.getElementById('longGrossProfit').innerText = "Long gross profit: " + pnlResults.LongGrossProfit.toString()
 document.getElementById('longGrossLoss').innerText = "Long gross loss: " + pnlResults.LongGrossLoss.toString()
-document.getElementById('shortPositionsCount').innerText = "Short positions count: " + closedPositions.filter(e => e.PositionDirection == "short").length.toString()
 document.getElementById('shortGrossProfit').innerText = "Short gross profit: " + pnlResults.ShortGrossProfit.toString()
 document.getElementById('shortGrossLoss').innerText = "Short gross loss: " + pnlResults.ShortGrossLoss.toString()
 document.getElementById('shortPositionCount').innerText = "Short position count: " + pnlResults.ShortPositionCount.toString()
@@ -53,3 +52,10 @@ document.getElementById('openedPositions').innerText = "Opened positions: " + pn
 document.getElementById('pendingPositions').innerText = "Pending positions: " + pnlResults.PendingPositions.toString()
 document.getElementById('cancelledPositions').innerText = "Cancelled positions: " + pnlResults.CancelledPositions.toString()
 document.getElementById('closedPositions').innerText = "Closed positions: " + pnlResults.ClosedPositions.toString()
+document.getElementById('longWins').innerText = "Long wins: " + pnlResults.LongWins.toString()
+document.getElementById('shortWins').innerText = "Short wins: " + pnlResults.ShortWins.toString()
+document.getElementById('wins').innerText = "Wins: " + pnlResults.Wins.toString()
+document.getElementById('longLosses').innerText = "Long losses: " + pnlResults.LongLosses.toString()
+document.getElementById('shortLosses').innerText = "Short losses: " + pnlResults.ShortLosses.toString()
+document.getElementById('losses').innerText = "Losses: " + pnlResults.Losses.toString()
+document.getElementById('winLossRatio').innerText = "Win loss ratio: " + pnlResults.WinLossRatio.toString()

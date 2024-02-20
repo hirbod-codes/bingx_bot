@@ -18,4 +18,11 @@ public class AnalysisSummary
     public int PendingPositions { get; set; } = 0;
     public int CancelledPositions { get; set; } = 0;
     public int ClosedPositions { get; set; } = 0;
+    public int LongWins { get; set; } = 0;
+    public int ShortWins { get; set; } = 0;
+    public int Wins { get; set; } = 0;
+    public int LongLosses { get; set; } = 0;
+    public int ShortLosses { get; set; } = 0;
+    public int Losses { get; set; } = 0;
+    public decimal WinLossRatio { get; set; } = 0;
 }

@@ -26,8 +26,6 @@ public class SmmaRsiStrategy : IStrategy
     private readonly IMessageRepository _messageRepository;
     private readonly ILogger _logger;
 
-    private int _signalCount = 0;
-
     public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
     {
         _indicatorsOptions = (indicatorsOptions as IndicatorOptions)!;
@@ -76,7 +74,7 @@ public class SmmaRsiStrategy : IStrategy
                                 decimal lowestLow = candle.Low;
                                 for (int i = 1; i <= _strategyOptions.NaturalTrendIndicatorLength; i++)
                                 {
-                                    Candle? c = await _broker.GetCandle(1);
+                                    Candle? c = await _broker.GetCandle(i);
 
                                     if (c == null)
                                     {
@@ -101,9 +99,6 @@ public class SmmaRsiStrategy : IStrategy
             IMessage message = CreateOpenPositionMessage(candle, timeFrame, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, isUpTrend ? candle.Close - _strategyOptions.SLDifference : candle.Close + _strategyOptions.SLDifference, isUpTrend ? candle.Close + _strategyOptions.TPDifference : candle.Close - _strategyOptions.TPDifference);
             await _messageRepository.CreateMessage(message);
             _logger.Information("Message sent.");
-
-            _signalCount++;
-            _logger.Information("Number of created signals: {signals}", _signalCount);
         }
     }
 
