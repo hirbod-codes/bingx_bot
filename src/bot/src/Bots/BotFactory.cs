@@ -1,4 +1,5 @@
 using GeneralBot = bot.src.Bots.General.Bot;
+using DoubleUtBotBot = bot.src.Bots.DoubleUtBot.Bot;
 using UtBotBot = bot.src.Bots.UtBot.Bot;
 using bot.src.Brokers;
 using bot.src.MessageStores;
@@ -15,6 +16,7 @@ public static class BotFactory
     {
         BotNames.GENERAL => new GeneralBot(botOptions, broker, time, messageStore, riskManagement, logger),
         BotNames.UT_BOT => new UtBotBot(botOptions, broker, time, messageStore, riskManagement, logger, notifier),
+        BotNames.DOUBLE_UT_BOT => new DoubleUtBotBot(botOptions, broker, time, messageStore, riskManagement, logger, notifier),
         _ => throw new Exception()
     };
 }

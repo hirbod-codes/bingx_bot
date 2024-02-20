@@ -18,9 +18,6 @@ public class Bot : IBot
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
 
-    private int _shortSignalCount = 0;
-    private int _longSignalCount = 0;
-
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
         _logger = logger.ForContext<Bot>();

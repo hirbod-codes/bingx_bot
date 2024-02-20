@@ -13,7 +13,7 @@ using bot.src.Data;
 
 namespace bot.src.Strategies.SmmaRsi;
 
-public class SmmaRsiStrategy : IStrategy
+public class Strategy : IStrategy
 {
     private readonly IndicatorOptions _indicatorsOptions;
     private readonly StrategyOptions _strategyOptions;
@@ -26,14 +26,14 @@ public class SmmaRsiStrategy : IStrategy
     private readonly IMessageRepository _messageRepository;
     private readonly ILogger _logger;
 
-    public SmmaRsiStrategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
+    public Strategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
     {
         _indicatorsOptions = (indicatorsOptions as IndicatorOptions)!;
         _strategyOptions = (strategyOptions as StrategyOptions)!;
         _broker = broker;
         _notifier = notifier;
         _messageRepository = messageRepository;
-        _logger = logger.ForContext<SmmaRsiStrategy>();
+        _logger = logger.ForContext<Strategy>();
     }
 
     public void PrepareIndicators(Candles candles)
@@ -46,6 +46,12 @@ public class SmmaRsiStrategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
+        if ((candle.High - candle.Low) > 70)
+        {
+            _logger.Information("This candle is too big, skipping...");
+            return;
+        }
+
         if (_smma1 == null || _smma2 == null || _smma3 == null || _rsi == null)
             throw new NoIndicatorException();
 

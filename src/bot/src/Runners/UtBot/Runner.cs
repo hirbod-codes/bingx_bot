@@ -35,8 +35,8 @@ public class Runner : IRunner
     {
         try
         {
-            _logger.Information("Runner started at: {dateTime}", DateTime.UtcNow.ToString());
-            await _notifier.SendMessage($"Runner started at: {DateTime.UtcNow}");
+            _logger.Information("Runner started at: {dateTime}", _time.GetUtcNow().ToString());
+            await _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
 
             await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
             {
@@ -54,8 +54,8 @@ public class Runner : IRunner
         }
         finally
         {
-            _logger.Information("Runner terminated at: {dateTime}", DateTime.UtcNow.ToString());
-            await _notifier.SendMessage($"Runner terminated at: {DateTime.UtcNow}");
+            _logger.Information("Runner terminated at: {dateTime}", _time.GetUtcNow().ToString());
+            await _notifier.SendMessage($"Runner terminated at: {_time.GetUtcNow()}");
         }
     }
 
@@ -81,7 +81,7 @@ public class Runner : IRunner
 
         _logger.Information("Candle: {@candle}", candle);
 
-        DateTime now = DateTime.UtcNow;
+        DateTime now = _time.GetUtcNow();
         if ((candle.Date - now.AddSeconds(now.Second * -1).AddSeconds(_runnerOptions.TimeFrame * -1)).TotalSeconds >= 1)
         {
             _logger.Information("now: {now}", now);

@@ -1,0 +1,52 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {
+            "InMemory": {}
+        },
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0.01,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 60
+        },
+        "RiskManagementName": "UtBot",
+        "RiskManagementOptions": {
+            "Margin": 10,
+            "SLPercentages": 70
+        },
+        "IndicatorOptionsName": "UtBot",
+        "IndicatorOptions": {
+            "EmaPeriod": {
+                "Period": 1,
+                "Source": "close"
+            },
+            "AtrPeriod": {
+                "Period": 200,
+                "Source": "close"
+            },
+            "AtrMultiplier": 2
+        },
+        "StrategyName": "UtBot",
+        "StrategyOptions": {
+            "ProviderName": "UtBotSignalProvider",
+            "SLDifference": 200
+        },
+        "BotName": "UtBot",
+        "BotOptions": {
+            "Provider": "UtBotSignalProvider",
+            "TimeFrame": 60
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "TimeFrame": 60
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]

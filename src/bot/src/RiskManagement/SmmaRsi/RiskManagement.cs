@@ -33,7 +33,7 @@ public class RiskManagement : IRiskManagement
             throw new InvalidRiskManagementException();
 
         // Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
-        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date.AddDays(-1).AddHours(6));
+        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date.AddHours(6));
         // Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossLossInterval)));
         Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossProfitInterval)));
         Task<IEnumerable<Position?>> openedPositionsTask = _broker.GetOpenPositions();

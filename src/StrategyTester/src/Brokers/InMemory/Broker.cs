@@ -20,8 +20,8 @@ public class Broker : IBroker
     private int _candlesCount = 0;
     private int _passedCandlesIndex = 0;
 
-    private List<(string id, decimal price)> _positionsUpperBand = new();
-    private List<(string id, decimal price)> _positionsLowerBand = new();
+    // private List<(string id, decimal price)> _positionsUpperBand = new();
+    // private List<(string id, decimal price)> _positionsLowerBand = new();
 
     public Broker(IBrokerOptions brokerOptions, IPositionRepository positionRepository, ITime time, ILogger logger)
     {
@@ -41,13 +41,17 @@ public class Broker : IBroker
         // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/kline_data_one_month_1min.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
         // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/3month_kline_data.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
 
+        candles = candles.Take(10000);
+        // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
+
         _candles = new(candles.ToList());
 
         _candlesCount = candles.Count();
 
         _passedCandlesIndex = 0;
 
-        _logger.Information("Finished Candle Store initiation.");
+        _logger.Information("Finished candle store initiation.");
+        _logger.Information("Candle store count: {count}", _candlesCount);
 
         return Task.CompletedTask;
     }
@@ -77,66 +81,102 @@ public class Broker : IBroker
     {
         _logger.Information("Getting open positions...");
 
-        if (_positionsUpperBand.Count == 0 && _positionsLowerBand.Count == 0)
+        if (!await _positionRepository.AnyOpenedPosition())
             return;
+
+        Position?[] openPositions = (await _positionRepository.GetOpenedPositions()).ToArray();
 
         Candle candle = await GetCandle();
 
-        if (_positionsLowerBand.Count == 0 && candle.High < _positionsUpperBand[0].price)
-            return;
-
-        if (_positionsUpperBand.Count == 0 && candle.Low > _positionsLowerBand[0].price)
-            return;
-
-        if (_positionsUpperBand.Count != 0 && _positionsLowerBand.Count != 0 && candle.Low > _positionsLowerBand[0].price && candle.High < _positionsUpperBand[0].price)
-            return;
-
-        _logger.Information("Closing open positions that are suppose to be closed.");
-
-        int closedPositionsCount = 0;
-        if (_positionsUpperBand.Count != 0)
+        int i = 0;
+        for (; i < openPositions.Length; i++)
         {
-            int i = 0;
-            if (candle.High >= _positionsUpperBand.Last().price)
-                i = _positionsUpperBand.Count;
-            else
-                for (; i < _positionsUpperBand.Count; i++)
-                    if (candle.High < _positionsUpperBand[i].price)
-                        break;
+            if (openPositions[i] == null)
+                continue;
 
-            for (int j = 0; j < i; j++)
+            if (
+                (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.Low <= openPositions[i]!.SLPrice)
+                ||
+                (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.High >= openPositions[i]!.SLPrice)
+            )
             {
-                await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsUpperBand[j].id))!);
-                closedPositionsCount++;
-
-                _positionsLowerBand = _positionsLowerBand.Where(o => o.id != _positionsUpperBand[j].id).ToList();
+                await ClosePosition(openPositions[i]!);
+                continue;
             }
 
-            _positionsUpperBand = _positionsUpperBand.Skip(i).ToList();
+            if (openPositions[i]!.TPPrice == null)
+                continue;
+
+            if (
+                (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.High >= openPositions[i]!.TPPrice)
+                ||
+                (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.Low <= openPositions[i]!.TPPrice)
+            )
+                await ClosePosition(openPositions[i]!);
         }
 
-        if (_positionsLowerBand.Count != 0)
-        {
-            int i = 0;
-            if (candle.Low <= _positionsLowerBand.Last().price)
-                i = _positionsLowerBand.Count;
-            else
-                for (; i < _positionsLowerBand.Count; i++)
-                    if (candle.Low > _positionsLowerBand[i].price)
-                        break;
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            for (int j = 0; j < i; j++)
-            {
-                await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsLowerBand[j].id))!);
-                closedPositionsCount++;
+        // if (_positionsUpperBand.Count == 0 && _positionsLowerBand.Count == 0)
+        //     return;
 
-                _positionsUpperBand = _positionsUpperBand.Where(o => o.id != _positionsLowerBand[j].id).ToList();
-            }
+        // Candle candle = await GetCandle();
 
-            _positionsLowerBand = _positionsLowerBand.Skip(i).ToList();
-        }
+        // if (_positionsLowerBand.Count == 0 && candle.High < _positionsUpperBand[0].price)
+        //     return;
 
-        _logger.Information("{closedPositionsCount} positions closed.", closedPositionsCount);
+        // if (_positionsUpperBand.Count == 0 && candle.Low > _positionsLowerBand[0].price)
+        //     return;
+
+        // if (_positionsUpperBand.Count != 0 && _positionsLowerBand.Count != 0 && candle.Low > _positionsLowerBand[0].price && candle.High < _positionsUpperBand[0].price)
+        //     return;
+
+        // _logger.Information("Closing open positions that are suppose to be closed.");
+
+        // int closedPositionsCount = 0;
+        // if (_positionsUpperBand.Count != 0)
+        // {
+        //     int i = 0;
+        //     if (candle.High >= _positionsUpperBand.Last().price)
+        //         i = _positionsUpperBand.Count;
+        //     else
+        //         for (; i < _positionsUpperBand.Count; i++)
+        //             if (candle.High < _positionsUpperBand[i].price)
+        //                 break;
+
+        //     for (int j = 0; j < i; j++)
+        //     {
+        //         await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsUpperBand[j].id))!);
+        //         closedPositionsCount++;
+
+        //         _positionsLowerBand = _positionsLowerBand.Where(o => o.id != _positionsUpperBand[j].id).ToList();
+        //     }
+
+        //     _positionsUpperBand = _positionsUpperBand.Skip(i).ToList();
+        // }
+
+        // if (_positionsLowerBand.Count != 0)
+        // {
+        //     int i = 0;
+        //     if (candle.Low <= _positionsLowerBand.Last().price)
+        //         i = _positionsLowerBand.Count;
+        //     else
+        //         for (; i < _positionsLowerBand.Count; i++)
+        //             if (candle.Low > _positionsLowerBand[i].price)
+        //                 break;
+
+        //     for (int j = 0; j < i; j++)
+        //     {
+        //         await ClosePosition((await _positionRepository.GetOpenedPosition(_positionsLowerBand[j].id))!);
+        //         closedPositionsCount++;
+
+        //         _positionsUpperBand = _positionsUpperBand.Where(o => o.id != _positionsLowerBand[j].id).ToList();
+        //     }
+
+        //     _positionsLowerBand = _positionsLowerBand.Skip(i).ToList();
+        // }
+
+        // _logger.Information("{closedPositionsCount} positions closed.", closedPositionsCount);
     }
 
     public async Task ClosePosition(Position position)
@@ -170,16 +210,19 @@ public class Broker : IBroker
         Candle candle = await GetCandle();
         await CloseAllPositions(candle.Close, candle.Date.AddSeconds(_brokerOptions.TimeFrame));
 
-        _positionsLowerBand = new();
-        _positionsUpperBand = new();
+        // _positionsLowerBand = new();
+        // _positionsUpperBand = new();
     }
 
     public async Task CloseAllPositions(decimal closedPrice, DateTime closedAt)
     {
-        string[] ids = (await GetOpenPositions()).Where(o => o != null).Select(o => o!.Id).ToArray();
+        Position?[] positions = (await GetOpenPositions()).ToArray();
 
-        for (int i = 0; i < ids.Length; i++)
-            await ClosePosition(ids[i], closedPrice, closedAt);
+        for (int i = 0; i < positions.Length; i++)
+            if (positions[i] == null)
+                continue;
+            else
+                await ClosePosition(positions[i]!.Id, closedPrice, closedAt);
     }
 
     public async Task<IEnumerable<Position?>> GetOpenPositions() => await _positionRepository.GetOpenedPositions();
@@ -232,49 +275,49 @@ public class Broker : IBroker
 
     private void AddSlPrice(string id, decimal slPrice, string direction)
     {
-        if (direction == PositionDirection.LONG)
-        {
-            if (_positionsLowerBand.Count == 0)
-                _positionsLowerBand.Add((id, slPrice));
-            else if (slPrice <= _positionsLowerBand.Last().price)
-                _positionsLowerBand.Add((id, slPrice));
-            else
-                _positionsLowerBand.Insert(_positionsLowerBand.FindIndex(t => slPrice > t.price), (id, slPrice));
-        }
-        else if (direction == PositionDirection.SHORT)
-        {
-            if (_positionsUpperBand.Count == 0)
-                _positionsUpperBand.Add((id, slPrice));
-            else if (slPrice >= _positionsUpperBand.Last().price)
-                _positionsUpperBand.Add((id, slPrice));
-            else
-                _positionsUpperBand.Insert(_positionsUpperBand.FindIndex(t => slPrice < t.price), (id, slPrice));
-        }
-        else
-            throw new BrokerException("Invalid direction detected for a position");
+        // if (direction == PositionDirection.LONG)
+        // {
+        //     if (_positionsLowerBand.Count == 0)
+        //         _positionsLowerBand.Add((id, slPrice));
+        //     else if (slPrice <= _positionsLowerBand.Last().price)
+        //         _positionsLowerBand.Add((id, slPrice));
+        //     else
+        //         _positionsLowerBand.Insert(_positionsLowerBand.FindIndex(t => slPrice > t.price), (id, slPrice));
+        // }
+        // else if (direction == PositionDirection.SHORT)
+        // {
+        //     if (_positionsUpperBand.Count == 0)
+        //         _positionsUpperBand.Add((id, slPrice));
+        //     else if (slPrice >= _positionsUpperBand.Last().price)
+        //         _positionsUpperBand.Add((id, slPrice));
+        //     else
+        //         _positionsUpperBand.Insert(_positionsUpperBand.FindIndex(t => slPrice < t.price), (id, slPrice));
+        // }
+        // else
+        //     throw new BrokerException("Invalid direction detected for a position");
     }
 
     private void AddTpPrice(string id, decimal tpPrice, string direction)
     {
-        if (direction == PositionDirection.SHORT)
-        {
-            if (_positionsLowerBand.Count == 0)
-                _positionsLowerBand.Add((id, tpPrice));
-            else if (tpPrice <= _positionsLowerBand.Last().price)
-                _positionsLowerBand.Add((id, tpPrice));
-            else
-                _positionsLowerBand.Insert(_positionsLowerBand.FindIndex(t => tpPrice > t.price), (id, tpPrice));
-        }
-        else if (direction == PositionDirection.LONG)
-        {
-            if (_positionsUpperBand.Count == 0)
-                _positionsUpperBand.Add((id, tpPrice));
-            else if (tpPrice >= _positionsUpperBand.Last().price)
-                _positionsUpperBand.Add((id, tpPrice));
-            else
-                _positionsUpperBand.Insert(_positionsUpperBand.FindIndex(t => tpPrice < t.price), (id, tpPrice));
-        }
-        else
-            throw new BrokerException("Invalid direction detected for a position");
+        // if (direction == PositionDirection.SHORT)
+        // {
+        //     if (_positionsLowerBand.Count == 0)
+        //         _positionsLowerBand.Add((id, tpPrice));
+        //     else if (tpPrice <= _positionsLowerBand.Last().price)
+        //         _positionsLowerBand.Add((id, tpPrice));
+        //     else
+        //         _positionsLowerBand.Insert(_positionsLowerBand.FindIndex(t => tpPrice > t.price), (id, tpPrice));
+        // }
+        // else if (direction == PositionDirection.LONG)
+        // {
+        //     if (_positionsUpperBand.Count == 0)
+        //         _positionsUpperBand.Add((id, tpPrice));
+        //     else if (tpPrice >= _positionsUpperBand.Last().price)
+        //         _positionsUpperBand.Add((id, tpPrice));
+        //     else
+        //         _positionsUpperBand.Insert(_positionsUpperBand.FindIndex(t => tpPrice < t.price), (id, tpPrice));
+        // }
+        // else
+        //     throw new BrokerException("Invalid direction detected for a position");
     }
 }

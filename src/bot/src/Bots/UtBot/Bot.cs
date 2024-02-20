@@ -18,9 +18,7 @@ public class Bot : IBot
     private readonly IMessageStore _messageStore;
     private readonly BotOptions _botOptions;
     private readonly IRiskManagement _riskManagement;
-    private string? _firstMessageDirection = null;
-    private string? _secondMessageId = null;
-    private string? _secondMessageDirection = null;
+    private string? _messageId = null;
 
     public Bot(IBotOptions botOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger, INotifier notifier)
     {
@@ -86,39 +84,6 @@ public class Bot : IBot
         await OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
     }
 
-    private async Task DeleteMessages(string from)
-    {
-        _logger.Information("Deleting messages...");
-
-        Exception? exception = null;
-
-        for (int i = 0; i < _botOptions.MessageStoreFailureRetryCount; i++)
-            try
-            {
-                await _messageStore.DeleteMessages(from);
-                _logger.Information("Messages has been deleted...");
-            }
-            catch (MessageStoreException ex)
-            {
-                exception = ex;
-                _logger.Error(ex, "A message store failure encountered, retrying...");
-                await _time.Sleep(_botOptions.MessageStoreFailureRetryInterval);
-            }
-
-        string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
-        _logger.Error(errorMessage);
-
-        if (!_botOptions.ShouldTerminateAfterMessageStoreFailure)
-        {
-            _logger.Information("Skipping...");
-            return;
-        }
-        
-        _logger.Information("Terminating...");
-        await _notifier.SendMessage(errorMessage);
-        throw exception!;
-    }
-
     private async Task<IUtBotMessage?> CheckForSignal()
     {
         _logger.Information("Checking for signals.");
@@ -181,7 +146,7 @@ public class Bot : IBot
             return false;
         }
 
-        if (message.Id == _secondMessageId)
+        if (message.Id == _messageId)
         {
             _logger.Information("This message is already processed.");
             return false;
@@ -199,11 +164,9 @@ public class Bot : IBot
             return false;
         }
 
-        _firstMessageDirection = _secondMessageDirection;
-        _secondMessageId = message.Id;
-        _secondMessageDirection = message.Direction;
+        _messageId = message.Id;
 
-        return _firstMessageDirection == _secondMessageDirection;
+        return true;
     }
 
     private async Task CloseAllPositions()

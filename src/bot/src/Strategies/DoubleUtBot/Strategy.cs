@@ -1,17 +1,17 @@
-using bot.src.Bots.UtBot.Models;
+using bot.src.Bots.DoubleUtBot.Models;
 using bot.src.Brokers;
 using bot.src.Data;
 using bot.src.Data.Models;
 using bot.src.Indicators;
-using bot.src.Indicators.UtBot;
+using bot.src.Indicators.DoubleUtBot;
 using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
 using Serilog;
 using Skender.Stock.Indicators;
 
-namespace bot.src.Strategies.UtBot;
+namespace bot.src.Strategies.DoubleUtBot;
 
-public class UtBotStrategy : IStrategy
+public class Strategy : IStrategy
 {
     private readonly IndicatorOptions _indicatorOptions;
     private readonly IMessageRepository _messageRepository;
@@ -23,13 +23,13 @@ public class UtBotStrategy : IStrategy
     private IEnumerable<AtrStopResult> _atrStop2 = Array.Empty<AtrStopResult>();
     private IEnumerable<EmaResult> _ema2 = Array.Empty<EmaResult>();
 
-    public UtBotStrategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorOptions, IMessageRepository messageRepository, IBroker broker, ILogger logger)
+    public Strategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorOptions, IMessageRepository messageRepository, IBroker broker, ILogger logger)
     {
         _strategyOptions = (strategyOptions as StrategyOptions)!;
         _indicatorOptions = (indicatorOptions as IndicatorOptions)!;
         _messageRepository = messageRepository;
         _broker = broker;
-        _logger = logger.ForContext<UtBotStrategy>();
+        _logger = logger.ForContext<Strategy>();
     }
 
     public void PrepareIndicators(Candles candles)

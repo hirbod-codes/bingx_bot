@@ -1,5 +1,5 @@
 using SmmaRsiStrategyOptions = bot.src.Strategies.SmmaRsi.StrategyOptions;
-using UtBotStrategyOptions = bot.src.Strategies.UtBot.StrategyOptions;
+using DoubleUtBotStrategyOptions = bot.src.Strategies.DoubleUtBot.StrategyOptions;
 
 namespace bot.src.Strategies;
 
@@ -8,7 +8,7 @@ public static class StrategyOptionsFactory
     public static IStrategyOptions CreateStrategyOptions(string strategyName) => strategyName switch
     {
         StrategyNames.SMMA_RSI => new SmmaRsiStrategyOptions(),
-        StrategyNames.UT_BOT => new UtBotStrategyOptions(),
+        StrategyNames.DOUBLE_UT_BOT => new DoubleUtBotStrategyOptions(),
         _ => throw new InvalidStrategyNameException()
     };
 }

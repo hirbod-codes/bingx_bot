@@ -1,6 +1,6 @@
 using bot.src.Indicators.Models;
 
-namespace bot.src.Indicators.UtBot;
+namespace bot.src.Indicators.DoubleUtBot;
 
 public class IndicatorOptions : IIndicatorOptions
 {
