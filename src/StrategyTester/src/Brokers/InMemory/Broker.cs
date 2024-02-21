@@ -41,7 +41,7 @@ public class Broker : IBroker
         // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/kline_data_one_month_1min.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
         // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/3month_kline_data.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
 
-        // candles = candles.Take(10000);
+        // candles = candles.Take(60000);
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());
