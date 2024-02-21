@@ -1,12 +1,5 @@
 using bot.src.PnLAnalysis.Models;
 using bot.src.Data.Models;
-using bot.src.MessageStores;
-using bot.src.Brokers;
-using bot.src.Bots;
-using bot.src.RiskManagement;
-using bot.src.Indicators;
-using bot.src.Strategies;
-using StrategyTester.src.Testers;
 
 namespace StrategyTester.Dtos;
 

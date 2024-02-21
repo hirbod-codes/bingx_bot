@@ -22,6 +22,9 @@ function dumpObject(arr, level) {
     return dumped_text;
 }
 
+var charts = []
+var chartElms = []
+
 Object.keys(results).forEach(k => {
     document.getElementById("accordion").innerHTML += `
         <div class="accordion-item">
@@ -39,12 +42,15 @@ Object.keys(results).forEach(k => {
         </div>
     `
 
+    var strategiesClosedPositions = []
+
     results[k].forEach((result, i) => {
-        var closedPositions = result.ClosedPositions
+        // if (i != 0) return
 
-        delete result.ClosedPositions
+        strategiesClosedPositions.push(result.ClosedPositions.filter(e => e != null))
 
-        var dump = dumpObject(result)
+        result.ClosedPositions = null
+        let dump = dumpObject(result)
 
         document.getElementById(k + "accordion").innerHTML += `
                 <div class="accordion-item">
@@ -53,14 +59,14 @@ Object.keys(results).forEach(k => {
                         ` + i + `
                         </button>
                     </h2>
-                    <div id="collapse` + k + i + `" class="accordion-collapse collapse show" data-bs-parent="#` + k + `accordion">
+                    <div id="collapse` + k + i + `" class="accordion-collapse collapse" data-bs-parent="#` + k + `accordion">
                         <div class="accordion-body">
-                            <pre id="` + k + i + `-body">
-                            </pre>
-        
-                            <div style="margin: 10px;border: 1px solid red;">
+                            <div id="` + k + i + `" style="margin: 10px;border: 1px solid red;">
                                 <canvas id="` + k + i + `-chart"></canvas>
                             </div>
+
+                            <pre style="max-height: 40em;" id="` + k + i + `-body">
+                            </pre>
                         </div>
                     </div>
                 </div>
@@ -68,23 +74,24 @@ Object.keys(results).forEach(k => {
 
         document.getElementById(k + i + "-body").innerHTML = dump
 
-        const chartElm = document.getElementById(k + i + '-chart')
+        chartElms[i] = document.getElementById(k + i + '-chart')
+    })
 
-        var netProfit = 0
-        var closedPositions = closedPositions.filter(e => e != null)
-        var formattedData = closedPositions.map((e, i) => {
+    strategiesClosedPositions.forEach((strategyClosedPositions, i) => {
+        chartElms[i] = document.getElementById(k + i + '-chart')
+
+        let netProfit = 0
+
+        let formattedData = strategyClosedPositions.map((e, i) => {
             netProfit += e.ProfitWithCommission
 
             return netProfit
         })
 
-        grossProfit = result.PnlResults.LongGrossProfit + result.PnlResults.ShortGrossProfit
-        grossLoss = result.PnlResults.LongGrossLoss + result.PnlResults.ShortGrossLoss
-
-        new Chart(chartElm, {
+        charts.push(new Chart(document.getElementById(k + i + '-chart'), {
             type: 'bar',
             data: {
-                labels: closedPositions.map(e => e.OpenedAt),
+                labels: strategyClosedPositions.map(e => e.OpenedAt),
                 datasets: [{
                     label: 'Strategy test results',
                     data: formattedData,
@@ -101,6 +108,10 @@ Object.keys(results).forEach(k => {
                     }
                 }
             }
-        })
+        }))
     })
 })
+
+console.log(charts);
+console.log(chartElms);
+charts.forEach(c => c.update('active'))
