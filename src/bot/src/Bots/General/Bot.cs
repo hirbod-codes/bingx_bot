@@ -17,6 +17,8 @@ public class Bot : IBot
     private readonly BotOptions _generalBotOptions;
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
+    private string _previousTrend = string.Empty;
+    private int _inTrendPositionsCount = 0;
 
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
@@ -96,8 +98,16 @@ public class Bot : IBot
             return;
         }
 
+        if (_previousTrend != generalMessage.Direction)
+            _inTrendPositionsCount = 0;
+        else
+            _previousTrend = generalMessage.Direction;
+
         decimal margin = _riskManagement.GetMargin();
         decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), generalMessage.SlPrice);
+
+        if (_inTrendPositionsCount <= 2)
+            margin /= 4m;
 
         _logger.Information("Opening a market position...");
 
@@ -107,6 +117,8 @@ public class Bot : IBot
             await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
 
         _logger.Information("market position is opened.");
+
+        _inTrendPositionsCount++;
     }
 
     private async Task<IGeneralMessage?> CheckForSignal()

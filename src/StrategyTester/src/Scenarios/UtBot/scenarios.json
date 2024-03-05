@@ -6,7 +6,7 @@
         },
         "BrokerName": "InMemory",
         "BrokerOptions": {
-            "BrokerCommission": 0.01,
+            "BrokerCommission": 0,
             "Symbol": "BTC-USDT",
             "AccountOptions": {
                 "Balance": 10000
@@ -20,15 +20,20 @@
         },
         "IndicatorOptionsName": "UtBot",
         "IndicatorOptions": {
+            "AtrPeriod": {
+                "Period": 14,
+                "Source": "close"
+            },
+            "AtrMultiplier": 2,
             "EmaPeriod": {
                 "Period": 1,
                 "Source": "close"
             },
-            "AtrPeriod": {
+            "AtrStopPeriod": {
                 "Period": 200,
                 "Source": "close"
             },
-            "AtrMultiplier": 2
+            "AtrStopMultiplier": 2
         },
         "StrategyName": "UtBot",
         "StrategyOptions": {

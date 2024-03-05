@@ -1,0 +1,86 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {},
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 60
+        },
+        "RiskManagementName": "EmaRsi",
+        "RiskManagementOptions": {
+            "Margin": 100,
+            "SLPercentages": 30,
+            "NumberOfConcurrentPositions": 0,
+            "GrossLossLimit": 0,
+            "GrossProfitLimit": 0
+        },
+        "IndicatorOptionsName": "EmaRsi",
+        "IndicatorOptions": {
+            "AtrMultiplier": 2,
+            "Atr": {
+                "Period": 14,
+                "Source": "close"
+            },
+            "Ema1": {
+                "Period": 20,
+                "Source": "close"
+            },
+            "Ema2": {
+                "Period": 20,
+                "Source": "close"
+            },
+            "Rsi": {
+                "Period": 14,
+                "Source": "close",
+                "UpperBand": 54,
+                "LowerBand": 46
+            }
+        },
+        "StrategyName": "EmaRsi",
+        "StrategyOptions": {
+            "ProviderName": "EmaRsiStrategy",
+            "SLPercentage": 20,
+            "Ratio": 2,
+            "InvalidTimePeriods": [
+                {
+                    "Start": "00:00:00",
+                    "End": "01:00:00"
+                },
+                {
+                    "Start": "05:00:00",
+                    "End": "07:00:00"
+                },
+                {
+                    "Start": "10:00:00",
+                    "End": "14:30:00"
+                },
+                {
+                    "Start": "21:00:00",
+                    "End": "11:59:00"
+                }
+            ],
+            "InvalidWeekDays": [
+                0,
+                6
+            ]
+        },
+        "BotName": "General",
+        "BotOptions": {
+            "Provider": "EmaRsiStrategy",
+            "TimeFrame": 60
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "TimeFrame": 60
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]

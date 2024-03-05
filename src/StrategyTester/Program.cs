@@ -102,6 +102,8 @@ public class Program
             Result[] strategyResults = JsonSerializer.Deserialize<Result[]>(await File.ReadAllTextAsync(path))!;
 
             strategiesResults.Add(scenariosDirectoryEntries[i].Split(Path.DirectorySeparatorChar).Last(), strategyResults);
+
+            break;
         }
 
         await File.WriteAllTextAsync($"{scenariosDirectory}{Path.DirectorySeparatorChar}results.json", JsonSerializer.Serialize(strategiesResults, new JsonSerializerOptions()

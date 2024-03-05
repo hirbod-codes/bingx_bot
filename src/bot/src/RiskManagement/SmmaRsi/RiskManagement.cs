@@ -24,18 +24,16 @@ public class RiskManagement : IRiskManagement
 
     public async Task<bool> PermitOpenPosition()
     {
-        if (_riskManagementOptions.GrossProfitInterval == 0 && _riskManagementOptions.GrossLossInterval == 0 && _riskManagementOptions.NumberOfConcurrentPositions == 0)
+        if (_riskManagementOptions.GrossProfitLimit == 0 && _riskManagementOptions.GrossLossLimit == 0 && _riskManagementOptions.NumberOfConcurrentPositions == 0)
             return true;
 
         decimal grossLossPerPosition = _riskManagementOptions.Margin * (_riskManagementOptions.SLPercentages / 100m);
 
-        if (_riskManagementOptions.GrossLossLimit < grossLossPerPosition)
+        if (_riskManagementOptions.GrossLossLimit != 0 && _riskManagementOptions.GrossLossLimit < grossLossPerPosition)
             throw new InvalidRiskManagementException();
 
-        // Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
-        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date.AddHours(6));
-        // Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossLossInterval)));
-        Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().AddSeconds(-1 * Math.Abs((double)_riskManagementOptions.GrossProfitInterval)));
+        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
+        Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
         Task<IEnumerable<Position?>> openedPositionsTask = _broker.GetOpenPositions();
         await Task.WhenAll(closedPositionsForLossTask, closedPositionsForProfitTask, openedPositionsTask);
         IEnumerable<Position> closedPositionsForLoss = closedPositionsForLossTask.Result.Where(o => o != null)!;
@@ -45,7 +43,7 @@ public class RiskManagement : IRiskManagement
         if (_riskManagementOptions.NumberOfConcurrentPositions != 0 && openedPositions.Count() >= _riskManagementOptions.NumberOfConcurrentPositions)
             return false;
 
-        if (_riskManagementOptions.GrossProfitInterval != 0)
+        if (_riskManagementOptions.GrossProfitLimit != 0)
         {
             decimal grossProfit = PnLAnalysis.PnLAnalysis.GetGrossProfit(closedPositionsForProfit);
 
@@ -53,7 +51,7 @@ public class RiskManagement : IRiskManagement
                 return false;
         }
 
-        if (_riskManagementOptions.GrossLossInterval != 0)
+        if (_riskManagementOptions.GrossLossLimit != 0)
         {
             // Adding another grossLossPerPosition because of current possible position
             decimal openedPositionsMaximumLoss = (openedPositions.Count() * grossLossPerPosition) + grossLossPerPosition;

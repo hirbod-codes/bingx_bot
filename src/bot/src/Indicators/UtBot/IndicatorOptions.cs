@@ -7,4 +7,6 @@ public class IndicatorOptions : IIndicatorOptions
     public EmaOptions EmaPeriod { get; set; } = null!;
     public AtrOptions AtrPeriod { get; set; } = null!;
     public double AtrMultiplier { get; set; }
+    public AtrOptions AtrStopPeriod { get; set; } = null!;
+    public double AtrStopMultiplier { get; set; }
 }

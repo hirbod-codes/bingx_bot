@@ -1,0 +1,165 @@
+using bot.src.Data.Models;
+using bot.src.MessageStores;
+using bot.src.MessageStores.InMemory.Models;
+using bot.src.Notifiers;
+using Serilog;
+using Skender.Stock.Indicators;
+using bot.src.Indicators;
+using bot.src.Indicators.EmaRsi;
+using bot.src.Strategies.EmaRsi.Exceptions;
+using bot.src.Bots.General.Models;
+using bot.src.Brokers;
+using bot.src.Data;
+
+namespace bot.src.Strategies.EmaRsi;
+
+public class Strategy : IStrategy
+{
+    private readonly IndicatorOptions _indicatorsOptions;
+    private readonly StrategyOptions _strategyOptions;
+    private IEnumerable<AtrResult> _atr = null!;
+    private IEnumerable<EmaResult> _ema1 = null!;
+    private IEnumerable<EmaResult> _ema2 = null!;
+    private IEnumerable<RsiResult> _rsi = null!;
+    private readonly IBroker _broker;
+    private readonly INotifier _notifier;
+    private readonly IMessageRepository _messageRepository;
+    private readonly ILogger _logger;
+
+    public Strategy(IStrategyOptions strategyOptions, IIndicatorOptions indicatorsOptions, IBroker broker, INotifier notifier, IMessageRepository messageRepository, ILogger logger)
+    {
+        _indicatorsOptions = (indicatorsOptions as IndicatorOptions)!;
+        _strategyOptions = (strategyOptions as StrategyOptions)!;
+        _broker = broker;
+        _notifier = notifier;
+        _messageRepository = messageRepository;
+        _logger = logger.ForContext<Strategy>();
+    }
+
+    public void PrepareIndicators(Candles candles)
+    {
+        _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
+        _ema1 = candles.GetEma(_indicatorsOptions.Ema1.Period);
+        _ema2 = candles.GetEma(_indicatorsOptions.Ema2.Period);
+        _rsi = candles.GetRsi(_indicatorsOptions.Rsi.Period);
+    }
+
+    public async Task HandleCandle(Candle candle, int timeFrame)
+    {
+        if ((candle.High - candle.Low) > 70)
+        {
+            _logger.Information("This candle is too big, skipping...");
+            return;
+        }
+
+        if (_atr == null || _ema1 == null || _ema2 == null || _rsi == null)
+            throw new NoIndicatorException();
+
+        int index = await _broker.GetLastCandleIndex();
+
+        bool isUpTrend = IsUpTrend(index);
+        bool isDownTrend = IsDownTrend(index);
+        bool isInTrend = isUpTrend || isDownTrend;
+
+        bool rsiCrossedOverLowerBand = HasRsiCrossedOverLowerBand(index);
+        bool rsiCrossedUnderUpperBand = HasRsiCrossedUnderUpperBand(index);
+
+        DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
+
+        bool shouldOpenPosition = false;
+        if (isInTrend)
+            if ((isUpTrend && rsiCrossedOverLowerBand) || (isDownTrend && rsiCrossedUnderUpperBand))
+                if (!_strategyOptions.InvalidWeekDays.Any() || (_strategyOptions.InvalidWeekDays.Any() && !_strategyOptions.InvalidWeekDays.Where(invalidDate => candleCloseDate.DayOfWeek == invalidDate).Any()))
+                    if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
+                        if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
+                            if (_strategyOptions.NaturalTrendIndicatorLength == 0 || _strategyOptions.NaturalTrendIndicatorLimit == 0)
+                                shouldOpenPosition = true;
+                            else
+                            {
+                                decimal highestHigh = candle.High;
+                                decimal lowestLow = candle.Low;
+                                for (int i = 1; i <= _strategyOptions.NaturalTrendIndicatorLength; i++)
+                                {
+                                    Candle? c = await _broker.GetCandle(i);
+
+                                    if (c == null)
+                                    {
+                                        shouldOpenPosition = true;
+                                        break;
+                                    }
+
+                                    if (c.High > highestHigh)
+                                        highestHigh = c.High;
+                                    if (c.Low < lowestLow)
+                                        lowestLow = c.Low;
+                                }
+
+                                if (!shouldOpenPosition && (highestHigh - lowestLow) > _strategyOptions.NaturalTrendIndicatorLimit)
+                                    shouldOpenPosition = true;
+                            }
+
+        if (shouldOpenPosition)
+        {
+            _logger.Information("Candle is valid for a position, sending the message...");
+
+            decimal slPrice = CalculateSlPrice(index, candle.Close, isUpTrend);
+            decimal tpPrice = CalculateTpPrice(index, candle.Close, isUpTrend);
+
+            IMessage message = CreateOpenPositionMessage(candle, timeFrame, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, slPrice, tpPrice);
+            await _messageRepository.CreateMessage(message);
+            _logger.Information("Message sent.");
+        }
+    }
+
+    private decimal CalculateSlPrice(int index, decimal entryPrice, bool isUpTrend) =>
+        isUpTrend ? entryPrice - (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! : entryPrice + (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
+
+    private decimal CalculateTpPrice(int index, decimal entryPrice, bool isUpTrend) =>
+        isUpTrend ? entryPrice + ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.Ratio) : entryPrice - ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.Ratio);
+
+    private bool HasRsiCrossedUnderUpperBand(int index)
+    {
+        if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
+            return false;
+
+        return _rsi.ElementAt(index - 1).Rsi > _indicatorsOptions.Rsi.UpperBand && _rsi.ElementAt(index).Rsi < _indicatorsOptions.Rsi.UpperBand;
+    }
+
+    private bool HasRsiCrossedOverLowerBand(int index)
+    {
+        if (_rsi.ElementAt(index).Rsi is null || _rsi.ElementAt(index - 1).Rsi is null)
+            return false;
+
+        return _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index).Rsi > _indicatorsOptions.Rsi.LowerBand;
+    }
+
+    private bool IsDownTrend(int index)
+    {
+        if (_ema1.ElementAt(index).Ema is null || _ema2.ElementAt(index).Ema is null)
+            return false;
+
+        return _ema1.ElementAt(index).Ema <= _ema2.ElementAt(index).Ema;
+    }
+
+    private bool IsUpTrend(int index)
+    {
+        if (_ema1.ElementAt(index).Ema is null || _ema2.ElementAt(index).Ema is null)
+            return false;
+
+        return _ema1.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema;
+    }
+
+    private IMessage CreateOpenPositionMessage(Candle candle, int timeFrame, string direction, decimal slPrice, decimal? tpPrice) => new Message()
+    {
+        From = _strategyOptions.ProviderName,
+        Body = IGeneralMessage.CreateMessageBody(
+                openingPosition: true,
+                allowingParallelPositions: true,
+                closingAllPositions: false,
+                direction,
+                slPrice,
+                tpPrice
+            ),
+        SentAt = candle.Date.AddSeconds(timeFrame)
+    };
+}
