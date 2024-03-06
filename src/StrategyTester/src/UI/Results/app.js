@@ -22,96 +22,107 @@ function dumpObject(arr, level) {
     return dumped_text;
 }
 
-var charts = []
-var chartElms = []
+var buttons = ''
 
 Object.keys(results).forEach(k => {
-    document.getElementById("accordion").innerHTML += `
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading` + k + `">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse` + k + `">
-                ` + k + `
-                </button>
-            </h2>
-            <div id="collapse` + k + `" class="accordion-collapse collapse show" data-bs-parent="#accordion">
-                <div class="accordion-body">
-                    <div class="accordion" id="` + k + `accordion">
-                    </div>
-                </div>
-            </div>
-        </div>
-    `
+    buttons += `
+    <button type="button" class="btn btn-primary" onclick="selectStrategy('` + k + `')">` + k + `</button>
+    `;
+})
+
+document.getElementById('buttons').innerHTML = buttons
+
+var chart = null;
+
+var render = (i, strategyName) => {
+    if (chart != null)
+        chart.destroy();
+
+    chart = null;
 
     var strategiesClosedPositions = []
 
-    results[k].forEach((result, i) => {
-        // if (i != 0) return
+    let t = results[strategyName][i].ClosedPositions
 
-        strategiesClosedPositions.push(result.ClosedPositions.filter(e => e != null))
+    strategiesClosedPositions.push(results[strategyName][i].ClosedPositions.filter(e => e != null))
 
-        result.ClosedPositions = null
-        let dump = dumpObject(result)
+    results[strategyName][i].ClosedPositions = null
+    let dump = dumpObject(results[strategyName][i])
+    results[strategyName][i].ClosedPositions = t
 
-        document.getElementById(k + "accordion").innerHTML += `
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading` + k + i + `">
-                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse` + k + i + `">
-                        ` + i + `
-                        </button>
-                    </h2>
-                    <div id="collapse` + k + i + `" class="accordion-collapse collapse" data-bs-parent="#` + k + `accordion">
-                        <div class="accordion-body">
-                            <div id="` + k + i + `" style="margin: 10px;border: 1px solid red;">
-                                <canvas id="` + k + i + `-chart"></canvas>
-                            </div>
+    document.getElementById(i + "-body").innerHTML = dump
 
-                            <pre style="max-height: 40em;" id="` + k + i + `-body">
-                            </pre>
-                        </div>
-                    </div>
-                </div>
-            `;
+    let netProfit = 0
+    let netProfitWithoutCommission = 0
 
-        document.getElementById(k + i + "-body").innerHTML = dump
-
-        chartElms[i] = document.getElementById(k + i + '-chart')
-    })
-
-    strategiesClosedPositions.forEach((strategyClosedPositions, i) => {
-        chartElms[i] = document.getElementById(k + i + '-chart')
-
-        let netProfit = 0
-
-        let formattedData = strategyClosedPositions.map((e, i) => {
-            netProfit += e.ProfitWithCommission
-
-            return netProfit
-        })
-
-        charts.push(new Chart(document.getElementById(k + i + '-chart'), {
-            type: 'bar',
-            data: {
-                labels: strategyClosedPositions.map(e => e.OpenedAt),
-                datasets: [{
+    chart = new Chart(i + '-chart', {
+        type: 'bar',
+        data: {
+            labels: results[strategyName][i].ClosedPositions.map(e => e.OpenedAt),
+            datasets: [
+                {
                     label: 'Strategy test results',
-                    data: formattedData,
+                    data: results[strategyName][i].ClosedPositions.map((e) => {
+                        netProfit += e.ProfitWithCommission
+
+                        return netProfit
+                    }),
                     borderWidth: 1,
-                    barThickness: 5,
-                    backgroundColor: 'rgb(0, 0, 255, 1)',
-                    barColor: 'rgb(0, 0, 255, 1)',
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                    }
+                    backgroundColor: '#FF00004D',
+                    borderColor: '#FF00004D',
+                    barColor: '#FF00004D',
+                },
+                {
+                    label: 'Strategy test results (with out commission)',
+                    data: results[strategyName][i].ClosedPositions.map((e) => {
+                        netProfitWithoutCommission += e.Profit
+
+                        return netProfitWithoutCommission
+                    }),
+                    borderWidth: 1,
+                    backgroundColor: '#0000FF4D',
+                    borderColor: '#0000FF4D',
+                    barColor: '#0000FF4D',
+                }
+            ]
+        },
+        options: {
+            animation: false,
+            events: ['click'],
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
                 }
             }
-        }))
+        }
     })
-})
+}
 
-console.log(charts);
-console.log(chartElms);
-charts.forEach(c => c.update('active'))
+var selectStrategy = (strategyName) => {
+    document.getElementById("accordion").innerHTML = ``
+
+    results[strategyName].forEach((result, i) => {
+        document.getElementById("accordion").innerHTML += `
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading` + i + `">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse` + i + `" id="` + i + `button" onclick="render('` + i + `', '` + strategyName + `')">
+                                ` + i + `
+                                </button>
+                            </h2>
+                            <div id="collapse` + i + `" class="accordion-collapse collapse" data-bs-parent="#accordion">
+                                <div class="accordion-body">
+                                    <div id="` + i + `" style="margin: 10px;border: 1px solid red;height:500px">
+                                        <canvas id="` + i + `-chart"></canvas>
+                                    </div>
+        
+                                    <pre style="max-height: 40em;" id="` + i + `-body">
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+    })
+}
+
+selectStrategy(Object.keys(results)[0])
