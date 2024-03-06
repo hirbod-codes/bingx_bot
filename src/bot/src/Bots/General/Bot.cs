@@ -18,7 +18,7 @@ public class Bot : IBot
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
     private string _previousTrend = string.Empty;
-    private int _inTrendPositionsCount = 0;
+    private decimal _inTrendPositionsCount = 0;
 
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
@@ -99,15 +99,16 @@ public class Bot : IBot
         }
 
         if (_previousTrend != generalMessage.Direction)
+        {
             _inTrendPositionsCount = 0;
-        else
             _previousTrend = generalMessage.Direction;
+        }
 
         decimal margin = _riskManagement.GetMargin();
         decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), generalMessage.SlPrice);
 
-        if (_inTrendPositionsCount <= 2)
-            margin /= 4m;
+        if (_generalBotOptions.ShouldDivideMargin && _inTrendPositionsCount <= 2)
+            margin /= (decimal)Math.Pow(2, (double)_inTrendPositionsCount);
 
         _logger.Information("Opening a market position...");
 

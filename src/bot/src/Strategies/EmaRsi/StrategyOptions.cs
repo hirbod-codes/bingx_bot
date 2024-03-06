@@ -5,7 +5,6 @@ namespace bot.src.Strategies.EmaRsi;
 public class StrategyOptions : IStrategyOptions
 {
     public string ProviderName { get; set; } = null!;
-    public decimal SLPercentage { get; set; }
     public decimal Ratio { get; set; }
     /// <summary>
     /// Can be left empty.

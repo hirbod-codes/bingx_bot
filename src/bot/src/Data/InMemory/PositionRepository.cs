@@ -85,17 +85,19 @@ public class PositionRepository : IPositionRepository
         && (end == null || o.ClosedAt <= end)
     ));
 
-    public async Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission)
+    public async Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission, bool unknownState)
     {
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
 
         if (position.PositionStatus == PositionStatus.CLOSED)
             throw new ClosingAClosedPosition();
 
+        position.UnknownCloseState = unknownState;
+
         position.ClosedPrice = closePrice;
         position.ClosedAt = closedAt;
 
-        decimal? profit = (position.ClosedPrice - position.OpenedPrice) * position.Margin * position.Leverage / position.OpenedPrice;
+        decimal profit = ((decimal)position.ClosedPrice - position.OpenedPrice) * position.Margin * position.Leverage / position.OpenedPrice;
         if (position.PositionDirection == PositionDirection.SHORT)
             profit *= -1;
         position.Profit = profit;
@@ -108,15 +110,12 @@ public class PositionRepository : IPositionRepository
             case PositionStatus.OPENED:
                 _openPositions[int.Parse(position.Id)] = null;
                 break;
-
             case PositionStatus.PENDING:
                 _pendingPositions[int.Parse(position.Id)] = null;
                 break;
-
             case PositionStatus.CANCELLED:
                 _cancelledPositions[int.Parse(position.Id)] = null;
                 break;
-
             default:
                 throw new InvalidPositionStatusException();
         }

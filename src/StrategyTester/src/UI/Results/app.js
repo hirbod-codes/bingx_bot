@@ -68,9 +68,9 @@ var render = (i, strategyName) => {
                         return netProfit
                     }),
                     borderWidth: 1,
-                    backgroundColor: '#FF00004D',
-                    borderColor: '#FF00004D',
-                    barColor: '#FF00004D',
+                    backgroundColor: '#FF0000B3',
+                    borderColor: '#FF0000B3',
+                    barColor: '#FF0000B3',
                 },
                 {
                     label: 'Strategy test results (with out commission)',
@@ -80,9 +80,9 @@ var render = (i, strategyName) => {
                         return netProfitWithoutCommission
                     }),
                     borderWidth: 1,
-                    backgroundColor: '#0000FF4D',
-                    borderColor: '#0000FF4D',
-                    barColor: '#0000FF4D',
+                    backgroundColor: '#0000FFB3',
+                    borderColor: '#0000FFB3',
+                    barColor: '#0000FFB3',
                 }
             ]
         },

@@ -9,16 +9,20 @@ public static class PnLAnalysis
 {
     public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo)
     {
+        IEnumerable<Position?> closedPositions = await repo.GetClosedPositions();
+
         AnalysisSummary analysisSummary = new()
         {
             OpenedPositions = (await repo.GetOpenedPositions()).Where(o => o != null).Count(),
             PendingPositions = (await repo.GetPendingPositions()).Where(o => o != null).Count(),
-            CancelledPositions = (await repo.GetCancelledPositions()).Where(o => o != null).Count()
+            CancelledPositions = (await repo.GetCancelledPositions()).Where(o => o != null).Count(),
+            ClosedPositions = closedPositions.Where(o => o != null && !o.UnknownCloseState).Count(),
+            UnknownStatePositions = closedPositions.Where(o => o != null && o.UnknownCloseState).Count(),
+            LongGrossProfit = GetLongGrossProfit(closedPositions),
+            ShortGrossProfit = GetShortGrossProfit(closedPositions),
+            LongGrossLoss = GetLongGrossLoss(closedPositions),
+            ShortGrossLoss = GetShortGrossLoss(closedPositions)
         };
-
-        IEnumerable<Position?> closedPositions = await repo.GetClosedPositions();
-
-        analysisSummary.ClosedPositions = closedPositions.Where(o => o != null).Count();
 
         foreach (Position? position in closedPositions)
         {
@@ -44,29 +48,17 @@ public static class PnLAnalysis
             if (position.ProfitWithCommission > 0)
             {
                 if (position.PositionDirection == PositionDirection.LONG)
-                {
-                    analysisSummary.LongGrossProfit += (decimal)position.ProfitWithCommission;
                     analysisSummary.LongWins++;
-                }
                 else
-                {
-                    analysisSummary.ShortGrossProfit += (decimal)position.ProfitWithCommission;
                     analysisSummary.ShortWins++;
-                }
                 analysisSummary.Wins++;
             }
             else
             {
                 if (position.PositionDirection == PositionDirection.LONG)
-                {
-                    analysisSummary.LongGrossLoss += (decimal)position.ProfitWithCommission;
                     analysisSummary.LongLosses++;
-                }
                 else
-                {
-                    analysisSummary.ShortGrossLoss += (decimal)position.ProfitWithCommission;
                     analysisSummary.ShortLosses++;
-                }
                 analysisSummary.Losses++;
             }
         }
@@ -95,14 +87,13 @@ public static class PnLAnalysis
         decimal grossProfit = 0;
         foreach (Position? position in closedPositions)
         {
-            if (position == null)
+            if (position == null || position.PositionDirection != PositionDirection.LONG || position.ProfitWithCommission <= 0)
                 continue;
 
             if (position.PositionStatus != PositionStatus.CLOSED)
                 throw new InvalidPositionException();
 
-            if (position.PositionDirection == PositionDirection.LONG && position.ProfitWithCommission > 0)
-                grossProfit += (decimal)position.ProfitWithCommission!;
+            grossProfit += (decimal)position.ProfitWithCommission!;
         }
 
         return grossProfit;
@@ -113,14 +104,13 @@ public static class PnLAnalysis
         decimal grossProfit = 0;
         foreach (Position? position in closedPositions)
         {
-            if (position == null)
+            if (position == null || position.PositionDirection != PositionDirection.SHORT || position.ProfitWithCommission <= 0)
                 continue;
 
             if (position.PositionStatus != PositionStatus.CLOSED)
                 throw new InvalidPositionException();
 
-            if (position.PositionDirection == PositionDirection.SHORT && position.ProfitWithCommission > 0)
-                grossProfit += (decimal)position.ProfitWithCommission!;
+            grossProfit += (decimal)position.ProfitWithCommission!;
         }
 
         return grossProfit;
@@ -131,7 +121,7 @@ public static class PnLAnalysis
         decimal grossLoss = 0;
         foreach (Position? position in closedPositions)
         {
-            if (position == null)
+            if (position == null || position.PositionDirection != PositionDirection.LONG || position.ProfitWithCommission >= 0)
                 continue;
 
             if (position.PositionStatus != PositionStatus.CLOSED)
@@ -149,14 +139,13 @@ public static class PnLAnalysis
         decimal grossLoss = 0;
         foreach (Position? position in closedPositions)
         {
-            if (position == null)
+            if (position == null || position.PositionDirection != PositionDirection.SHORT || position.ProfitWithCommission >= 0)
                 continue;
 
             if (position.PositionStatus != PositionStatus.CLOSED)
                 throw new InvalidPositionException();
 
-            if (position.PositionDirection == PositionDirection.SHORT && position.ProfitWithCommission < 0)
-                grossLoss += Math.Abs((decimal)position.ProfitWithCommission!);
+            grossLoss += Math.Abs((decimal)position.ProfitWithCommission!);
         }
 
         return grossLoss;

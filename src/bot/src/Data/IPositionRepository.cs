@@ -20,6 +20,6 @@ public interface IPositionRepository
     public Task<IEnumerable<Position?>> GetCancelledPositions();
     public Task<IEnumerable<Position>> GetPositions();
     public Task<IEnumerable<Position>> GetPositions(DateTime start, DateTime? end = null);
-    public Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission);
+    public Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission, bool unknownState);
     public Task<bool> AnyOpenedPosition();
 }

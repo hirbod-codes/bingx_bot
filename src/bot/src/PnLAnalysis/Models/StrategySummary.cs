@@ -25,4 +25,5 @@ public class AnalysisSummary
     public int ShortLosses { get; set; } = 0;
     public int Losses { get; set; } = 0;
     public decimal WinLossRatio { get; set; } = 0;
+    public int UnknownStatePositions { get; set; } = 0;
 }

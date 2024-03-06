@@ -44,78 +44,80 @@ public class Program
         string resultsJsonFile = $"{strategyDirectory}{Path.DirectorySeparatorChar}results.json";
         string resultsJsFile = $"{strategyDirectory}{Path.DirectorySeparatorChar}results.js";
 
-        await File.WriteAllTextAsync(logFile, String.Empty);
-        await File.AppendAllTextAsync(logFile, $"\n{scenarios.Length} scenarios are parsed to be tested at {DateTime.UtcNow}.");
-
-        List<Result> strategyTestResults = new();
-        int y = 0;
-        for (; y < scenarios.Length; y++)
+        try
         {
-            object scenario = scenarios[y];
+            await File.WriteAllTextAsync(logFile, String.Empty);
+            await File.AppendAllTextAsync(logFile, $"{scenarios.Length} scenarios are parsed to be tested at {DateTime.UtcNow}.");
 
-            _configuration = null!;
-            _logger = null!;
-
-            _configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddJsonStream(GenerateStreamFromString(JsonSerializer.Serialize(scenario)))
-                .AddEnvironmentVariables()
-                .AddCommandLine(args)
-                .Build();
-
-            _logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
-                .CreateLogger();
-
-            try { await RunScenario(strategyTestResults); }
-            catch (Exception ex)
+            List<Result> strategyTestResults = new();
+            int y = 0;
+            for (; y < scenarios.Length; y++)
             {
-                await File.AppendAllTextAsync(logFile, $"\nScenario with index:{y} has thrown an exception at {DateTime.UtcNow}, with message {ex.Message}, Skipping");
-                continue;
+                object scenario = scenarios[y];
+
+                _configuration = null!;
+                _logger = null!;
+
+                _configuration = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json")
+                    .AddJsonStream(GenerateStreamFromString(JsonSerializer.Serialize(scenario)))
+                    .AddEnvironmentVariables()
+                    .AddCommandLine(args)
+                    .Build();
+
+                _logger = new LoggerConfiguration()
+                    .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
+                    .CreateLogger();
+
+                try { await RunScenario(strategyTestResults); }
+                catch (Exception ex)
+                {
+                    await File.AppendAllTextAsync(logFile, $"\nScenario with index:{y} has thrown an exception at {DateTime.UtcNow}, with message {ex.Message}, Skipping");
+                    continue;
+                }
+
+                await File.AppendAllTextAsync(logFile, $"\nScenario {y} has completed at {DateTime.UtcNow}.");
             }
 
-            await File.AppendAllTextAsync(logFile, $"\nScenario {y} has completed at {DateTime.UtcNow}.");
+            await File.AppendAllTextAsync(logFile, $"\n{y} scenarios has completed successfully at {DateTime.UtcNow}.");
+
+            string serializedStrategyTestResults = JsonSerializer.Serialize(strategyTestResults, new JsonSerializerOptions()
+            {
+                IncludeFields = true,
+                WriteIndented = true,
+                UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
+            });
+
+            await File.WriteAllTextAsync(resultsJsonFile, serializedStrategyTestResults);
+            await File.WriteAllTextAsync(resultsJsFile, $"var {strategyName}Results = " + serializedStrategyTestResults);
+
+            string[] scenariosDirectoryEntries = Directory.EnumerateDirectories($"{scenariosDirectory}").ToArray();
+
+            Dictionary<string, Result[]> strategiesResults = new();
+            for (int i = 0; i < scenariosDirectoryEntries.Length; i++)
+            {
+                string path = $"{scenariosDirectoryEntries[i]}{Path.DirectorySeparatorChar}results.json";
+
+                if (!File.Exists(path))
+                    continue;
+
+                Result[] strategyResults = JsonSerializer.Deserialize<Result[]>(await File.ReadAllTextAsync(path))!;
+
+                strategiesResults.Add(scenariosDirectoryEntries[i].Split(Path.DirectorySeparatorChar).Last(), strategyResults);
+            }
+
+            await File.WriteAllTextAsync($"{scenariosDirectory}{Path.DirectorySeparatorChar}results.json", JsonSerializer.Serialize(strategiesResults, new JsonSerializerOptions()
+            {
+                WriteIndented = true,
+                UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
+            }));
+            await File.WriteAllTextAsync($"{scenariosDirectory}{Path.DirectorySeparatorChar}results.js", "var results = " + JsonSerializer.Serialize(strategiesResults, new JsonSerializerOptions()
+            {
+                WriteIndented = true,
+                UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
+            }));
         }
-
-        await File.AppendAllTextAsync(logFile, $"\n{y} scenarios has completed successfully at {DateTime.UtcNow}.");
-
-        string serializedStrategyTestResults = JsonSerializer.Serialize(strategyTestResults, new JsonSerializerOptions()
-        {
-            IncludeFields = true,
-            WriteIndented = true,
-            UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
-        });
-
-        await File.WriteAllTextAsync(resultsJsonFile, serializedStrategyTestResults);
-        await File.WriteAllTextAsync(resultsJsFile, $"var {strategyName}Results = " + serializedStrategyTestResults);
-
-        string[] scenariosDirectoryEntries = Directory.EnumerateDirectories($"{scenariosDirectory}").ToArray();
-
-        Dictionary<string, Result[]> strategiesResults = new();
-        for (int i = 0; i < scenariosDirectoryEntries.Length; i++)
-        {
-            string path = $"{scenariosDirectoryEntries[i]}{Path.DirectorySeparatorChar}results.json";
-
-            if (!File.Exists(path))
-                continue;
-
-            Result[] strategyResults = JsonSerializer.Deserialize<Result[]>(await File.ReadAllTextAsync(path))!;
-
-            strategiesResults.Add(scenariosDirectoryEntries[i].Split(Path.DirectorySeparatorChar).Last(), strategyResults);
-
-            break;
-        }
-
-        await File.WriteAllTextAsync($"{scenariosDirectory}{Path.DirectorySeparatorChar}results.json", JsonSerializer.Serialize(strategiesResults, new JsonSerializerOptions()
-        {
-            WriteIndented = true,
-            UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
-        }));
-        await File.WriteAllTextAsync($"{scenariosDirectory}{Path.DirectorySeparatorChar}results.js", "var results = " + JsonSerializer.Serialize(strategiesResults, new JsonSerializerOptions()
-        {
-            WriteIndented = true,
-            UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
-        }));
+        catch (System.Exception ex) { await File.AppendAllTextAsync(logFile, $"An unhandled exception was thrown: {ex.Message}"); }
     }
 
     private static Stream GenerateStreamFromString(string str)
