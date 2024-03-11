@@ -87,17 +87,19 @@ public class Broker : Api, IBroker
         return bingxResponse.Data;
     }
 
-    public async Task InitiateCandleStore(int candlesCount = 10000)
+    public async Task InitiateCandleStore(int candlesCount = 10000, int? timeFrame = null)
     {
+        timeFrame ??= _brokerOptions.TimeFrame;
+
         _logger.Information("Initiating Candle Store...");
 
-        RunConcurrently(ListenForCandles(candlesCount));
+        RunConcurrently(ListenForCandles(candlesCount, (int)timeFrame));
 
         // ListenForCandles method must be ready before FetchCandles finishes execution.(_isListeningForCandles must become true)
         await Task.Delay(3000);
 
-        await FetchHistoricalCandles(candlesCount);
-        await FetchRecentCandles(candlesCount);
+        await FetchHistoricalCandles((int)timeFrame, candlesCount);
+        await FetchRecentCandles(candlesCount, (int)timeFrame);
 
         if (!_isListeningForCandles)
             throw new BingxException("System is not listening for new candles.");
@@ -110,7 +112,7 @@ public class Broker : Api, IBroker
         _logger.Information("Finished Candle Store initiation.");
     }
 
-    private async Task FetchHistoricalCandles(int candlesCount = 10000)
+    private async Task FetchHistoricalCandles(int timeFrame, int candlesCount = 10000)
     {
         _logger.Information("Fetching historical candles...");
         _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
@@ -123,7 +125,7 @@ public class Broker : Api, IBroker
         while (candles.Count < candlesCount)
         {
             _logger.Information($"{nameof(candles)} Count: {{candlesCount}}", candles.Count);
-            IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), null, endTime);
+            IEnumerable<BingxCandle> bingxCandles = await GetKline(GetStringTimeFrame(timeFrame), Math.Min(1400, candlesCount), null, endTime);
 
             if (!bingxCandles.Any() || (candles.Any() && candles.First().Date <= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.Last().Time).DateTime))
                 throw new BingxException("Server does not provide new candles.");
@@ -153,17 +155,41 @@ public class Broker : Api, IBroker
 
             convertedCandles.AddRange(candles);
             candles = convertedCandles;
+            _logger.Information($"{nameof(candles)}: {{candlesCount}}", candles.Count);
         }
 
         _areCandlesLocked = true;
         _candles = new Candles(candles);
         _candles.SkipLast(2);
+
+        File.WriteAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{Symbol}_{candles.Count}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
+
         _areCandlesLocked = false;
 
         _logger.Information("Finished fetching historical candles...");
     }
 
-    public async Task FetchRecentCandles(int candlesCount)
+    private string GetStringTimeFrame(int timeFrame) => timeFrame switch
+    {
+        60 => "1m",
+        60 * 3 => "3m",
+        60 * 5 => "5m",
+        60 * 15 => "15m",
+        60 * 30 => "30m",
+        60 * 60 * 1 => "1h",
+        60 * 60 * 2 => "2h",
+        60 * 60 * 4 => "4h",
+        60 * 60 * 6 => "6h",
+        60 * 60 * 8 => "8h",
+        60 * 60 * 12 => "12h",
+        60 * 60 * 24 * 1 => "1d",
+        60 * 60 * 24 * 3 => "3d",
+        60 * 60 * 24 * 7 => "1w",
+        60 * 60 * 24 * 30 => "1M",
+        _ => throw new BingxException("Invalid TimeFrame!")
+    };
+
+    public async Task FetchRecentCandles(int candlesCount, int timeFrame)
     {
         _logger.Information("Fetching recent candles...");
         _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
@@ -173,7 +199,7 @@ public class Broker : Api, IBroker
         now = now.AddSeconds(-1 * now.Second);
         while (Math.Floor((now.AddMinutes(-1) - _candles.Last().Date).TotalSeconds) >= _brokerOptions.TimeFrame)
         {
-            IEnumerable<BingxCandle> bingxCandles = await GetKline("1m", Math.Min(1400, candlesCount), startTime);
+            IEnumerable<BingxCandle> bingxCandles = await GetKline(GetStringTimeFrame(timeFrame), Math.Min(1400, candlesCount), startTime);
 
             if (!bingxCandles.Any() || (_candles.Any() && _candles.Last().Date >= DateTimeOffset.FromUnixTimeMilliseconds(bingxCandles.First().Time).DateTime))
                 throw new BingxException("Server does not provide new candles.");
@@ -221,15 +247,17 @@ public class Broker : Api, IBroker
         _logger.Information("Finished fetching recent candles...");
     }
 
-    public async Task<Candles> GetCandles()
+    public async Task<Candles> GetCandles(int? timeFrameSeconds = null)
     {
+        timeFrameSeconds ??= _brokerOptions.TimeFrame;
+
         while (true)
         {
             if (_areCandlesLocked)
                 continue;
 
             if (!_candles.Any())
-                await InitiateCandleStore();
+                await InitiateCandleStore(timeFrame: timeFrameSeconds);
 
             return _candles;
         }
@@ -259,7 +287,7 @@ public class Broker : Api, IBroker
         }
     }
 
-    public async Task ListenForCandles(int candlesCount)
+    public async Task ListenForCandles(int candlesCount, int timeFrame)
     {
         _logger.Information("Listening for candles...");
 
@@ -277,7 +305,7 @@ public class Broker : Api, IBroker
             {
                 id,
                 reqType = "sub",
-                dataType = "BTC-USDT@kline_1m"
+                dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
             }))), WebSocketMessageType.Text, true, CancellationToken.None);
 
             break;
@@ -329,7 +357,18 @@ public class Broker : Api, IBroker
             if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
                 continue;
 
-            if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data.First().T).DateTime)
+            if (_candles == null)
+                _candles = new(new Candle[]{ new()
+                    {
+                        Open = decimal.Parse(wsResponse.Data!.First().o),
+                        Close = decimal.Parse(wsResponse.Data!.First().c),
+                        High = decimal.Parse(wsResponse.Data!.First().h),
+                        Low = decimal.Parse(wsResponse.Data!.First().l),
+                        Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
+                        Volume = decimal.Parse(wsResponse.Data!.First().v)
+                    }}
+                );
+            else if (_candles.Any() && _candles.Last().Date == DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data.First().T).DateTime)
                 continue;
 
             Candle candle = new()
@@ -364,7 +403,7 @@ public class Broker : Api, IBroker
 
                 RunConcurrently(Task.Run(async () =>
                 {
-                    await FetchRecentCandles(candlesCount);
+                    await FetchRecentCandles(candlesCount, timeFrame);
                     _areCandlesFetched = true;
                 }));
 
