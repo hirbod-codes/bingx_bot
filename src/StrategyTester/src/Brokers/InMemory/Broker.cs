@@ -28,17 +28,20 @@ public class Broker : IBroker
         _positionRepository = positionRepository;
     }
 
-    public Task InitiateCandleStore(int candlesCount = 10000)
+    public Task InitiateCandleStore(int candlesCount = 10000, int? timeFrame = null)
     {
         _logger.Information("Initiating Candle Store...");
 
-        IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/bot/HistoricalCandles.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-        // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/twelvedata.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
-        // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/kline_raw_data_Y-1-18__12:37:36.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
-        // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/kline_data_one_month_1min.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
-        // IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText("/home/hirbod/projects/bingx_ut_bot/src/StrategyTester/Brokers/fetched_data/3month_kline_data.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.ToList();
+        timeFrame ??= 60;
 
-        candles = candles.Take(100000);
+        IEnumerable<Candle> candles = null!;
+
+        if (timeFrame == 60)
+            candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_200000_HistoricalCandles_1m.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+        if (timeFrame == (60 * 15))
+            candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_100000_HistoricalCandles_15m.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());
@@ -61,7 +64,7 @@ public class Broker : IBroker
 
     public bool IsFinished() => _passedCandlesIndex + 1 == _candlesCount;
 
-    public async Task<Candles> GetCandles()
+    public async Task<Candles> GetCandles(int? timeFrameSeconds = null)
     {
         if (!_candles.Any())
             await InitiateCandleStore();
