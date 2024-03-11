@@ -64,6 +64,9 @@ public class Candles : IEnumerable<Candle>
 
             double totalSeconds = Math.Abs((candle.Date - previousCandle.Date).TotalSeconds);
 
+            if (totalSeconds == 0)
+                continue;
+
             if (_timeFrame != 0 && (totalSeconds < _timeFrame - 1 || totalSeconds > _timeFrame + 1))
                 throw new ArgumentException($"Invalid candle provided.{_candles.Last().Date}");
 
