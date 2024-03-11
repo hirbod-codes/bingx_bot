@@ -4,7 +4,7 @@ namespace bot.src.Indicators.EmaRsi;
 
 public class IndicatorOptions : IIndicatorOptions
 {
-    public int AtrMultiplier { get; set; } = 2;
+    public double AtrMultiplier { get; set; } = 2;
     public AtrOptions Atr { get; set; } = null!;
     public EmaOptions Ema1 { get; set; } = null!;
     public EmaOptions Ema2 { get; set; } = null!;

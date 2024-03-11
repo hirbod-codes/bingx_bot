@@ -52,47 +52,120 @@ var render = (i, strategyName) => {
 
     document.getElementById(i + "-body").innerHTML = dump
 
+    let colorTransparency = 'CF'
+
+    let highestNetProfitWithoutCommission = 0
     let netProfit = 0
     let netProfitWithoutCommission = 0
 
+    let dt = (new Date(Date.parse(results[strategyName][i].ClosedPositions[0].OpenedAt))).valueOf() + (5000 * 60 * 1000)
+
+    let positions = results[strategyName][i].ClosedPositions
+    // .filter((e) => e.Commission / 10 < 0.2)
+    // .filter(e => new Date(Date.parse(e.OpenedAt)).valueOf() <= dt)
+    // .filter(e => e.Leverage <= 10)
+
+    console.log(positions);
+
     chart = new Chart(i + '-chart', {
-        type: 'bar',
+        type: 'line',
         data: {
-            labels: results[strategyName][i].ClosedPositions.map(e => e.OpenedAt),
+            labels: positions.map(e => e.OpenedAt),
             datasets: [
                 {
-                    label: 'Strategy test results',
-                    data: results[strategyName][i].ClosedPositions.map((e) => {
-                        netProfit += e.ProfitWithCommission
+                    type: 'bar',
+                    label: 'with commission',
+                    pointRadius: 0,
+                    data: positions
+                        .map((e) => {
+                            // netProfit += e.ProfitWithCommission
 
-                        return netProfit
-                    }),
+                            let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
+                            if (e.PositionDirection == "short")
+                                profit *= -1
+
+                            netProfit += profit - (0.001 * e.Margin * e.Leverage)
+                            // netProfit += profit - 4
+
+                            return netProfit
+                        }),
                     borderWidth: 1,
-                    backgroundColor: '#FF0000B3',
-                    borderColor: '#FF0000B3',
-                    barColor: '#FF0000B3',
+                    backgroundColor: '#FF0000' + colorTransparency,
+                    backgroundColor: '#FF0000' + colorTransparency,
+                    borderColor: '#FF0000' + colorTransparency,
+                    barColor: '#FF0000' + colorTransparency,
                 },
                 {
-                    label: 'Strategy test results (with out commission)',
-                    data: results[strategyName][i].ClosedPositions.map((e) => {
-                        netProfitWithoutCommission += e.Profit
+                    type: 'bar',
+                    label: 'with out commission',
+                    pointRadius: 0,
+                    data: positions
+                        .map((e) => {
+                            // netProfitWithoutCommission += e.Profit
 
-                        return netProfitWithoutCommission
-                    }),
+                            let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
+                            if (e.PositionDirection == "short")
+                                profit *= -1
+
+                            netProfitWithoutCommission += profit
+
+                            if (netProfitWithoutCommission > highestNetProfitWithoutCommission)
+                                highestNetProfitWithoutCommission = netProfitWithoutCommission
+
+                            return netProfitWithoutCommission
+                        }),
                     borderWidth: 1,
-                    backgroundColor: '#0000FFB3',
-                    borderColor: '#0000FFB3',
-                    barColor: '#0000FFB3',
+                    backgroundColor: '#0000FF' + colorTransparency,
+                    borderColor: '#0000FF' + colorTransparency,
+                    barColor: '#0000FF' + colorTransparency,
+                },
+                {
+                    label: 'Commission/SL%',
+                    pointRadius: 0,
+                    data: positions.map((e) => e.Commission * 5),
+                    borderWidth: 1,
+                    backgroundColor: '#00FF00' + colorTransparency,
+                    borderColor: '#00FF00' + colorTransparency,
+                    barColor: '#00FF00' + colorTransparency,
+                },
+                {
+                    label: 'ProfitWithCommission (x1)',
+                    pointRadius: 0,
+                    data: positions.map((e) => e.ProfitWithCommission * 1),
+                    borderWidth: 1,
+                    backgroundColor: '#00FF00' + colorTransparency,
+                    borderColor: '#00FF00' + colorTransparency,
+                    barColor: '#00FF00' + colorTransparency,
+                },
+                {
+                    label: 'Leverage (x1)',
+                    pointRadius: 0,
+                    data: positions.map((e) => e.Leverage * 1),
+                    borderWidth: 1,
+                    backgroundColor: '#FFFF00' + colorTransparency,
+                    borderColor: '#FFFF00' + colorTransparency,
+                    barColor: '#FFFF00' + colorTransparency,
+                },
+                {
+                    label: 'Margin (x1)',
+                    pointRadius: 0,
+                    data: positions.map((e) => e.Margin * 1),
+                    borderWidth: 1,
+                    backgroundColor: '#00FFFF' + colorTransparency,
+                    borderColor: '#00FFFF' + colorTransparency,
+                    barColor: '#00FFFF' + colorTransparency,
                 }
             ]
         },
         options: {
-            animation: false,
-            events: ['click'],
-            maintainAspectRatio: false,
+            // animation: false,
+            // events: ['click'],
             scales: {
                 y: {
                     beginAtZero: true,
+                    suggestedMin: results[strategyName][i].PnlResults.HighestDrawDown,
+                    suggestedMax: highestNetProfitWithoutCommission
+                    // suggestedMax: results[strategyName][i].PnlResults.HighestNetProfit
                 }
             }
         }
@@ -111,8 +184,8 @@ var selectStrategy = (strategyName) => {
                                 </button>
                             </h2>
                             <div id="collapse` + i + `" class="accordion-collapse collapse" data-bs-parent="#accordion">
-                                <div class="accordion-body">
-                                    <div id="` + i + `" style="margin: 10px;border: 1px solid red;height:500px">
+                                <div class="accordion-body" style="background-color: #777;">
+                                    <div id="` + i + `" style="margin: 10px;border: 1px solid red;">
                                         <canvas id="` + i + `-chart"></canvas>
                                     </div>
         

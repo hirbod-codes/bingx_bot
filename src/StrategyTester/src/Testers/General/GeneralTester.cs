@@ -32,9 +32,7 @@ public class GeneralTester : ITester
 
         await _broker.InitiateCandleStore();
 
-        Candles candles = await _broker.GetCandles();
-
-        _strategy.PrepareIndicators(candles);
+        await _strategy.PrepareIndicators();
 
         while (!_broker.IsFinished())
         {

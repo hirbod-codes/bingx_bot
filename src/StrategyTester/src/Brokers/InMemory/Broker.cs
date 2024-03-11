@@ -33,15 +33,19 @@ public class Broker : IBroker
         _logger.Information("Initiating Candle Store...");
 
         timeFrame ??= 60;
+        string timeFrameString = null!;
 
         IEnumerable<Candle> candles = null!;
 
         if (timeFrame == 60)
-            candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_200000_HistoricalCandles_1m.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            timeFrameString = "1m";
 
         if (timeFrame == (60 * 15))
-            candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_100000_HistoricalCandles_15m.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            timeFrameString = "15m";
 
+        candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_100000_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+        // candles = candles.Take(90000);
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());

@@ -5,7 +5,7 @@ namespace bot.src.Strategies.EmaRsi;
 public class StrategyOptions : IStrategyOptions
 {
     public string ProviderName { get; set; } = null!;
-    public decimal Ratio { get; set; }
+    public decimal RiskRewardRatio { get; set; }
     /// <summary>
     /// Can be left empty.
     /// </summary>

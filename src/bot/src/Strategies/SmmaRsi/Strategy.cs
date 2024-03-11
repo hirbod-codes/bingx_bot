@@ -36,8 +36,10 @@ public class Strategy : IStrategy
         _logger = logger.ForContext<Strategy>();
     }
 
-    public void PrepareIndicators(Candles candles)
+    public async Task PrepareIndicators()
     {
+        Candles candles = await _broker.GetCandles();
+
         _smma1 = candles.GetSmma(_indicatorsOptions.Smma1.Period);
         _smma2 = candles.GetSmma(_indicatorsOptions.Smma2.Period);
         _smma3 = candles.GetSmma(_indicatorsOptions.Smma3.Period);

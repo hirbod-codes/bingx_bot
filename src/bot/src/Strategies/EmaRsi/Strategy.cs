@@ -17,6 +17,7 @@ public class Strategy : IStrategy
 {
     private readonly IndicatorOptions _indicatorsOptions;
     private readonly StrategyOptions _strategyOptions;
+    private IEnumerable<SuperTrendResult> _superTrend = null!;
     private IEnumerable<AtrResult> _atr = null!;
     private IEnumerable<EmaResult> _ema1 = null!;
     private IEnumerable<EmaResult> _ema2 = null!;
@@ -36,11 +37,14 @@ public class Strategy : IStrategy
         _logger = logger.ForContext<Strategy>();
     }
 
-    public void PrepareIndicators(Candles candles)
+    public async Task PrepareIndicators()
     {
         if (_indicatorsOptions.Ema1.Period == _indicatorsOptions.Ema2.Period)
             throw new NoIndicatorException("Missing second ema indicator options.");
 
+        Candles candles = await _broker.GetCandles();
+
+        _superTrend = candles.GetSuperTrend(20);
         _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
         _ema1 = candles.GetEma(_indicatorsOptions.Ema1.Period);
         _ema2 = candles.GetEma(_indicatorsOptions.Ema2.Period);
@@ -49,11 +53,7 @@ public class Strategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        // if ((candle.High - candle.Low) > 70)
-        // {
-        //     _logger.Information("This candle is too big, skipping...");
-        //     return;
-        // }
+        await PrepareIndicators();
 
         if (_atr == null || _ema1 == null || _ema2 == null || _rsi == null)
             throw new NoIndicatorException();
@@ -118,7 +118,7 @@ public class Strategy : IStrategy
         isUpTrend ? entryPrice - (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! : entryPrice + (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
 
     private decimal CalculateTpPrice(int index, decimal entryPrice, bool isUpTrend) =>
-        isUpTrend ? entryPrice + ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.Ratio) : entryPrice - ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.Ratio);
+        isUpTrend ? entryPrice + ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.RiskRewardRatio) : entryPrice - ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.RiskRewardRatio);
 
     private bool IsUpTrend(int index) => _ema1.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema;
 

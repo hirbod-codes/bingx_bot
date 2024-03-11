@@ -31,10 +31,11 @@ public class Strategy : IStrategy
         _logger = logger.ForContext<Strategy>();
     }
 
-    public void PrepareIndicators(Candles candles)
+    public async Task PrepareIndicators()
     {
         _logger.Information("Creating indicators...");
 
+        Candles candles = await _broker.GetCandles();
         int candlesCount = candles.Count();
 
         // adding one to the atr stop indicator because this strategy needs previous values of this indicator.

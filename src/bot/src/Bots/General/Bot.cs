@@ -104,8 +104,13 @@ public class Bot : IBot
             _previousTrend = generalMessage.Direction;
         }
 
+        decimal entryPrice = await _broker.GetLastPrice();
+
+        decimal leverage = _riskManagement.CalculateLeverage(entryPrice, generalMessage.SlPrice);
         decimal margin = _riskManagement.GetMargin();
-        decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), generalMessage.SlPrice);
+
+        if (generalMessage.TpPrice != null)
+            generalMessage.TpPrice = _riskManagement.CalculateTpPrice(leverage, entryPrice, generalMessage.Direction);
 
         if (_generalBotOptions.ShouldDivideMargin && _inTrendPositionsCount <= 2)
             margin /= (decimal)Math.Pow(2, (double)_inTrendPositionsCount);

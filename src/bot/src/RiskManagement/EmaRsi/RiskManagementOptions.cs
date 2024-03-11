@@ -3,6 +3,8 @@ namespace bot.src.RiskManagement.EmaRsi;
 public record class RiskManagementOptions : IRiskManagementOptions
 {
     public decimal Margin { get; set; }
+    public decimal RiskRewardRatio { get; set; }
+    public decimal BrokerCommission { get; set; }
     public decimal SLPercentages { get; set; }
     /// <summary>
     /// if zero, no limit will be applied on the number concurrent positions.

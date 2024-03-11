@@ -18,9 +18,21 @@ public class RiskManagement : IRiskManagement
         _time = time;
     }
 
-    public decimal GetLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / (100.0m * Math.Abs(entryPrice - slPrice));
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / 100.0m / (Math.Abs(entryPrice - slPrice) + (entryPrice * _riskManagementOptions.BrokerCommission));
+
+    public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)
+    {
+        decimal delta = (_riskManagementOptions.RiskRewardRatio * entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage) + (_riskManagementOptions.BrokerCommission * entryPrice);
+
+        if (direction == PositionDirection.LONG)
+            return delta + entryPrice;
+        else
+            return entryPrice - delta;
+    }
 
     public decimal GetMargin() => _riskManagementOptions.Margin;
+
+    public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice) => throw new NotImplementedException();
 
     public async Task<bool> PermitOpenPosition()
     {
@@ -43,27 +55,24 @@ public class RiskManagement : IRiskManagement
         if (_riskManagementOptions.NumberOfConcurrentPositions != 0 && openedPositions.Count() >= _riskManagementOptions.NumberOfConcurrentPositions)
             return false;
 
-        if (_riskManagementOptions.GrossProfitLimit != 0)
-        {
-            decimal grossProfit = PnLAnalysis.PnLAnalysis.GetGrossProfit(closedPositionsForProfit);
+        if (_riskManagementOptions.GrossLossLimit == 0 && _riskManagementOptions.GrossProfitLimit == 0)
+            return false;
 
-            if (grossProfit >= _riskManagementOptions.GrossProfitLimit)
-                return false;
-        }
+        // Adding another grossLossPerPosition because of current possible position
+        decimal openedPositionsMaximumLoss = (openedPositions.Count() * grossLossPerPosition) + grossLossPerPosition;
 
-        if (_riskManagementOptions.GrossLossLimit != 0)
-        {
-            // Adding another grossLossPerPosition because of current possible position
-            decimal openedPositionsMaximumLoss = (openedPositions.Count() * grossLossPerPosition) + grossLossPerPosition;
+        if (_riskManagementOptions.GrossLossLimit != 0 && openedPositionsMaximumLoss >= _riskManagementOptions.GrossLossLimit)
+            return false;
 
-            if (openedPositionsMaximumLoss >= _riskManagementOptions.GrossLossLimit)
-                return false;
+        decimal grossLoss = PnLAnalysis.PnLAnalysis.GetGrossLoss(closedPositionsForLoss) + openedPositionsMaximumLoss;
 
-            decimal grossLoss = PnLAnalysis.PnLAnalysis.GetGrossLoss(closedPositionsForLoss) + openedPositionsMaximumLoss;
+        if (_riskManagementOptions.GrossLossLimit != 0 && grossLoss >= Math.Abs(_riskManagementOptions.GrossLossLimit))
+            return false;
 
-            if (grossLoss >= Math.Abs(_riskManagementOptions.GrossLossLimit))
-                return false;
-        }
+        decimal grossProfit = Math.Abs(grossLoss - PnLAnalysis.PnLAnalysis.GetGrossProfit(closedPositionsForProfit));
+
+        if (_riskManagementOptions.GrossProfitLimit != 0 && grossProfit >= _riskManagementOptions.GrossProfitLimit)
+            return false;
 
         return true;
     }

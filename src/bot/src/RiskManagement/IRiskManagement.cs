@@ -2,7 +2,9 @@ namespace bot.src.RiskManagement;
 
 public interface IRiskManagement
 {
-    public decimal GetLeverage(decimal entryPrice, decimal slPrice);
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice);
+    public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction);
     public decimal GetMargin();
+    public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice);
     public Task<bool> PermitOpenPosition();
 }

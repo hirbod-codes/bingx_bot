@@ -18,9 +18,19 @@ public class RiskManagement : IRiskManagement
         _time = time;
     }
 
-    public decimal GetLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / (100.0m * Math.Abs(entryPrice - slPrice));
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / (100.0m * Math.Abs(entryPrice - slPrice));
+
+    public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)
+    {
+        throw new NotImplementedException();
+    }
 
     public decimal GetMargin() => _riskManagementOptions.Margin;
+
+    public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice)
+    {
+        throw new NotImplementedException();
+    }
 
     public async Task<bool> PermitOpenPosition()
     {
