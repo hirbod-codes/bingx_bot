@@ -1,0 +1,67 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {},
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0.001,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 900
+        },
+        "RiskManagementName": "StochasticEma",
+        "RiskManagementOptions": {
+            "BrokerCommission": 0.001,
+            "RiskRewardRatio": 2,
+            "Margin": 100,
+            "SLPercentages": 10,
+            "NumberOfConcurrentPositions": 0,
+            "GrossLossLimit": 0,
+            "GrossProfitLimit": 0
+        },
+        "IndicatorOptionsName": "StochasticEma",
+        "IndicatorOptions": {
+            "AtrMultiplier": 2,
+            "Atr": {
+                "Period": 14,
+                "Source": "close"
+            },
+            "Ema": {
+                "Period": 100,
+                "Source": "close"
+            },
+            "Stochastic": {
+                "Period": 14,
+                "SignalPeriod": 3,
+                "SmoothPeriod": 1,
+                "Source": "close"
+            },
+            "StochasticUpperBand": 80,
+            "StochasticLowerBand": 20
+        },
+        "StrategyName": "StochasticEma",
+        "StrategyOptions": {
+            "ProviderName": "StochasticEma",
+            "RiskRewardRatio": 2,
+            "InvalidWeekDays": [
+                0,
+                6
+            ]
+        },
+        "BotName": "General",
+        "BotOptions": {
+            "Provider": "StochasticEma",
+            "TimeFrame": 900
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "TimeFrame": 900
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]

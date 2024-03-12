@@ -37,15 +37,15 @@ public class Broker : IBroker
 
         IEnumerable<Candle> candles = null!;
 
-        if (timeFrame == 60)
-            timeFrameString = "1m";
+        // if (timeFrame == 60)
+        //     timeFrameString = "1m";
 
-        if (timeFrame == (60 * 15))
-            timeFrameString = "15m";
+        // if (timeFrame == (60 * 15))
+        timeFrameString = "15m";
 
-        candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_100000_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_200000_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
 
-        // candles = candles.Take(90000);
+        // candles = candles.Take(50000);
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());

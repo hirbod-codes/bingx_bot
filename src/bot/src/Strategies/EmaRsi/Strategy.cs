@@ -53,8 +53,6 @@ public class Strategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        await PrepareIndicators();
-
         if (_atr == null || _ema1 == null || _ema2 == null || _rsi == null)
             throw new NoIndicatorException();
 

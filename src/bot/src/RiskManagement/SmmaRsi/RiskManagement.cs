@@ -32,8 +32,13 @@ public class RiskManagement : IRiskManagement
         throw new NotImplementedException();
     }
 
-    public async Task<bool> PermitOpenPosition()
+    private decimal GetMaximumLeverage() => _riskManagementOptions.SLPercentages;
+
+    public async Task<bool> PermitOpenPosition(decimal entryPrice, decimal slPrice)
     {
+        if (GetMaximumLeverage() > CalculateLeverage(entryPrice, slPrice))
+            return false;
+
         if (_riskManagementOptions.GrossProfitLimit == 0 && _riskManagementOptions.GrossLossLimit == 0 && _riskManagementOptions.NumberOfConcurrentPositions == 0)
             return true;
 

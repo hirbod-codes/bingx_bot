@@ -1,19 +1,14 @@
-using SmmaRsiIndicatorOptions = bot.src.Indicators.SmmaRsi.IndicatorOptions;
-using EmaRsiIndicatorOptions = bot.src.Indicators.EmaRsi.IndicatorOptions;
-using DoubleUtBotIndicatorOptions = bot.src.Indicators.DoubleUtBot.IndicatorOptions;
-using UtBotIndicatorOptions = bot.src.Indicators.UtBot.IndicatorOptions;
-
-
 namespace bot.src.Indicators;
 
 public static class IndicatorOptionsFactory
 {
     public static IIndicatorOptions CreateIndicatorOptions(string indicatorOptionsName) => indicatorOptionsName switch
     {
-        IndicatorsOptionsNames.SMMA_RSI => new SmmaRsiIndicatorOptions(),
-        IndicatorsOptionsNames.EMA_RSI => new EmaRsiIndicatorOptions(),
-        IndicatorsOptionsNames.DOUBLE_UT_BOT => new DoubleUtBotIndicatorOptions(),
-        IndicatorsOptionsNames.UT_BOT => new UtBotIndicatorOptions(),
+        IndicatorsOptionsNames.SMMA_RSI => new SmmaRsi.IndicatorOptions(),
+        IndicatorsOptionsNames.EMA_RSI => new EmaRsi.IndicatorOptions(),
+        IndicatorsOptionsNames.DOUBLE_UT_BOT => new DoubleUtBot.IndicatorOptions(),
+        IndicatorsOptionsNames.UT_BOT => new UtBot.IndicatorOptions(),
+        IndicatorsOptionsNames.STOCHASTIC_EMA => new StochasticEma.IndicatorOptions(),
         _ => throw new Exception("Invalid Indicator options name provided.")
     };
 }

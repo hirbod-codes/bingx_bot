@@ -12,6 +12,7 @@ public static class StrategyFactory
     {
         StrategyNames.SMMA_RSI => new SmmaRsi.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.EMA_RSI => new EmaRsi.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
+        StrategyNames.STOCHASTIC_EMA => new StochasticEma.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.UT_BOT => new UtBot.Strategy(strategyOptions, indicatorsOptions, messageRepository, broker, logger),
         StrategyNames.DOUBLE_UT_BOT => new DoubleUtBot.Strategy(strategyOptions, indicatorsOptions, messageRepository, broker, logger),
         _ => throw new ArgumentException($"Invalid value for {nameof(strategyName)} parameter provider.")

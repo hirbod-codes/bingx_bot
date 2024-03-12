@@ -71,7 +71,9 @@ public class Bot : IBot
             return;
         }
 
-        if (!await _riskManagement.PermitOpenPosition())
+        decimal entryPrice = await _broker.GetLastPrice();
+
+        if (!await _riskManagement.PermitOpenPosition(entryPrice, utBotMessage.SlPrice))
         {
             _logger.Information("Risk management rejects opening a position, skipping...");
             return;

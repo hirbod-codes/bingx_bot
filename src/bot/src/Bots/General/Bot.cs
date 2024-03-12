@@ -79,8 +79,9 @@ public class Bot : IBot
 
         if (!generalMessage.AllowingParallelPositions && positions.Any())
         {
-            _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
-            return;
+            _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
+            await _broker.CloseAllPositions();
+            _logger.Information("open positions are closed.");
         }
 
         if (
@@ -92,7 +93,9 @@ public class Bot : IBot
             return;
         }
 
-        if (!await _riskManagement.PermitOpenPosition())
+        decimal entryPrice = await _broker.GetLastPrice();
+
+        if (!await _riskManagement.PermitOpenPosition(entryPrice, generalMessage.SlPrice))
         {
             _logger.Information("Risk management rejects opening a position, skipping...");
             return;
@@ -104,13 +107,8 @@ public class Bot : IBot
             _previousTrend = generalMessage.Direction;
         }
 
-        decimal entryPrice = await _broker.GetLastPrice();
-
         decimal leverage = _riskManagement.CalculateLeverage(entryPrice, generalMessage.SlPrice);
         decimal margin = _riskManagement.GetMargin();
-
-        if (generalMessage.TpPrice != null)
-            generalMessage.TpPrice = _riskManagement.CalculateTpPrice(leverage, entryPrice, generalMessage.Direction);
 
         if (_generalBotOptions.ShouldDivideMargin && _inTrendPositionsCount <= 2)
             margin /= (decimal)Math.Pow(2, (double)_inTrendPositionsCount);

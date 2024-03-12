@@ -1,18 +1,14 @@
-using SmmaRsiRiskManagementOptions = bot.src.RiskManagement.SmmaRsi.RiskManagementOptions;
-using EmaRsiRiskManagementOptions = bot.src.RiskManagement.EmaRsi.RiskManagementOptions;
-using DoubleUtBotRiskManagementOptions = bot.src.RiskManagement.DoubleUtBot.RiskManagementOptions;
-using UtBotRiskManagementOptions = bot.src.RiskManagement.UtBot.RiskManagementOptions;
-
 namespace bot.src.RiskManagement;
 
 public static class RiskManagementOptionsFactory
 {
     public static IRiskManagementOptions RiskManagementOptions(string riskManagementName) => riskManagementName switch
     {
-        RiskManagementNames.SMMA_RSI => new SmmaRsiRiskManagementOptions(),
-        RiskManagementNames.EMA_RSI => new EmaRsiRiskManagementOptions(),
-        RiskManagementNames.UT_BOT => new UtBotRiskManagementOptions(),
-        RiskManagementNames.DOUBLE_UT_BOT => new DoubleUtBotRiskManagementOptions(),
+        RiskManagementNames.SMMA_RSI => new SmmaRsi.RiskManagementOptions(),
+        RiskManagementNames.EMA_RSI => new EmaRsi.RiskManagementOptions(),
+        RiskManagementNames.UT_BOT => new UtBot.RiskManagementOptions(),
+        RiskManagementNames.DOUBLE_UT_BOT => new DoubleUtBot.RiskManagementOptions(),
+        RiskManagementNames.STOCHASTIC_EMA => new StochasticEma.RiskManagementOptions(),
         _ => throw new Exception()
     };
 }

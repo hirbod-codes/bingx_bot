@@ -6,5 +6,5 @@ public interface IRiskManagement
     public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction);
     public decimal GetMargin();
     public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice);
-    public Task<bool> PermitOpenPosition();
+    public Task<bool> PermitOpenPosition(decimal entryPrice, decimal slPrice);
 }

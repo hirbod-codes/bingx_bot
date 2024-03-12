@@ -20,5 +20,5 @@ public class RiskManagement : IRiskManagement
         throw new NotImplementedException();
     }
 
-    public Task<bool> PermitOpenPosition() => Task.FromResult(true);
+    public Task<bool> PermitOpenPosition(decimal entryPrice, decimal slPrice) => Task.FromResult(true);
 }

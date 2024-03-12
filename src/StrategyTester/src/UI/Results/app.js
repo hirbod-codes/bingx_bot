@@ -54,16 +54,10 @@ var render = (i, strategyName) => {
 
     let colorTransparency = 'CF'
 
-    let highestNetProfitWithoutCommission = 0
     let netProfit = 0
     let netProfitWithoutCommission = 0
 
-    let dt = (new Date(Date.parse(results[strategyName][i].ClosedPositions[0].OpenedAt))).valueOf() + (5000 * 60 * 1000)
-
     let positions = results[strategyName][i].ClosedPositions
-    // .filter((e) => e.Commission / 10 < 0.2)
-    // .filter(e => new Date(Date.parse(e.OpenedAt)).valueOf() <= dt)
-    // .filter(e => e.Leverage <= 10)
 
     console.log(positions);
 
@@ -78,13 +72,13 @@ var render = (i, strategyName) => {
                     pointRadius: 0,
                     data: positions
                         .map((e) => {
-                            // netProfit += e.ProfitWithCommission
+                            netProfit += e.ProfitWithCommission
 
-                            let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
-                            if (e.PositionDirection == "short")
-                                profit *= -1
+                            // let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
+                            // if (e.PositionDirection == "short")
+                            //     profit *= -1
 
-                            netProfit += profit - (0.001 * e.Margin * e.Leverage)
+                            // netProfit += profit - (0.001 * e.Margin * e.Leverage)
                             // netProfit += profit - 4
 
                             return netProfit
@@ -101,16 +95,7 @@ var render = (i, strategyName) => {
                     pointRadius: 0,
                     data: positions
                         .map((e) => {
-                            // netProfitWithoutCommission += e.Profit
-
-                            let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
-                            if (e.PositionDirection == "short")
-                                profit *= -1
-
-                            netProfitWithoutCommission += profit
-
-                            if (netProfitWithoutCommission > highestNetProfitWithoutCommission)
-                                highestNetProfitWithoutCommission = netProfitWithoutCommission
+                            netProfitWithoutCommission += e.Profit
 
                             return netProfitWithoutCommission
                         }),
@@ -158,14 +143,12 @@ var render = (i, strategyName) => {
             ]
         },
         options: {
-            // animation: false,
-            // events: ['click'],
+            animation: false,
             scales: {
                 y: {
                     beginAtZero: true,
                     suggestedMin: results[strategyName][i].PnlResults.HighestDrawDown,
-                    suggestedMax: highestNetProfitWithoutCommission
-                    // suggestedMax: results[strategyName][i].PnlResults.HighestNetProfit
+                    suggestedMax: results[strategyName][i].PnlResults.HighestNetProfit
                 }
             }
         }
@@ -196,6 +179,8 @@ var selectStrategy = (strategyName) => {
                         </div>
                     `;
     })
+
+    document.getElementById("title").innerHTML = strategyName
 }
 
 selectStrategy(Object.keys(results)[0])
