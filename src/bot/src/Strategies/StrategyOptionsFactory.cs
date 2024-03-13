@@ -9,6 +9,7 @@ public static class StrategyOptionsFactory
         StrategyNames.STOCHASTIC_EMA => new StochasticEma.StrategyOptions(),
         StrategyNames.DOUBLE_UT_BOT => new DoubleUtBot.StrategyOptions(),
         StrategyNames.UT_BOT => new UtBot.StrategyOptions(),
+        StrategyNames.LUCK => new Luck.StrategyOptions(),
         _ => throw new InvalidStrategyNameException()
     };
 }

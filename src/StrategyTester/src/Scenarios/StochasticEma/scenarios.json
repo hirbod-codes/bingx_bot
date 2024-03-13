@@ -13,10 +13,11 @@
         },
         "RiskManagementName": "StochasticEma",
         "RiskManagementOptions": {
-            "BrokerCommission": 0.001,
-            "RiskRewardRatio": 2,
             "Margin": 100,
             "SLPercentages": 10,
+            "BrokerCommission": 0.001,
+            "RiskRewardRatio": 2,
+            "CommissionPercentage": 10,
             "NumberOfConcurrentPositions": 0,
             "GrossLossLimit": 0,
             "GrossProfitLimit": 0

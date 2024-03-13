@@ -15,6 +15,7 @@ public static class StrategyFactory
         StrategyNames.STOCHASTIC_EMA => new StochasticEma.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.UT_BOT => new UtBot.Strategy(strategyOptions, indicatorsOptions, messageRepository, broker, logger),
         StrategyNames.DOUBLE_UT_BOT => new DoubleUtBot.Strategy(strategyOptions, indicatorsOptions, messageRepository, broker, logger),
+        StrategyNames.LUCK => new Luck.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         _ => throw new ArgumentException($"Invalid value for {nameof(strategyName)} parameter provider.")
     };
 }

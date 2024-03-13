@@ -18,9 +18,15 @@ public class RiskManagement : IRiskManagement
         _time = time;
     }
 
-    private decimal GetMaximumLeverage() => _riskManagementOptions.SLPercentages;
+    private decimal GetMaximumLeverage()
+    {
+        if (_riskManagementOptions.BrokerCommission <= 0)
+            return 200000;
+        else
+            return _riskManagementOptions.SLPercentages * (_riskManagementOptions.CommissionPercentage / 100.0m) / (100.0m * _riskManagementOptions.BrokerCommission);
+    }
 
-    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / 100.0m / (Math.Abs(entryPrice - slPrice) + (entryPrice * _riskManagementOptions.BrokerCommission));
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / 100.0m / Math.Abs(entryPrice - slPrice);
 
     public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)
     {
@@ -36,7 +42,7 @@ public class RiskManagement : IRiskManagement
 
     public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice) => throw new NotImplementedException();
 
-    public async Task<bool> PermitOpenPosition(decimal entryPrice, decimal slPrice)
+    public async Task<bool> IsPositionAcceptable(decimal entryPrice, decimal slPrice)
     {
         if (GetMaximumLeverage() < CalculateLeverage(entryPrice, slPrice))
             return false;

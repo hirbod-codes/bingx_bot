@@ -9,6 +9,7 @@ public static class RunnerOptionsFactory
         RunnerNames.STOCHASTIC_EMA => new StochasticEma.RunnerOptions(),
         RunnerNames.UT_BOT => new UtBot.RunnerOptions(),
         RunnerNames.DOUBLE_UT_BOT => new DoubleUtBot.RunnerOptions(),
+        RunnerNames.LUCK => new Luck.RunnerOptions(),
         _ => throw new Exception("Invalid runner option name provided.")
     };
 }

@@ -17,9 +17,11 @@ public class Strategy : IStrategy
 {
     private readonly IndicatorOptions _indicatorsOptions;
     private readonly StrategyOptions _strategyOptions;
-    private IEnumerable<ZigZagResult> _zigZag = null!;
+    // private IEnumerable<ZigZagResult> _zigZag = null!;
     private IEnumerable<AtrResult> _atr = null!;
-    private IEnumerable<EmaResult> _ema = null!;
+    private IEnumerable<EmaResult> _ema1 = null!;
+    private IEnumerable<EmaResult> _ema2 = null!;
+    private IEnumerable<RsiResult> _rsi = null!;
     private IEnumerable<StochResult> _stochastic = null!;
     private readonly IBroker _broker;
     private readonly INotifier _notifier;
@@ -43,13 +45,15 @@ public class Strategy : IStrategy
         // _zigZag = candles.GetZigZag();
 
         _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
-        _ema = candles.GetEma(_indicatorsOptions.Ema.Period);
+        _ema1 = candles.GetEma(100);
+        _ema2 = candles.GetEma(200);
         _stochastic = candles.GetStoch(_indicatorsOptions.Stochastic.Period, _indicatorsOptions.Stochastic.SignalPeriod, _indicatorsOptions.Stochastic.SmoothPeriod);
+        _rsi = candles.GetRsi();
     }
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        if (_atr == null || _ema == null && _stochastic == null)
+        if (_atr == null || _ema1 == null && _stochastic == null)
             throw new NoIndicatorException();
 
         int index = await _broker.GetLastCandleIndex();
@@ -85,33 +89,25 @@ public class Strategy : IStrategy
         }
     }
 
-    // private decimal CalculateDelta(int index) => (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
-
     private decimal CalculateDelta(int index) => (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
 
     private decimal CalculateSlPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice - delta : entryPrice + delta;
 
     private decimal CalculateTpPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice + (delta * _strategyOptions.RiskRewardRatio) : entryPrice - (delta * _strategyOptions.RiskRewardRatio);
 
-    private bool IsLong(int index, decimal source) => source >= (decimal)_ema.ElementAt(index).Ema!;
+    private bool IsLong(int index, decimal source) => source > (decimal)_ema2.ElementAt(index).Ema!;
 
-    private bool HasStochasticCrossedUnderUpperBand(int index)
-    {
-        StochResult stochResult = _stochastic.ElementAt(index);
-
-        return _stochastic.ElementAt(index - 1).K >= _stochastic.ElementAt(index - 1).D
+    private bool HasStochasticCrossedUnderUpperBand(int index) => _stochastic.ElementAt(index - 1).K >= _stochastic.ElementAt(index - 1).D
         && _stochastic.ElementAt(index).K < _stochastic.ElementAt(index).D
         && _stochastic.ElementAt(index - 1).K >= _indicatorsOptions.StochasticUpperBand;
-    }
+    // && _rsi.ElementAt(index - 1).Rsi > 60;
 
     // && _stochastic.ElementAt(index - 1).D >= _indicatorsOptions.StochasticUpperBand;
 
-    private bool HasStochasticCrossedOverLowerBand(int index)
-    {
-        return _stochastic.ElementAt(index - 1).K <= _stochastic.ElementAt(index - 1).D
+    private bool HasStochasticCrossedOverLowerBand(int index) => _stochastic.ElementAt(index - 1).K <= _stochastic.ElementAt(index - 1).D
         && _stochastic.ElementAt(index).K > _stochastic.ElementAt(index).D
         && _stochastic.ElementAt(index - 1).K <= _indicatorsOptions.StochasticLowerBand;
-    }
+    // && _rsi.ElementAt(index - 1).Rsi < 40;
 
     // && _stochastic.ElementAt(index - 1).D <= _indicatorsOptions.StochasticLowerBand;
 

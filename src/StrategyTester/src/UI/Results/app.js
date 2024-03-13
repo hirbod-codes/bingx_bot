@@ -62,24 +62,16 @@ var render = (i, strategyName) => {
     console.log(positions);
 
     chart = new Chart(i + '-chart', {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: positions.map(e => e.OpenedAt),
             datasets: [
                 {
-                    type: 'bar',
-                    label: 'with commission',
+                    label: 'with commission (Cumulative)',
                     pointRadius: 0,
                     data: positions
                         .map((e) => {
                             netProfit += e.ProfitWithCommission
-
-                            // let profit = (e.ClosedPrice - e.OpenedPrice) * e.Margin * e.Leverage / e.OpenedPrice
-                            // if (e.PositionDirection == "short")
-                            //     profit *= -1
-
-                            // netProfit += profit - (0.001 * e.Margin * e.Leverage)
-                            // netProfit += profit - 4
 
                             return netProfit
                         }),
@@ -90,8 +82,7 @@ var render = (i, strategyName) => {
                     barColor: '#FF0000' + colorTransparency,
                 },
                 {
-                    type: 'bar',
-                    label: 'with out commission',
+                    label: 'with out commission (Cumulative)',
                     pointRadius: 0,
                     data: positions
                         .map((e) => {
@@ -105,22 +96,31 @@ var render = (i, strategyName) => {
                     barColor: '#0000FF' + colorTransparency,
                 },
                 {
-                    label: 'Commission/SL%',
+                    label: '(Commission/SL)(%) (*1)',
                     pointRadius: 0,
-                    data: positions.map((e) => e.Commission * 5),
+                    data: positions.map((e) => e.Commission * 1),
                     borderWidth: 1,
                     backgroundColor: '#00FF00' + colorTransparency,
                     borderColor: '#00FF00' + colorTransparency,
                     barColor: '#00FF00' + colorTransparency,
                 },
                 {
-                    label: 'ProfitWithCommission (x1)',
+                    label: 'with commission',
                     pointRadius: 0,
                     data: positions.map((e) => e.ProfitWithCommission * 1),
                     borderWidth: 1,
                     backgroundColor: '#00FF00' + colorTransparency,
                     borderColor: '#00FF00' + colorTransparency,
                     barColor: '#00FF00' + colorTransparency,
+                },
+                {
+                    label: 'with out commission',
+                    pointRadius: 0,
+                    data: positions.map((e) => e.Profit * 1),
+                    borderWidth: 1,
+                    backgroundColor: '#00FF00' + colorTransparency,
+                    borderColor: '#00FF00' + colorTransparency,
+                    barColor: '#00FF00' + colorTransparency
                 },
                 {
                     label: 'Leverage (x1)',
@@ -132,6 +132,7 @@ var render = (i, strategyName) => {
                     barColor: '#FFFF00' + colorTransparency,
                 },
                 {
+                    type: 'line',
                     label: 'Margin (x1)',
                     pointRadius: 0,
                     data: positions.map((e) => e.Margin * 1),
@@ -144,6 +145,7 @@ var render = (i, strategyName) => {
         },
         options: {
             animation: false,
+            events: ['click'],
             scales: {
                 y: {
                     beginAtZero: true,
@@ -167,7 +169,7 @@ var selectStrategy = (strategyName) => {
                                 </button>
                             </h2>
                             <div id="collapse` + i + `" class="accordion-collapse collapse" data-bs-parent="#accordion">
-                                <div class="accordion-body" style="background-color: #777;">
+                                <div class="accordion-body" style="">
                                     <div id="` + i + `" style="margin: 10px;border: 1px solid red;">
                                         <canvas id="` + i + `-chart"></canvas>
                                     </div>

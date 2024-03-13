@@ -4,23 +4,31 @@
         "MessageStoreOptions": {},
         "BrokerName": "InMemory",
         "BrokerOptions": {
-            "BrokerCommission": 0,
+            "BrokerCommission": 0.001,
             "Symbol": "BTC-USDT",
             "AccountOptions": {
                 "Balance": 10000
             },
-            "TimeFrame": 60
+            "TimeFrame": 900
         },
         "RiskManagementName": "SmmaRsi",
         "RiskManagementOptions": {
             "Margin": 100,
-            "SLPercentages": 30,
+            "SLPercentages": 10,
+            "BrokerCommission": 0.001,
+            "CommissionPercentage": 10,
+            "RiskRewardRatio": 2,
             "NumberOfConcurrentPositions": 0,
             "GrossLossLimit": 0,
-            "GrossProfitLimit": 70
+            "GrossProfitLimit": 0
         },
         "IndicatorOptionsName": "SmmaRsi",
         "IndicatorOptions": {
+            "AtrMultiplier": 2,
+            "Atr": {
+                "Period": 14,
+                "Source": "close"
+            },
             "Smma1": {
                 "Period": 20,
                 "Source": "close"
@@ -42,9 +50,8 @@
         },
         "StrategyName": "SmmaRsi",
         "StrategyOptions": {
-            "ProviderName": "SmmaRsiStrategy",
-            "SLDifference": 100,
-            "TPDifference": 200,
+            "ProviderName": "SmmaRsi",
+            "RiskRewardRatio": 2,
             "InvalidWeekDays": [
                 0,
                 6
@@ -52,12 +59,12 @@
         },
         "BotName": "General",
         "BotOptions": {
-            "Provider": "SmmaRsiStrategy",
-            "TimeFrame": 60
+            "Provider": "SmmaRsi",
+            "TimeFrame": 900
         },
         "TesterName": "General",
         "TesterOptions": {
-            "TimeFrame": 60
+            "TimeFrame": 900
         },
         "NotifierName": "InMemory",
         "PositionRepositoryType": "InMemory",

@@ -72,39 +72,17 @@ public class Strategy : IStrategy
             if (!_strategyOptions.InvalidWeekDays.Any() || (_strategyOptions.InvalidWeekDays.Any() && !_strategyOptions.InvalidWeekDays.Where(invalidDate => candleCloseDate.DayOfWeek == invalidDate).Any()))
                 if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
                     if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
-                        if (_strategyOptions.NaturalTrendIndicatorLength == 0 || _strategyOptions.NaturalTrendIndicatorLimit == 0)
-                            shouldOpenPosition = true;
-                        else
-                        {
-                            decimal highestHigh = candle.High;
-                            decimal lowestLow = candle.Low;
-                            for (int i = 1; i <= _strategyOptions.NaturalTrendIndicatorLength; i++)
-                            {
-                                Candle? c = await _broker.GetCandle(i);
-
-                                if (c == null)
-                                {
-                                    shouldOpenPosition = true;
-                                    break;
-                                }
-
-                                if (c.High > highestHigh)
-                                    highestHigh = c.High;
-                                if (c.Low < lowestLow)
-                                    lowestLow = c.Low;
-                            }
-
-                            if (!shouldOpenPosition && (highestHigh - lowestLow) > _strategyOptions.NaturalTrendIndicatorLimit)
-                                shouldOpenPosition = true;
-                        }
+                        shouldOpenPosition = true;
 
         if (shouldOpenPosition)
         {
             _logger.Information("Candle is valid for a position, sending the message...");
             _logger.Information("Position direction: {direction}", isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT);
 
-            decimal slPrice = CalculateSlPrice(index, candle.Close, isUpTrend);
-            decimal tpPrice = CalculateTpPrice(index, candle.Close, isUpTrend);
+            decimal delta = CalculateDelta(index);
+
+            decimal slPrice = CalculateSlPrice(candle.Close, isUpTrend, delta);
+            decimal tpPrice = CalculateTpPrice(candle.Close, isUpTrend, delta);
 
             IMessage message = CreateOpenPositionMessage(candle, timeFrame, isUpTrend ? PositionDirection.LONG : PositionDirection.SHORT, slPrice, tpPrice);
             await _messageRepository.CreateMessage(message);
@@ -112,11 +90,11 @@ public class Strategy : IStrategy
         }
     }
 
-    private decimal CalculateSlPrice(int index, decimal entryPrice, bool isUpTrend) =>
-        isUpTrend ? entryPrice - (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! : entryPrice + (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
+    private decimal CalculateDelta(int index) => (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
 
-    private decimal CalculateTpPrice(int index, decimal entryPrice, bool isUpTrend) =>
-        isUpTrend ? entryPrice + ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.RiskRewardRatio) : entryPrice - ((decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)! * _strategyOptions.RiskRewardRatio);
+    private decimal CalculateSlPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice - delta : entryPrice + delta;
+
+    private decimal CalculateTpPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice + (delta * _strategyOptions.RiskRewardRatio) : entryPrice - (delta * _strategyOptions.RiskRewardRatio);
 
     private bool IsUpTrend(int index) => _ema1.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema;
 

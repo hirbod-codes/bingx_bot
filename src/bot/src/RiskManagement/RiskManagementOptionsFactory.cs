@@ -9,6 +9,7 @@ public static class RiskManagementOptionsFactory
         RiskManagementNames.UT_BOT => new UtBot.RiskManagementOptions(),
         RiskManagementNames.DOUBLE_UT_BOT => new DoubleUtBot.RiskManagementOptions(),
         RiskManagementNames.STOCHASTIC_EMA => new StochasticEma.RiskManagementOptions(),
+        RiskManagementNames.LUCK => new Luck.RiskManagementOptions(),
         _ => throw new Exception()
     };
 }

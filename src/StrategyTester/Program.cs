@@ -73,7 +73,8 @@ public class Program
                 catch (Exception ex)
                 {
                     await File.AppendAllTextAsync(logFile, $"\nScenario with index:{y} has thrown an exception at {DateTime.UtcNow}, with message {ex.Message}, Skipping");
-                    continue;
+                    throw;
+                    // continue;
                 }
 
                 await File.AppendAllTextAsync(logFile, $"\nScenario {y} has completed at {DateTime.UtcNow}.");
@@ -117,7 +118,7 @@ public class Program
                 UnknownTypeHandling = System.Text.Json.Serialization.JsonUnknownTypeHandling.JsonElement
             }));
         }
-        catch (System.Exception ex) { await File.AppendAllTextAsync(logFile, $"An unhandled exception was thrown: {ex.Message}"); }
+        catch (System.Exception ex) { await File.AppendAllTextAsync(logFile, $"An unhandled exception was thrown: {ex.Message}"); throw; }
     }
 
     private static Stream GenerateStreamFromString(string str)
@@ -164,7 +165,7 @@ public class Program
 
         INotifier notifier = NotifierFactory.CreateNotifier(_configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, _logger);
 
-        IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(_configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time);
+        IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(_configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, _logger);
 
         IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, messageRepository, _logger);
 

@@ -9,6 +9,7 @@ public static class IndicatorOptionsFactory
         IndicatorsOptionsNames.DOUBLE_UT_BOT => new DoubleUtBot.IndicatorOptions(),
         IndicatorsOptionsNames.UT_BOT => new UtBot.IndicatorOptions(),
         IndicatorsOptionsNames.STOCHASTIC_EMA => new StochasticEma.IndicatorOptions(),
+        IndicatorsOptionsNames.LUCK => new Luck.IndicatorOptions(),
         _ => throw new Exception("Invalid Indicator options name provided.")
     };
 }

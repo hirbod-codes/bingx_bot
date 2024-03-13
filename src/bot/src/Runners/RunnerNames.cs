@@ -7,4 +7,5 @@ public static class RunnerNames
     public const string SMMA_RSI = "SmmaRsi";
     public const string EMA_RSI = "EmaRsi";
     public const string STOCHASTIC_EMA = "StochasticEma";
+    public const string LUCK = "Luck";
 }

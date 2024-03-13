@@ -75,18 +75,20 @@ public class Bot : IBot
             return;
         }
 
-        IEnumerable<Position?> positions = await _broker.GetOpenPositions();
+        IEnumerable<Position> openPositions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
 
-        if (!generalMessage.AllowingParallelPositions && positions.Any())
+        if (!generalMessage.AllowingParallelPositions && openPositions.Any())
         {
-            _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
-            await _broker.CloseAllPositions();
-            _logger.Information("open positions are closed.");
+            _logger.Information("Parallel positions is not allowed, Skipping...");
+            // _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
+            // await _broker.CloseAllPositions();
+            // _logger.Information("open positions are closed.");
+            return;
         }
 
         if (
-            (generalMessage.Direction == PositionDirection.LONG && positions.Any(o => o != null && o.PositionDirection == PositionDirection.SHORT)) ||
-            (generalMessage.Direction == PositionDirection.SHORT && positions.Any(o => o != null && o.PositionDirection == PositionDirection.LONG))
+            (generalMessage.Direction == PositionDirection.LONG && openPositions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
+            (generalMessage.Direction == PositionDirection.SHORT && openPositions.Any(o => o.PositionDirection == PositionDirection.LONG))
         )
         {
             _logger.Information("There are open positions with opposite direction from the provided signal, skipping...");
@@ -95,7 +97,7 @@ public class Bot : IBot
 
         decimal entryPrice = await _broker.GetLastPrice();
 
-        if (!await _riskManagement.PermitOpenPosition(entryPrice, generalMessage.SlPrice))
+        if (!await _riskManagement.IsPositionAcceptable(entryPrice, generalMessage.SlPrice))
         {
             _logger.Information("Risk management rejects opening a position, skipping...");
             return;

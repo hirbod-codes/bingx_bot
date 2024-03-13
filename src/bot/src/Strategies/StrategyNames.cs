@@ -7,4 +7,5 @@ public static class StrategyNames
     public const string STOCHASTIC_EMA = "StochasticEma";
     public const string UT_BOT = "UtBot";
     public const string DOUBLE_UT_BOT = "DoubleUtBot";
+    public const string LUCK = "Luck";
 }
