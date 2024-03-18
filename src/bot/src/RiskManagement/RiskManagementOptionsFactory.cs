@@ -10,6 +10,7 @@ public static class RiskManagementOptionsFactory
         RiskManagementNames.DOUBLE_UT_BOT => new DoubleUtBot.RiskManagementOptions(),
         RiskManagementNames.STOCHASTIC_EMA => new StochasticEma.RiskManagementOptions(),
         RiskManagementNames.LUCK => new Luck.RiskManagementOptions(),
+        RiskManagementNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.RiskManagementOptions(),
         _ => throw new Exception()
     };
 }

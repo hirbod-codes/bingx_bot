@@ -8,4 +8,5 @@ public static class IndicatorsOptionsNames
     public const string DOUBLE_UT_BOT = "DoubleUtBot";
     public const string STOCHASTIC_EMA = "StochasticEma";
     public const string LUCK = "Luck";
+    public const string CANDLES_OPEN_CLOSE = "CandlesOpenClose";
 }

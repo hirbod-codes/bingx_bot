@@ -1,4 +1,4 @@
-namespace bot.src.Indicators.StochasticEma;
+namespace bot.src.Indicators.Models;
 
 public class StochasticOptions
 {

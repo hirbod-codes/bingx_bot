@@ -44,4 +44,5 @@ public class Position
     public bool UnknownCloseState { get; set; } = false;
     public DateTime OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
 }

@@ -10,6 +10,7 @@ public static class StrategyOptionsFactory
         StrategyNames.DOUBLE_UT_BOT => new DoubleUtBot.StrategyOptions(),
         StrategyNames.UT_BOT => new UtBot.StrategyOptions(),
         StrategyNames.LUCK => new Luck.StrategyOptions(),
+        StrategyNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.StrategyOptions(),
         _ => throw new InvalidStrategyNameException()
     };
 }

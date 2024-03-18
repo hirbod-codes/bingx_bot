@@ -7,12 +7,13 @@ namespace bot.src.PnLAnalysis;
 
 public static class PnLAnalysis
 {
-    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo)
+    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository)
     {
         IEnumerable<Position?> closedPositions = await repo.GetClosedPositions();
 
         AnalysisSummary analysisSummary = new()
         {
+            SignalsCount = (await messageRepository.GetMessages()).Count(),
             OpenedPositions = (await repo.GetOpenedPositions()).Where(o => o != null).Count(),
             PendingPositions = (await repo.GetPendingPositions()).Where(o => o != null).Count(),
             CancelledPositions = (await repo.GetCancelledPositions()).Where(o => o != null).Count(),

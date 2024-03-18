@@ -30,7 +30,7 @@ public class GeneralTester : ITester
     {
         _logger.Information("Testing...");
 
-        await _broker.InitiateCandleStore();
+        await _broker.InitiateCandleStore(_testerOptions.CandlesCount, _testerOptions.TimeFrame);
 
         await _strategy.PrepareIndicators();
 

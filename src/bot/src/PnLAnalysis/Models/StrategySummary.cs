@@ -12,6 +12,7 @@ public class AnalysisSummary
     public decimal LongGrossLoss { get; set; }
     public decimal ShortGrossLoss { get; set; }
     public decimal GrossLoss { get; set; }
+    public int SignalsCount { get; set; } = 0;
     public int ShortPositionCount { get; set; } = 0;
     public int LongPositionCount { get; set; } = 0;
     public int OpenedPositions { get; set; } = 0;

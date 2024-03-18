@@ -167,7 +167,7 @@ public class Program
 
         IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(_configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, _logger);
 
-        IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, messageRepository, _logger);
+        IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, riskManagement, broker, notifier, messageRepository, _logger);
 
         IBot bot = BotFactory.CreateBot(_configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, _logger);
 
@@ -175,7 +175,7 @@ public class Program
 
         await tester.Test();
 
-        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository);
+        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository);
 
         results.Add(new Result
         {

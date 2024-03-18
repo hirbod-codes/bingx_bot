@@ -14,6 +14,7 @@ public static class RiskManagementFactory
         RiskManagementNames.EMA_RSI => new EmaRsi.RiskManagement(riskManagementOptions, broker, time),
         RiskManagementNames.STOCHASTIC_EMA => new StochasticEma.RiskManagement(riskManagementOptions, broker, time),
         RiskManagementNames.LUCK => new Luck.RiskManagement(riskManagementOptions, broker, time, logger),
+        RiskManagementNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.RiskManagement(riskManagementOptions, broker, time, logger),
         _ => throw new Exception()
     };
 }

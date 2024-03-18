@@ -576,4 +576,29 @@ public class Broker : Api, IBroker
     {
         throw new NotImplementedException();
     }
+
+    public Task CancelPosition(string id, DateTime cancelledAt)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task CancelAllPendingPositions()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IEnumerable<Position?>> GetPendingPositions()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
+    {
+        throw new NotImplementedException();
+    }
 }

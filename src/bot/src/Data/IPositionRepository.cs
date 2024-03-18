@@ -4,7 +4,8 @@ namespace bot.src.Data;
 
 public interface IPositionRepository
 {
-    public Task<Position> CreatePosition(Position position);
+    public Task<Position> CreateOpenPosition(Position position);
+    public Task<Position> CreatePendingPosition(Position position);
     public Task<Position?> GetPosition(string id);
     public Task<Position?> GetOpenedPosition(string id);
     public Task<Position?> GetClosedPosition(string id);
@@ -22,4 +23,9 @@ public interface IPositionRepository
     public Task<IEnumerable<Position>> GetPositions(DateTime start, DateTime? end = null);
     public Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission, bool unknownState);
     public Task<bool> AnyOpenedPosition();
+    public Task<bool> AnyPendingPosition();
+    public Task<bool> AnyCancelledPosition();
+    public Task<bool> AnyClosedPosition();
+    public Task OpenPosition(string id);
+    Task CancelPosition(string id, DateTime cancelledAt);
 }

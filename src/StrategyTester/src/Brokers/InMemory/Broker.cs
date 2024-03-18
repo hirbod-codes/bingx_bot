@@ -35,17 +35,15 @@ public class Broker : IBroker
         timeFrame ??= 60;
         string timeFrameString = null!;
 
-        IEnumerable<Candle> candles = null!;
+        if (timeFrame == 60)
+            timeFrameString = "1m";
 
-        // if (timeFrame == 60)
-        //     timeFrameString = "1m";
+        if (timeFrame == (60 * 15))
+            timeFrameString = "15m";
 
-        // if (timeFrame == (60 * 15))
-        timeFrameString = "15m";
+        IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
 
-        candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-
-        // candles = candles.Take(10000);
+        candles = candles.Take(candlesCount);
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());
@@ -85,37 +83,63 @@ public class Broker : IBroker
     {
         _logger.Information("Getting open positions...");
 
-        if (!await _positionRepository.AnyOpenedPosition())
-            return;
-
-        Position?[] openPositions = (await _positionRepository.GetOpenedPositions()).ToArray();
-
         Candle candle = await GetCandle();
 
-        for (int i = 0; i < openPositions.Length; i++)
+        if (await _positionRepository.AnyPendingPosition())
         {
-            if (openPositions[i] == null)
-                continue;
+            Position?[] pendingPositions = (await _positionRepository.GetPendingPositions()).ToArray();
 
-            if (
-                (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.Low <= openPositions[i]!.SLPrice)
-                ||
-                (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.High >= openPositions[i]!.SLPrice)
-            )
+            long[] ticksArray = Array.Empty<long>();
+            for (int i = 0; i < pendingPositions.Length; i++)
             {
-                await ClosePosition(openPositions[i]!);
-                continue;
+                if (pendingPositions[i] == null)
+                    continue;
+
+                if (
+                    (pendingPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.Low > pendingPositions[i]!.OpenedPrice)
+                    ||
+                    (pendingPositions[i]!.PositionDirection == PositionDirection.LONG && candle.High < pendingPositions[i]!.OpenedPrice)
+                )
+                    continue;
+
+                if (ticksArray.Contains(pendingPositions[i]!.OpenedAt.Ticks))
+                    continue;
+
+                ticksArray = ticksArray.Append(pendingPositions[i]!.OpenedAt.Ticks).ToArray();
+
+                await _positionRepository.OpenPosition(pendingPositions[i]!.Id);
             }
+        }
 
-            if (openPositions[i]!.TPPrice == null)
-                continue;
+        if (await _positionRepository.AnyOpenedPosition())
+        {
+            Position?[] openPositions = (await _positionRepository.GetOpenedPositions()).ToArray();
 
-            if (
-                (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.High >= openPositions[i]!.TPPrice)
-                ||
-                (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.Low <= openPositions[i]!.TPPrice)
-            )
-                await ClosePosition(openPositions[i]!);
+            for (int i = 0; i < openPositions.Length; i++)
+            {
+                if (openPositions[i] == null)
+                    continue;
+
+                if (
+                    (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.Low <= openPositions[i]!.SLPrice)
+                    ||
+                    (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.High >= openPositions[i]!.SLPrice)
+                )
+                {
+                    await ClosePosition(openPositions[i]!);
+                    continue;
+                }
+
+                if (openPositions[i]!.TPPrice == null)
+                    continue;
+
+                if (
+                    (openPositions[i]!.PositionDirection == PositionDirection.LONG && candle.High >= openPositions[i]!.TPPrice)
+                    ||
+                    (openPositions[i]!.PositionDirection == PositionDirection.SHORT && candle.Low <= openPositions[i]!.TPPrice)
+                )
+                    await ClosePosition(openPositions[i]!);
+            }
         }
     }
 
@@ -160,6 +184,8 @@ public class Broker : IBroker
 
     public async Task ClosePosition(string id, decimal closedPrice, DateTime closedAt, bool unknownState) => await _positionRepository.ClosePosition(id, closedPrice, closedAt, _brokerOptions.BrokerCommission, unknownState);
 
+    public async Task CancelPosition(string id, DateTime cancelledAt) => await _positionRepository.CancelPosition(id, cancelledAt);
+
     public async Task CloseAllPositions()
     {
         Candle candle = await GetCandle();
@@ -177,9 +203,22 @@ public class Broker : IBroker
                 await ClosePosition(positions[i]!.Id, closedPrice, closedAt, false);
     }
 
+    public async Task CancelAllPendingPositions()
+    {
+        Position?[] positions = (await GetPendingPositions()).ToArray();
+
+        for (int i = 0; i < positions.Length; i++)
+            if (positions[i] == null)
+                continue;
+            else
+                await CancelPosition(positions[i]!.Id, _time.GetUtcNow());
+    }
+
     public async Task<IEnumerable<Position?>> GetOpenPositions() => await _positionRepository.GetOpenedPositions();
 
     public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null) => _positionRepository.GetClosedPositions(start, end);
+
+    public async Task<IEnumerable<Position?>> GetPendingPositions() => await _positionRepository.GetPendingPositions();
 
     public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
     {
@@ -187,7 +226,7 @@ public class Broker : IBroker
             throw new BrokerException();
 
         Candle candle = await GetCandle();
-        await _positionRepository.CreatePosition(new Position()
+        await _positionRepository.CreateOpenPosition(new Position()
         {
             Leverage = leverage,
             Margin = margin,
@@ -207,7 +246,7 @@ public class Broker : IBroker
             throw new BrokerException();
 
         Candle candle = await GetCandle();
-        await _positionRepository.CreatePosition(new Position()
+        await _positionRepository.CreateOpenPosition(new Position()
         {
             Leverage = leverage,
             Margin = margin,
@@ -216,7 +255,46 @@ public class Broker : IBroker
             SLPrice = slPrice,
             CommissionRatio = _brokerOptions.BrokerCommission,
             Symbol = _brokerOptions.Symbol,
-            PositionDirection = direction,
+            PositionDirection = direction
+        });
+    }
+
+    public async Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice)
+    {
+        if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
+            throw new BrokerException();
+
+        Candle candle = await GetCandle();
+        await _positionRepository.CreatePendingPosition(new Position()
+        {
+            Leverage = leverage,
+            Margin = margin,
+            OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
+            OpenedPrice = limit,
+            SLPrice = slPrice,
+            CommissionRatio = _brokerOptions.BrokerCommission,
+            Symbol = _brokerOptions.Symbol,
+            PositionDirection = direction
+        });
+    }
+
+    public async Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
+    {
+        if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
+            throw new BrokerException();
+
+        Candle candle = await GetCandle();
+        await _positionRepository.CreatePendingPosition(new Position()
+        {
+            Leverage = leverage,
+            Margin = margin,
+            OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
+            OpenedPrice = limit,
+            SLPrice = slPrice,
+            TPPrice = tpPrice,
+            CommissionRatio = _brokerOptions.BrokerCommission,
+            Symbol = _brokerOptions.Symbol,
+            PositionDirection = direction
         });
     }
 }

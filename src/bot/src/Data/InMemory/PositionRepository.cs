@@ -9,28 +9,55 @@ public class PositionRepository : IPositionRepository
     private List<Position> _positions = new();
     private readonly List<Position?> _openPositions = new();
     private bool _anyOpenedPosition = false;
+    private bool _anyPendingPosition = false;
+    private bool _anyCancelledPosition = false;
+    private bool _anyClosedPosition = false;
     private readonly List<Position?> _cancelledPositions = new();
     private readonly List<Position?> _closedPositions = new();
     private readonly List<Position?> _pendingPositions = new();
 
-    public Task<Position> CreatePosition(Position position)
+    private Task<Position> CreatePosition(Position position, string status)
     {
         position.Id = _lastId.ToString();
+        position.PositionStatus = status;
         _positions.Add(position);
 
-        _openPositions.Add(position);
-        _anyOpenedPosition = true;
-
+        _openPositions.Add(null);
         _cancelledPositions.Add(null);
         _closedPositions.Add(null);
         _pendingPositions.Add(null);
 
         _lastId++;
-
         return Task.FromResult(position);
     }
 
+    public async Task<Position> CreateOpenPosition(Position position)
+    {
+        Position createdPosition = await CreatePosition(position, PositionStatus.OPENED);
+
+        _openPositions[int.Parse(position.Id)] = position;
+        _anyOpenedPosition = true;
+
+        return createdPosition;
+    }
+
+    public async Task<Position> CreatePendingPosition(Position position)
+    {
+        Position createdPosition = await CreatePosition(position, PositionStatus.PENDING);
+
+        _pendingPositions[int.Parse(position.Id)] = position;
+        _anyPendingPosition = true;
+
+        return createdPosition;
+    }
+
     public Task<bool> AnyOpenedPosition() => Task.FromResult(_anyOpenedPosition);
+
+    public Task<bool> AnyPendingPosition() => Task.FromResult(_anyPendingPosition);
+
+    public Task<bool> AnyCancelledPosition() => Task.FromResult(_anyCancelledPosition);
+
+    public Task<bool> AnyClosedPosition() => Task.FromResult(_anyClosedPosition);
 
     public Task<Position?> GetCancelledPosition(string id) => Task.FromResult(_cancelledPositions[int.Parse(id)])!;
 
@@ -85,12 +112,32 @@ public class PositionRepository : IPositionRepository
         && (end == null || o.ClosedAt <= end)
     ));
 
+    public async Task OpenPosition(string id)
+    {
+        Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
+
+        if (position.PositionStatus != PositionStatus.PENDING)
+            throw new PositionStatusException();
+
+        position.PositionStatus = PositionStatus.OPENED;
+
+        _openPositions[int.Parse(position.Id)] = position;
+        _anyOpenedPosition = true;
+
+        _pendingPositions[int.Parse(position.Id)] = null;
+
+        if (!_pendingPositions.Where(o => o != null).Any())
+            _anyPendingPosition = false;
+    }
+
     public async Task ClosePosition(string id, decimal closePrice, DateTime closedAt, decimal brokerCommission, bool unknownState)
     {
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
 
-        if (position.PositionStatus == PositionStatus.CLOSED)
+        if (position.PositionStatus != PositionStatus.OPENED)
             throw new ClosingAClosedPosition();
+
+        position.PositionStatus = PositionStatus.CLOSED;
 
         position.UnknownCloseState = unknownState;
 
@@ -105,26 +152,31 @@ public class PositionRepository : IPositionRepository
         position.Commission = commission;
         position.ProfitWithCommission = profit - commission;
 
-        switch (position.PositionStatus)
-        {
-            case PositionStatus.OPENED:
-                _openPositions[int.Parse(position.Id)] = null;
-                break;
-            case PositionStatus.PENDING:
-                _pendingPositions[int.Parse(position.Id)] = null;
-                break;
-            case PositionStatus.CANCELLED:
-                _cancelledPositions[int.Parse(position.Id)] = null;
-                break;
-            default:
-                throw new InvalidPositionStatusException();
-        }
-
-        position.PositionStatus = PositionStatus.CLOSED;
-
         _closedPositions[int.Parse(position.Id)] = position;
+        _anyClosedPosition = true;
+
+        _openPositions[int.Parse(position.Id)] = null;
 
         if (!_openPositions.Where(o => o != null).Any())
             _anyOpenedPosition = false;
+    }
+
+    public async Task CancelPosition(string id, DateTime cancelledAt)
+    {
+        Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
+
+        if (position.PositionStatus != PositionStatus.PENDING)
+            throw new CancellingAPosition();
+
+        position.CancelledAt = cancelledAt;
+        position.PositionStatus = PositionStatus.CANCELLED;
+
+        _cancelledPositions[int.Parse(position.Id)] = position;
+        _anyCancelledPosition = true;
+
+        _pendingPositions[int.Parse(position.Id)] = null;
+
+        if (!_pendingPositions.Where(o => o != null).Any())
+            _anyPendingPosition = false;
     }
 }

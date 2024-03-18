@@ -10,6 +10,7 @@ public static class RunnerOptionsFactory
         RunnerNames.UT_BOT => new UtBot.RunnerOptions(),
         RunnerNames.DOUBLE_UT_BOT => new DoubleUtBot.RunnerOptions(),
         RunnerNames.LUCK => new Luck.RunnerOptions(),
+        RunnerNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.RunnerOptions(),
         _ => throw new Exception("Invalid runner option name provided.")
     };
 }

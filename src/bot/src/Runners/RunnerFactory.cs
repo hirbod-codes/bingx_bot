@@ -17,6 +17,7 @@ public static class RunnerFactory
         RunnerNames.EMA_RSI => new EmaRsi.Runner(runnerOptions, bot, broker, strategy, time, notifier, logger),
         RunnerNames.STOCHASTIC_EMA => new EmaRsi.Runner(runnerOptions, bot, broker, strategy, time, notifier, logger),
         RunnerNames.LUCK => new Luck.Runner(runnerOptions, bot, broker, strategy, time, notifier, logger),
+        RunnerNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.Runner(runnerOptions, bot, broker, strategy, time, notifier, logger),
         _ => throw new RunnerException()
     };
 }
