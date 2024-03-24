@@ -41,6 +41,9 @@ public class Broker : IBroker
         if (timeFrame == (60 * 15))
             timeFrameString = "15m";
 
+        if (timeFrame == (60 * 60))
+            timeFrameString = "1h";
+
         IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
 
         candles = candles.Take(candlesCount);
@@ -105,7 +108,7 @@ public class Broker : IBroker
                 if (ticksArray.Contains(pendingPositions[i]!.OpenedAt.Ticks))
                     continue;
 
-                ticksArray = ticksArray.Append(pendingPositions[i]!.OpenedAt.Ticks).ToArray();
+                ticksArray = ticksArray.Append(_time.GetUtcNow().Ticks).ToArray();
 
                 await _positionRepository.OpenPosition(pendingPositions[i]!.Id);
             }
@@ -206,12 +209,7 @@ public class Broker : IBroker
     public async Task CancelAllPendingPositions()
     {
         Position?[] positions = (await GetPendingPositions()).ToArray();
-
-        for (int i = 0; i < positions.Length; i++)
-            if (positions[i] == null)
-                continue;
-            else
-                await CancelPosition(positions[i]!.Id, _time.GetUtcNow());
+        await CancelAllPendingPositions(positions);
     }
 
     public async Task<IEnumerable<Position?>> GetOpenPositions() => await _positionRepository.GetOpenedPositions();
@@ -296,5 +294,26 @@ public class Broker : IBroker
             Symbol = _brokerOptions.Symbol,
             PositionDirection = direction
         });
+    }
+
+    private async Task CancelAllPendingPositions(Position?[] positions)
+    {
+        for (int i = 0; i < positions.Length; i++)
+            if (positions[i] == null)
+                continue;
+            else
+                await CancelPosition(positions[i]!.Id, _time.GetUtcNow());
+    }
+
+    public async Task CancelAllLongPendingPositions()
+    {
+        Position?[] positions = (await GetPendingPositions()).Where(o => o != null && o.PositionDirection == PositionDirection.LONG).ToArray();
+        await CancelAllPendingPositions(positions);
+    }
+
+    public async Task CancelAllShortPendingPositions()
+    {
+        Position?[] positions = (await GetPendingPositions()).Where(o => o != null && o.PositionDirection == PositionDirection.SHORT).ToArray();
+        await CancelAllPendingPositions(positions);
     }
 }

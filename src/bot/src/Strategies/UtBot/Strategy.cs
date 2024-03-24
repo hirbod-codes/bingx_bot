@@ -52,6 +52,12 @@ public class Strategy : IStrategy
         _logger.Information("Indicators created...");
     }
 
+    public Dictionary<string, object> GetIndicators() => new(new KeyValuePair<string, object>[]{
+            new(nameof(_atr), _atr),
+            new(nameof(_atrStop), _atrStop),
+            new(nameof(_ema), _ema)
+        });
+
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
         _logger.Information("Handling the candle...");

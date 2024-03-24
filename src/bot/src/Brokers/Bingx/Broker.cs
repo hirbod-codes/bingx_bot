@@ -93,7 +93,7 @@ public class Broker : Api, IBroker
 
         _logger.Information("Initiating Candle Store...");
 
-        RunConcurrently(ListenForCandles(candlesCount, (int)timeFrame));
+        // RunConcurrently(ListenForCandles(candlesCount, (int)timeFrame));
 
         // ListenForCandles method must be ready before FetchCandles finishes execution.(_isListeningForCandles must become true)
         await Task.Delay(3000);
@@ -162,7 +162,7 @@ public class Broker : Api, IBroker
         _candles = new Candles(candles);
         _candles.SkipLast(2);
 
-        File.WriteAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{Symbol}_{candles.Count}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
+        File.WriteAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
 
         _areCandlesLocked = false;
 
@@ -598,6 +598,16 @@ public class Broker : Api, IBroker
     }
 
     public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task CancelAllLongPendingPositions()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task CancelAllShortPendingPositions()
     {
         throw new NotImplementedException();
     }

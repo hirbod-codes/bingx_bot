@@ -38,6 +38,7 @@ public class Runner : IRunner
             _logger.Information("Runner started at: {dateTime}", _time.GetUtcNow().ToString());
             await _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
 
+                await Tick();
             await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
             {
                 await _time.Sleep(2500);

@@ -29,6 +29,8 @@ public class RiskManagement : IRiskManagement
             return _riskManagementOptions.SLPercentages * (_riskManagementOptions.CommissionPercentage / 100.0m) / (100.0m * _riskManagementOptions.BrokerCommission);
     }
 
+    public int GetUnacceptableOrdersCount() => 0;
+
     public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => Math.Min(GetMaximumLeverage(), _riskManagementOptions.SLPercentages * entryPrice / 100.0m / Math.Abs(entryPrice - slPrice));
 
     public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)

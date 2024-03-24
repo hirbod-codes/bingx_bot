@@ -7,6 +7,11 @@ function dumpObject(arr, level) {
 
     if (typeof (arr) == 'object') {
         for (var item in arr) {
+            if (["ClosedPositions", "Indicators"].includes(item)) {
+                dumped_text += level_padding + "'" + item + "' ... hidden\n";
+                continue
+            }
+
             var value = arr[item];
 
             if (typeof (value) == 'object') {
@@ -40,15 +45,7 @@ var render = (i, strategyName) => {
 
     chart = null;
 
-    var strategiesClosedPositions = []
-
-    let t = results[strategyName][i].ClosedPositions
-
-    strategiesClosedPositions.push(results[strategyName][i].ClosedPositions.filter(e => e != null))
-
-    results[strategyName][i].ClosedPositions = null
     let dump = dumpObject(results[strategyName][i])
-    results[strategyName][i].ClosedPositions = t
 
     document.getElementById(i + "-body").innerHTML = dump
 

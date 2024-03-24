@@ -18,6 +18,8 @@ public class RiskManagement : IRiskManagement
         _time = time;
     }
 
+    public int GetUnacceptableOrdersCount() => 0;
+
     private decimal GetMaximumLeverage()
     {
         if (_riskManagementOptions.BrokerCommission <= 0)

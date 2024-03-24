@@ -1,3 +1,4 @@
+
 namespace bot.src.PnLAnalysis.Models;
 
 public class AnalysisSummary
@@ -15,16 +16,18 @@ public class AnalysisSummary
     public int SignalsCount { get; set; } = 0;
     public int ShortPositionCount { get; set; } = 0;
     public int LongPositionCount { get; set; } = 0;
-    public int OpenedPositions { get; set; } = 0;
-    public int PendingPositions { get; set; } = 0;
-    public int CancelledPositions { get; set; } = 0;
-    public int ClosedPositions { get; set; } = 0;
+    public int OpenedPositionsCount { get; set; } = 0;
+    public int PendingPositionsCount { get; set; } = 0;
+    public int CancelledPositionsCount { get; set; } = 0;
+    public int ClosedPositionsCount { get; set; } = 0;
+    public int Wins { get; set; } = 0;
+    public int Losses { get; set; } = 0;
+    public int UnknownStatePositions { get; set; } = 0;
+    public int UnacceptableOrdersCount { get; set; } = 0;
     public int LongWins { get; set; } = 0;
     public int ShortWins { get; set; } = 0;
-    public int Wins { get; set; } = 0;
     public int LongLosses { get; set; } = 0;
     public int ShortLosses { get; set; } = 0;
-    public int Losses { get; set; } = 0;
     public decimal WinLossRatio { get; set; } = 0;
-    public int UnknownStatePositions { get; set; } = 0;
+    public Dictionary<string, object> Indicators { get; set; } = new();
 }

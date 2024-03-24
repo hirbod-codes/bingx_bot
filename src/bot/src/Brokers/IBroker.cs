@@ -21,4 +21,6 @@ public interface IBroker
     public Task<IEnumerable<Position?>> GetPendingPositions();
     public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice);
     public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice);
+    public Task CancelAllLongPendingPositions();
+    public Task CancelAllShortPendingPositions();
 }

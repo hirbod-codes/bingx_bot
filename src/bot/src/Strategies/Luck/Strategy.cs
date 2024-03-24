@@ -43,6 +43,11 @@ public class Strategy : IStrategy
         _rsi = candles.GetRsi();
     }
 
+    public Dictionary<string, object> GetIndicators() => new(new KeyValuePair<string, object>[]{
+            new(nameof(_atr), _atr),
+            new(nameof(_rsi), _rsi)
+        });
+
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
         if (_atr == null)

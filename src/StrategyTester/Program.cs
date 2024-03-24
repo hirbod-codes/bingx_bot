@@ -175,10 +175,11 @@ public class Program
 
         await tester.Test();
 
-        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository);
+        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement);
 
         results.Add(new Result
         {
+            PnlResults = analysisSummary,
             MessageStoreOptions = messageStoreOptions,
             BrokerOptions = brokerOptions,
             BotOptions = botOptions,
@@ -186,8 +187,7 @@ public class Program
             IndicatorsOptions = indicatorsOptions,
             StrategyOptions = strategyOptions,
             TesterOptions = testerOptions,
-            ClosedPositions = (await positionRepository.GetClosedPositions()).Where(o => o != null)!,
-            PnlResults = analysisSummary
+            ClosedPositions = (await positionRepository.GetClosedPositions()).Where(o => o != null)!
         });
     }
 }

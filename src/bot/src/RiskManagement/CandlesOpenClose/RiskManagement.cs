@@ -12,6 +12,7 @@ public class RiskManagement : IRiskManagement
     private readonly IBroker _broker;
     private readonly ITime _time;
     private readonly ILogger _logger;
+    private int _unacceptableOrdersCount = 0;
 
     public RiskManagement(IRiskManagementOptions riskManagementOptions, IBroker broker, ITime time, ILogger logger)
     {
@@ -20,6 +21,8 @@ public class RiskManagement : IRiskManagement
         _time = time;
         _logger = logger.ForContext<RiskManagement>();
     }
+
+    public int GetUnacceptableOrdersCount() => _unacceptableOrdersCount;
 
     private decimal GetMaximumLeverage()
     {
@@ -48,7 +51,10 @@ public class RiskManagement : IRiskManagement
     public async Task<bool> IsPositionAcceptable(decimal entryPrice, decimal slPrice)
     {
         if (GetMaximumLeverage() < CalculateLeverage(entryPrice, slPrice))
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         if (_riskManagementOptions.GrossProfitLimit == 0 && _riskManagementOptions.GrossLossLimit == 0 && _riskManagementOptions.NumberOfConcurrentPositions == 0)
             return true;
@@ -67,26 +73,41 @@ public class RiskManagement : IRiskManagement
         IEnumerable<Position> openedPositions = openedPositionsTask.Result.Where(o => o != null)!;
 
         if (_riskManagementOptions.NumberOfConcurrentPositions != 0 && openedPositions.Count() >= _riskManagementOptions.NumberOfConcurrentPositions)
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         if (_riskManagementOptions.GrossLossLimit == 0 && _riskManagementOptions.GrossProfitLimit == 0)
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         // Adding another grossLossPerPosition because of current possible position
         decimal openedPositionsMaximumLoss = (openedPositions.Count() * grossLossPerPosition) + grossLossPerPosition;
 
         if (_riskManagementOptions.GrossLossLimit != 0 && openedPositionsMaximumLoss >= _riskManagementOptions.GrossLossLimit)
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         decimal grossLoss = PnLAnalysis.PnLAnalysis.GetGrossLoss(closedPositionsForLoss) + openedPositionsMaximumLoss;
 
         if (_riskManagementOptions.GrossLossLimit != 0 && grossLoss >= Math.Abs(_riskManagementOptions.GrossLossLimit))
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         decimal grossProfit = Math.Abs(grossLoss - PnLAnalysis.PnLAnalysis.GetGrossProfit(closedPositionsForProfit));
 
         if (_riskManagementOptions.GrossProfitLimit != 0 && grossProfit >= _riskManagementOptions.GrossProfitLimit)
+        {
+            _unacceptableOrdersCount++;
             return false;
+        }
 
         return true;
     }

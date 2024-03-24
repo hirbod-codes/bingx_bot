@@ -62,6 +62,19 @@ public class Strategy : IStrategy
         _superTrend = candles.GetSuperTrend(_indicatorsOptions.SuperTrend.Period, _indicatorsOptions.SuperTrend.Multiplier);
     }
 
+    public Dictionary<string, object> GetIndicators() => new(new KeyValuePair<string, object>[]{
+            new(nameof(_atr), _atr),
+            new(nameof(_ema1), _ema1),
+            new(nameof(_ema2), _ema2),
+            new(nameof(_ema3), _ema3),
+            new(nameof(_ema4), _ema4),
+            new(nameof(_ema5), _ema5),
+            new(nameof(_ema6), _ema6),
+            new(nameof(_ema7), _ema7),
+            new(nameof(_stochastic), _stochastic),
+            new(nameof(_superTrend), _superTrend)
+        });
+
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
         if (_atr == null)

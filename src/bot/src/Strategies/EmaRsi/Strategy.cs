@@ -51,6 +51,14 @@ public class Strategy : IStrategy
         _rsi = candles.GetRsi(_indicatorsOptions.Rsi.Period);
     }
 
+    public Dictionary<string, object> GetIndicators() => new(new KeyValuePair<string, object>[]{
+            new(nameof(_superTrend), _superTrend),
+            new(nameof(_atr), _atr),
+            new(nameof(_ema1), _ema1),
+            new(nameof(_ema2), _ema2),
+            new(nameof(_rsi), _rsi)
+        });
+
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
         if (_atr == null || _ema1 == null || _ema2 == null || _rsi == null)
