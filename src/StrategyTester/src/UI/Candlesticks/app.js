@@ -11,10 +11,11 @@ var startDate = new Date(candles[0].Date)
 var endDate = new Date(candles[candles.length - 1].Date)
 
 candles = candles.filter(c => new Date(c.Date) >= startDate && new Date(c.Date) < endDate)
-closedPositions = results.CandlesOpenClose[0].ClosedPositions.filter(o => new Date(o.OpenedAt) >= new Date(startDate) && new Date(o.OpenedAt) < new Date(endDate))
 
 // candles = candles.slice(candles.length - 101)
-candles = candles.slice(0, 400)
+candles = candles.slice(200, 600)
+
+closedPositions = results.CandlesOpenClose[0].ClosedPositions.filter(o => new Date(o.OpenedAt) >= new Date(candles[0].Date) && new Date(o.OpenedAt) < new Date(candles[candles.length - 1].Date))
 
 var start = startDate.valueOf();
 var end = endDate.valueOf();
@@ -38,26 +39,35 @@ Object.keys(indicators).forEach(k => {
         case "_stochastic":
             y = indicator.map(i => i.K)
             break;
-        case "_superTrend":
-            y = indicator.map(i => i.SuperTrend)
-            break;
         case "_deltaWma":
             y = indicator.map(i => i.Wma)
+            break;
+        case "_rsi":
+            y = indicator.map(i => i.rsi)
             break;
 
         default:
             break;
     }
 
-    if (k == "_superTrend")
+    if (k == "_superTrend") {
         data.push({
             x,
-            y,
+            y: indicator.map(i => i.LowerBand),
             mode: 'lines',
             type: 'scatter',
-            name: k,
+            name: 'LowerBand',
             text: y
         })
+        data.push({
+            x,
+            y: indicator.map(i => i.UpperBand),
+            mode: 'lines',
+            type: 'scatter',
+            name: 'UpperBand',
+            text: y
+        })
+    }
     else
         overlayData.push({
             x,
@@ -84,45 +94,45 @@ data = data.concat([
         xaxis: 'x',
         yaxis: 'y'
     },
-    {
-        x: closedPositions.map(p => new Date(p.OpenedAt)),
-        y: closedPositions.map(p => p.TPPrice),
+    // {
+    //     x: closedPositions.map(p => new Date(p.OpenedAt)),
+    //     y: closedPositions.map(p => p.TPPrice),
 
-        mode: 'markers',
-        type: 'scatter',
-        name: 'TPPrice',
-        text: closedPositions.map(p => p.TPPrice),
-        marker: {
-            size: 4,
-            color: 12
-        }
-    },
-    {
-        x: closedPositions.map(p => new Date(p.OpenedAt)),
-        y: closedPositions.map(p => p.OpenedPrice),
+    //     mode: 'markers',
+    //     type: 'scatter',
+    //     name: 'TPPrice',
+    //     text: closedPositions.map(p => p.TPPrice),
+    //     marker: {
+    //         size: 4,
+    //         color: 12
+    //     }
+    // },
+    // {
+    //     x: closedPositions.map(p => new Date(p.OpenedAt)),
+    //     y: closedPositions.map(p => p.OpenedPrice),
 
-        mode: 'markers',
-        type: 'scatter',
-        name: 'OpenedPrice',
-        text: closedPositions.map(p => p.OpenedPrice),
-        marker: {
-            size: 4,
-            color: 0
-        }
-    },
-    {
-        x: closedPositions.map(p => new Date(p.OpenedAt)),
-        y: closedPositions.map(p => p.SLPrice),
+    //     mode: 'markers',
+    //     type: 'scatter',
+    //     name: 'OpenedPrice',
+    //     text: closedPositions.map(p => p.OpenedPrice),
+    //     marker: {
+    //         size: 4,
+    //         color: 0
+    //     }
+    // },
+    // {
+    //     x: closedPositions.map(p => new Date(p.OpenedAt)),
+    //     y: closedPositions.map(p => p.SLPrice),
 
-        mode: 'markers',
-        type: 'scatter',
-        name: 'SLPrice',
-        text: closedPositions.map(p => p.SLPrice),
-        marker: {
-            size: 4,
-            color: 12
-        }
-    },
+    //     mode: 'markers',
+    //     type: 'scatter',
+    //     name: 'SLPrice',
+    //     text: closedPositions.map(p => p.SLPrice),
+    //     marker: {
+    //         size: 4,
+    //         color: 12
+    //     }
+    // },
     {
         x: closedPositions.map(p => new Date(p.OpenedAt)),
         y: closedPositions.map(p => p.ClosedPrice),
@@ -151,7 +161,7 @@ data = data.concat([
     // }
 ]);
 
-var layout = {
+Plotly.newPlot('overlay-chart', overlayData, {
     dragmode: 'pan',
     margin: {
         r: 10,
@@ -171,40 +181,61 @@ var layout = {
     yaxis: {
         autorange: true,
         domain: [0, 1],
+        title: 'value',
+        type: 'linear'
+    }
+}, { responsive: true });
+
+Plotly.newPlot('chart', data, {
+    shapes: closedPositions.map((p, i) => [{
+        type: 'rect',
+        xref: 'x',
+        yref: 'y',
+        x0: p.OpenedAt,
+        x1: p.ClosedAt,
+        y1: Math.max(p.SLPrice, p.TPPrice),
+        y0: p.OpenedPrice,
+        fillcolor: '#0a0',
+        opacity: 0.3,
+        line: {
+            width: 0
+        }
+    },
+    {
+        type: 'rect',
+        xref: 'x',
+        yref: 'y',
+        x0: p.OpenedAt,
+        x1: p.ClosedAt,
+        y1: p.OpenedPrice,
+        y0: Math.min(p.SLPrice, p.TPPrice),
+        fillcolor: '#a00',
+        opacity: 0.2,
+        line: {
+            width: 0
+        }
+    }]).flat(),
+    dragmode: 'pan',
+    margin: {
+        r: 10,
+        t: 25,
+        b: 40,
+        l: 160
+    },
+    showlegend: false,
+    xaxis: {
+        autorange: true,
+        domain: [0, 1],
+        range: dateRange,
+        rangeslider: { range: dateRange },
+        title: 'Date',
+        type: 'date'
+    },
+    yaxis: {
+        // autorange: true,
+        domain: [0, 1],
+        range: [8600, 10000],
         title: 'Price',
         type: 'linear'
     }
-};
-
-Plotly.newPlot('overlay-chart', overlayData, layout, { responsive: true });
-
-// layout.shapes = closedPositions.map((p, i) => [{
-//     type: 'rect',
-//     xref: 'x',
-//     yref: 'y',
-//     x0: p.OpenedAt,
-//     x1: p.ClosedAt,
-//     y1: Math.max(p.SLPrice, p.TPPrice),
-//     y0: p.OpenedPrice,
-//     fillcolor: '#0a0',
-//     opacity: 0.3,
-//     line: {
-//         width: 0
-//     }
-// },
-// {
-//     type: 'rect',
-//     xref: 'x',
-//     yref: 'y',
-//     x0: p.OpenedAt,
-//     x1: p.ClosedAt,
-//     y1: p.OpenedPrice,
-//     y0: Math.min(p.SLPrice, p.TPPrice),
-//     fillcolor: '#a00',
-//     opacity: 0.2,
-//     line: {
-//         width: 0
-//     }
-// }]).flat()
-
-Plotly.newPlot('chart', data, layout, { responsive: true });
+}, { responsive: true });

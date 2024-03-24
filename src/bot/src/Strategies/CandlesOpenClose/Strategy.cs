@@ -16,6 +16,7 @@ public class Strategy : IStrategy
 {
     private readonly IndicatorOptions _indicatorsOptions;
     private readonly StrategyOptions _strategyOptions;
+    private IEnumerable<RsiResult> _rsi = Array.Empty<RsiResult>();
     private IEnumerable<AtrResult> _atr = Array.Empty<AtrResult>();
     private IEnumerable<StochResult> _stochastic = Array.Empty<StochResult>();
     private IEnumerable<SuperTrendResult> _superTrend = Array.Empty<SuperTrendResult>();
@@ -36,6 +37,7 @@ public class Strategy : IStrategy
     }
 
     public Dictionary<string, object> GetIndicators() => new(new KeyValuePair<string, object>[]{
+            new(nameof(_rsi), _rsi),
             new(nameof(_atr), _atr),
             new(nameof(_stochastic), _stochastic),
             new(nameof(_superTrend), _superTrend),
@@ -49,20 +51,19 @@ public class Strategy : IStrategy
         _stochastic = candles.GetStoch(_indicatorsOptions.Stochastic.Period, _indicatorsOptions.Stochastic.SignalPeriod, _indicatorsOptions.Stochastic.SmoothPeriod);
         _superTrend = candles.GetSuperTrend(10, 2);
         _atr = candles.GetAtr();
+        _rsi = candles.GetRsi();
 
-        // _deltaWma = candles.ToList().ConvertAll(candle =>
-        //   {
-        //       decimal offset = Math.Abs(candle.Close - candle.Open) / 4.0m;
+        _deltaWma = candles.ToList().ConvertAll(candle =>
+        {
+            decimal offset = Math.Abs(candle.Close - candle.Open) / 4.0m;
 
-        //       decimal upperBand = Math.Max(candle.Close, candle.Open) + offset;
-        //       decimal lowerBand = Math.Min(candle.Close, candle.Open) - offset;
+            decimal upperBand = Math.Max(candle.Close, candle.Open) + offset;
+            decimal lowerBand = Math.Min(candle.Close, candle.Open) - offset;
 
-        //       decimal delta = Math.Abs(upperBand - lowerBand);
+            decimal delta = Math.Abs(upperBand - lowerBand);
 
-        //       candle.Close = delta;
-
-        //       return candle;
-        //   }).GetWma(14);
+            return new Candle() { Date = candle.Date, Close = delta };
+        }).GetWma(14);
     }
 
     public async Task HandleCandle(Candle candle, int timeFrame)
@@ -88,8 +89,8 @@ public class Strategy : IStrategy
             if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
                 if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
                 {
-                    // if (openPositions.Any())
-                    //     return;
+                    if (openPositions.Any())
+                        return;
 
                     if (!longPendingPositions.Any())
                         shouldOpenLongPosition = true;
@@ -105,11 +106,11 @@ public class Strategy : IStrategy
 
         decimal delta = Math.Abs(upperBand - lowerBand);
 
-        // if ((double)delta < _deltaWma.ElementAt(index).Wma)
-        //     return;
-
-        if ((double)delta < 50)
+        if ((double)delta < _deltaWma.ElementAt(index).Wma)
             return;
+
+        // if ((double)delta < 50)
+        //     return;
 
         decimal longTpPrice = upperBand + (delta * _strategyOptions.RiskRewardRatio);
         decimal longSlPrice = lowerBand;
@@ -118,37 +119,35 @@ public class Strategy : IStrategy
         decimal shortSlPrice = upperBand;
 
         if (shouldOpenLongPosition)
-        {
-            _logger.Information("Candle is valid for a position, sending the message...");
-
             if (IsLong(index))
-                if (candle.Close > candle.Open)
+                // if (candle.Close > candle.Open)
                 {
+                    _logger.Information("Candle is valid for a position, sending the message...");
+
                     IMessage longMessage = CreateOpenPositionMessage(candle, timeFrame, PositionDirection.LONG, upperBand, longSlPrice, longTpPrice);
                     await _messageRepository.CreateMessage(longMessage);
-                }
 
-            _logger.Information("Messages sent.");
-        }
+                    _logger.Information("Messages sent.");
+                }
 
         if (shouldOpenShortPosition)
-        {
-            _logger.Information("Candle is valid for a position, sending the message...");
-
             if (IsShort(index))
-                if (candle.Close < candle.Open)
+                // if (candle.Close < candle.Open)
                 {
+                    _logger.Information("Candle is valid for a position, sending the message...");
+
                     IMessage shortMessage = CreateOpenPositionMessage(candle, timeFrame, PositionDirection.SHORT, lowerBand, shortSlPrice, shortTpPrice);
                     await _messageRepository.CreateMessage(shortMessage);
-                }
 
-            _logger.Information("Messages sent.");
-        }
+                    _logger.Information("Messages sent.");
+                }
     }
 
-    private bool IsLong(int index) => true;
+    private bool IsLong(int index) => _superTrend.ElementAt(index).LowerBand != null && _rsi.ElementAt(index).Rsi > 40 && _rsi.ElementAt(index).Rsi < 65;
 
     private bool IsShort(int index) => false;
+    // private bool IsShort(int index) => _rsi.ElementAt(index).Rsi < 60 && _rsi.ElementAt(index).Rsi > 35;
+    // private bool IsShort(int index) => _superTrend.ElementAt(index).UpperBand != null;
 
     private IMessage CreateOpenPositionMessage(Candle candle, int timeFrame, string direction, decimal limit, decimal slPrice, decimal tpPrice) => new Message()
     {
