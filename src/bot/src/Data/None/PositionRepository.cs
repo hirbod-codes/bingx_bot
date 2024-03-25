@@ -50,7 +50,7 @@ public class PositionRepository : IPositionRepository
 
     public Task<IEnumerable<Position>> GetPositions(DateTime start, DateTime? end = null) => throw new NotImplementedException();
 
-    public Task OpenPosition(string id) => throw new NotImplementedException();
+    public Task OpenPosition(string id, DateTime openedAt) => throw new NotImplementedException();
 
     public Task ReplacePosition(Position position) => throw new NotImplementedException();
 }

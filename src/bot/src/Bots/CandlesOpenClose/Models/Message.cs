@@ -95,17 +95,17 @@ public class Message : IMessage
         else
             throw new MessageParseException();
 
-        if (fields.TryGetValue(nameof(Limit), out string? limitString) && decimal.TryParse(limitString, out decimal limit) && limit > 0)
+        if (fields.TryGetValue(nameof(Limit), out string? limitString) && decimal.TryParse(limitString, out decimal limit))
             generalMessage.Limit = limit;
         else
             throw new MessageParseException();
 
-        if (fields.TryGetValue(nameof(SlPrice), out string? slPriceString) && decimal.TryParse(slPriceString, out decimal slPrice) && slPrice > 0)
+        if (fields.TryGetValue(nameof(SlPrice), out string? slPriceString) && decimal.TryParse(slPriceString, out decimal slPrice))
             generalMessage.SlPrice = slPrice;
         else
             throw new MessageParseException();
 
-        if (fields.TryGetValue(nameof(TpPrice), out string? tpPriceString) && tpPriceString is not null && decimal.TryParse(tpPriceString, out decimal tpPrice) && tpPrice > 0)
+        if (fields.TryGetValue(nameof(TpPrice), out string? tpPriceString) && tpPriceString is not null && decimal.TryParse(tpPriceString, out decimal tpPrice))
             generalMessage.TpPrice = tpPrice;
         else if (tpPriceString is not null)
             throw new MessageParseException();

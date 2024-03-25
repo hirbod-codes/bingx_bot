@@ -75,17 +75,24 @@ public class Bot : IBot
             {
                 _logger.Information("Closing all of the open positions...");
                 await _broker.CloseAllPositions();
+                await _broker.CancelAllPendingPositions();
                 _logger.Information("open positions are closed.");
                 return;
             }
 
-            IEnumerable<Position> openPositions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
+            IEnumerable<Position>? openPositions = null;
 
-            if (!message.AllowingParallelPositions && openPositions.Any())
+            if (!message.AllowingParallelPositions)
             {
-                _logger.Information("Parallel positions is not allowed, Skipping...");
-                return;
+                openPositions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
+                if (openPositions.Any())
+                {
+                    _logger.Information("Parallel positions is not allowed, Skipping...");
+                    return;
+                }
             }
+
+            openPositions ??= (await _broker.GetOpenPositions()).Where(o => o != null)!;
 
             if (
                 (message.Direction == PositionDirection.LONG && openPositions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||

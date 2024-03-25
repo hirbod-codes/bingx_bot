@@ -3,27 +3,25 @@ Date.prototype.addMilliseconds = function (ms) {
     return this;
 }
 
-console.log('candles.length', candles.length);
+result = results.EmaRsi[0]
+
+// candles = candles.slice(candles.length - 101)
+candles = candles.slice(200, 600)
+
+console.log('candles.length', candles.length)
 
 // var startDate = new Date("2021-06-27T00:00:00.000Z");
 // var endDate = new Date("2024-01-15T08:47:00")
 var startDate = new Date(candles[0].Date)
 var endDate = new Date(candles[candles.length - 1].Date)
 
-candles = candles.filter(c => new Date(c.Date) >= startDate && new Date(c.Date) < endDate)
+candles = candles.filter(c => new Date(c.Date) >= startDate && new Date(c.Date) <= endDate)
 
-// candles = candles.slice(candles.length - 101)
-candles = candles.slice(200, 600)
+closedPositions = result.ClosedPositions.filter(o => new Date(o.OpenedAt) >= new Date(candles[0].Date) && new Date(o.OpenedAt) <= new Date(candles[candles.length - 1].Date))
 
-closedPositions = results.CandlesOpenClose[0].ClosedPositions.filter(o => new Date(o.OpenedAt) >= new Date(candles[0].Date) && new Date(o.OpenedAt) < new Date(candles[candles.length - 1].Date))
+var dateRange = [new Date(candles[0].Date).toISOString(), new Date(candles[candles.length - 1].Date).toISOString()]
 
-var start = startDate.valueOf();
-var end = endDate.valueOf();
-var dateRange = [startDate.toISOString(), endDate.toISOString()]
-
-candles = candles.filter(c => Date.parse(c.Date) <= end && Date.parse(c.Date) >= start)
-
-var indicators = results.CandlesOpenClose[0].PnlResults.Indicators
+var indicators = result.PnlResults.Indicators
 
 var overlayData = []
 var data = []
@@ -32,31 +30,24 @@ Object.keys(indicators).forEach(k => {
     let indicator = indicators[k].filter(o => new Date(o.Date) >= new Date(candles[0].Date) && new Date(o.Date) < new Date(candles[candles.length - 1].Date))
     let x = indicator.map(i => new Date(i.Date))
     let y = []
-    switch (k) {
-        case "_atr":
-            y = indicator.map(i => i.Atr)
-            break;
-        case "_stochastic":
-            y = indicator.map(i => i.K)
-            break;
-        case "_deltaWma":
-            y = indicator.map(i => i.Wma)
-            break;
-        case "_rsi":
-            y = indicator.map(i => i.rsi)
-            break;
+    if (k.includes("_atr"))
+        y = indicator.map(i => i.Atr)
+    else if (k.includes("_stochastic"))
+        y = indicator.map(i => i.K)
+    else if (k.includes("_deltaWma"))
+        y = indicator.map(i => i.Wma)
+    else if (k.includes("_rsi"))
+        y = indicator.map(i => i.Rsi)
+    else if (k.includes("_ema"))
+        y = indicator.map(i => i.Ema)
 
-        default:
-            break;
-    }
-
-    if (k == "_superTrend") {
+    if (k.includes("_superTrend")) {
         data.push({
             x,
             y: indicator.map(i => i.LowerBand),
             mode: 'lines',
+            name: k.replace('_superTrend', '') + 'UpperBand',
             type: 'scatter',
-            name: 'LowerBand',
             text: y
         })
         data.push({
@@ -64,7 +55,27 @@ Object.keys(indicators).forEach(k => {
             y: indicator.map(i => i.UpperBand),
             mode: 'lines',
             type: 'scatter',
-            name: 'UpperBand',
+            name: k.replace('_superTrend', '') + 'UpperBand',
+            text: y
+        })
+    }
+    else if (k.includes("_wma")) {
+        data.push({
+            x,
+            y,
+            mode: 'lines',
+            type: 'scatter',
+            name: k,
+            text: y
+        })
+    }
+    else if (k.includes("_ema")) {
+        data.push({
+            x,
+            y,
+            mode: 'lines',
+            type: 'scatter',
+            name: k,
             text: y
         })
     }
@@ -87,10 +98,11 @@ data = data.concat([
         low: candles.map(c => c.Low),
         open: candles.map(c => c.Open),
 
-        decreasing: { line: { color: '#7F7F7F' } },
-        increasing: { line: { color: '#17BECF' } },
-        line: { color: 'rgba(31,119,180,1)' },
+        increasing: { fillcolor: 'rgba(255, 255, 255,0)', line: { width: 1, color: '#0f0' } },
+        decreasing: { fillcolor: 'rgba(255, 255, 255,0)', line: { width: 1, color: '#f00' } },
+        line: { color: 'rgba(31,119,180,1)', width: 1 },
         type: 'candlestick',
+        name: 'BTC-USDT.PS',
         xaxis: 'x',
         yaxis: 'y'
     },
@@ -161,81 +173,141 @@ data = data.concat([
     // }
 ]);
 
-Plotly.newPlot('overlay-chart', overlayData, {
-    dragmode: 'pan',
-    margin: {
-        r: 10,
-        t: 25,
-        b: 40,
-        l: 160
-    },
-    showlegend: false,
-    xaxis: {
-        autorange: true,
-        domain: [0, 1],
-        range: dateRange,
-        rangeslider: { range: dateRange },
-        title: 'Date',
-        type: 'date'
-    },
-    yaxis: {
-        autorange: true,
-        domain: [0, 1],
-        title: 'value',
-        type: 'linear'
-    }
-}, { responsive: true });
-
-Plotly.newPlot('chart', data, {
-    shapes: closedPositions.map((p, i) => [{
-        type: 'rect',
-        xref: 'x',
-        yref: 'y',
-        x0: p.OpenedAt,
-        x1: p.ClosedAt,
-        y1: Math.max(p.SLPrice, p.TPPrice),
-        y0: p.OpenedPrice,
-        fillcolor: '#0a0',
-        opacity: 0.3,
-        line: {
-            width: 0
+Plotly.newPlot(
+    'overlay-chart',
+    overlayData,
+    {
+        autocolorscale: true,
+        paper_bgcolor: '#2d334f',
+        plot_bgcolor: '#2d334f',
+        font: {
+            color: '#aaa'
+        },
+        dragmode: 'pan',
+        margin: {
+            r: 10,
+            t: 25,
+            b: 40,
+            l: 160
+        },
+        showlegend: true,
+        xaxis: {
+            autorange: true,
+            domain: [0, 1],
+            range: dateRange,
+            rangeslider: { range: dateRange },
+            title: 'Date',
+            type: 'date'
+        },
+        yaxis: {
+            autorange: true,
+            domain: [0, 1],
+            title: 'value',
+            type: 'linear'
         }
     },
     {
-        type: 'rect',
-        xref: 'x',
-        yref: 'y',
-        x0: p.OpenedAt,
-        x1: p.ClosedAt,
-        y1: p.OpenedPrice,
-        y0: Math.min(p.SLPrice, p.TPPrice),
-        fillcolor: '#a00',
-        opacity: 0.2,
-        line: {
-            width: 0
-        }
-    }]).flat(),
-    dragmode: 'pan',
-    margin: {
-        r: 10,
-        t: 25,
-        b: 40,
-        l: 160
-    },
-    showlegend: false,
-    xaxis: {
-        autorange: true,
-        domain: [0, 1],
-        range: dateRange,
-        rangeslider: { range: dateRange },
-        title: 'Date',
-        type: 'date'
-    },
-    yaxis: {
-        // autorange: true,
-        domain: [0, 1],
-        range: [8600, 10000],
-        title: 'Price',
-        type: 'linear'
+        responsive: true,
+        scrollZoom: true
     }
-}, { responsive: true });
+);
+
+Plotly.newPlot(
+    'chart',
+    data,
+    {
+        shapes: closedPositions.map((p, i) => {
+            if (!p.TPPrice)
+                p.TPPrice = p.OpenedPrice
+
+            return [
+                {
+                    type: 'rect',
+                    xref: 'x',
+                    yref: 'y',
+                    x0: new Date(p.CreatedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    x1: new Date(p.OpenedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    y1: Math.max(p.SLPrice, p.TPPrice),
+                    y0: Math.min(p.SLPrice, p.TPPrice),
+                    fillcolor: '#aaa',
+                    opacity: 0.3,
+                    line: {
+                        width: 0
+                    },
+                    label: {
+                        text: 'pending'
+                    }
+                },
+                {
+                    type: 'rect',
+                    xref: 'x',
+                    yref: 'y',
+                    x0: new Date(p.OpenedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    x1: new Date(p.ClosedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    y1: Math.max(p.SLPrice, p.TPPrice),
+                    y0: p.OpenedPrice,
+                    fillcolor: p.PositionDirection.toLowerCase() == "long" ? '#0f0' : '#f00',
+                    opacity: 0.3,
+                    line: {
+                        width: 0
+                    },
+                    label: {
+                        text: 'top',
+                        textposition: 'top center'
+                    }
+                },
+                {
+                    type: 'rect',
+                    xref: 'x',
+                    yref: 'y',
+                    x0: new Date(p.OpenedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    x1: new Date(p.ClosedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    y1: p.OpenedPrice,
+                    y0: Math.min(p.SLPrice, p.TPPrice),
+                    fillcolor: p.PositionDirection.toLowerCase() == "long" ? '#f00' : '#0f0',
+                    opacity: 0.3,
+                    line: {
+                        width: 0
+                    },
+                    label: {
+                        text: 'bottom',
+                        textposition: 'bottom center'
+                    }
+                }
+            ]
+        }).flat(),
+        autocolorscale: true,
+        paper_bgcolor: '#2d334f',
+        plot_bgcolor: '#2d334f',
+        font: {
+            color: '#aaa'
+        },
+        dragmode: 'pan',
+        margin: {
+            r: 10,
+            t: 25,
+            b: 40,
+            l: 160
+        },
+        showlegend: true,
+        xaxis: {
+            autorange: true,
+            domain: [0, 1],
+            range: dateRange,
+            rangeslider: { range: dateRange },
+            title: 'Date',
+            type: 'date'
+        },
+        yaxis: {
+            autorange: true,
+            domain: [0, 1],
+            // range: [30000, 40000],
+            title: 'Price',
+            type: 'linear'
+        }
+    },
+    {
+        responsive: true,
+        scrollZoom: true
+    }
+);

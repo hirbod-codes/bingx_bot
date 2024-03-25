@@ -105,12 +105,12 @@ public class Broker : IBroker
                 )
                     continue;
 
-                if (ticksArray.Contains(pendingPositions[i]!.OpenedAt.Ticks))
+                if (ticksArray.Contains(((DateTime)pendingPositions[i]!.CreatedAt!).Ticks))
                     continue;
 
                 ticksArray = ticksArray.Append(_time.GetUtcNow().Ticks).ToArray();
 
-                await _positionRepository.OpenPosition(pendingPositions[i]!.Id);
+                await _positionRepository.OpenPosition(pendingPositions[i]!.Id, candle.Date.AddSeconds(_brokerOptions.TimeFrame));
             }
         }
 
@@ -228,6 +228,7 @@ public class Broker : IBroker
         {
             Leverage = leverage,
             Margin = margin,
+            CreatedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedPrice = await GetLastPrice(),
             SLPrice = slPrice,
@@ -248,6 +249,7 @@ public class Broker : IBroker
         {
             Leverage = leverage,
             Margin = margin,
+            CreatedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedPrice = await GetLastPrice(),
             SLPrice = slPrice,
@@ -267,7 +269,7 @@ public class Broker : IBroker
         {
             Leverage = leverage,
             Margin = margin,
-            OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
+            CreatedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedPrice = limit,
             SLPrice = slPrice,
             CommissionRatio = _brokerOptions.BrokerCommission,
@@ -286,7 +288,7 @@ public class Broker : IBroker
         {
             Leverage = leverage,
             Margin = margin,
-            OpenedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
+            CreatedAt = candle.Date.AddSeconds(_brokerOptions.TimeFrame),
             OpenedPrice = limit,
             SLPrice = slPrice,
             TPPrice = tpPrice,

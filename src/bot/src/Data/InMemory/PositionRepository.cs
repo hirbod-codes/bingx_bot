@@ -1,3 +1,4 @@
+using System.Runtime.Serialization;
 using bot.src.Brokers.InMemory.Exceptions;
 using bot.src.Data.Models;
 
@@ -18,6 +19,9 @@ public class PositionRepository : IPositionRepository
 
     private Task<Position> CreatePosition(Position position, string status)
     {
+        if (position.CreatedAt == null)
+            throw new PositionCreationException();
+
         position.Id = _lastId.ToString();
         position.PositionStatus = status;
         _positions.Add(position);
@@ -112,13 +116,14 @@ public class PositionRepository : IPositionRepository
         && (end == null || o.ClosedAt <= end)
     ));
 
-    public async Task OpenPosition(string id)
+    public async Task OpenPosition(string id, DateTime openedAt)
     {
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
 
         if (position.PositionStatus != PositionStatus.PENDING)
             throw new PositionStatusException();
 
+        position.OpenedAt = openedAt;
         position.PositionStatus = PositionStatus.OPENED;
 
         _openPositions[int.Parse(position.Id)] = position;
@@ -178,5 +183,25 @@ public class PositionRepository : IPositionRepository
 
         if (!_pendingPositions.Where(o => o != null).Any())
             _anyPendingPosition = false;
+    }
+}
+
+[Serializable]
+internal class PositionCreationException : Exception
+{
+    public PositionCreationException()
+    {
+    }
+
+    public PositionCreationException(string? message) : base(message)
+    {
+    }
+
+    public PositionCreationException(string? message, Exception? innerException) : base(message, innerException)
+    {
+    }
+
+    protected PositionCreationException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
     }
 }

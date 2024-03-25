@@ -26,6 +26,6 @@ public interface IPositionRepository
     public Task<bool> AnyPendingPosition();
     public Task<bool> AnyCancelledPosition();
     public Task<bool> AnyClosedPosition();
-    public Task OpenPosition(string id);
-    Task CancelPosition(string id, DateTime cancelledAt);
+    public Task OpenPosition(string id, DateTime openedAt);
+    public Task CancelPosition(string id, DateTime cancelledAt);
 }

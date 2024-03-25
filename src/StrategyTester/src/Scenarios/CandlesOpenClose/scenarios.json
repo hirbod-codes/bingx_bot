@@ -1,0 +1,43 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {},
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 3600
+        },
+        "RiskManagementName": "CandlesOpenClose",
+        "RiskManagementOptions": {
+            "BrokerCommission": 0,
+            "RiskRewardRatio": 2
+        },
+        "IndicatorOptionsName": "CandlesOpenClose",
+        "StrategyName": "CandlesOpenClose",
+        "StrategyOptions": {
+            "ProviderName": "CandlesOpenClose",
+            "RiskRewardRatio": 2,
+            "InvalidWeekDays": [
+                0
+            ]
+        },
+        "BotName": "CandlesOpenClose",
+        "BotOptions": {
+            "Provider": "CandlesOpenClose",
+            "TimeFrame": 3600
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "CandlesCount": 34900,
+            "TimeFrame": 3600
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]
