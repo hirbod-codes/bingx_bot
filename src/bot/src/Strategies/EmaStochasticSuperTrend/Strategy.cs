@@ -22,11 +22,6 @@ public class Strategy : IStrategy
     private IEnumerable<AtrResult> _atr = null!;
     private IEnumerable<EmaResult> _ema1 = null!;
     private IEnumerable<EmaResult> _ema2 = null!;
-    private IEnumerable<EmaResult> _ema3 = null!;
-    private IEnumerable<EmaResult> _ema4 = null!;
-    private IEnumerable<EmaResult> _ema5 = null!;
-    private IEnumerable<EmaResult> _ema6 = null!;
-    private IEnumerable<EmaResult> _ema7 = null!;
     private IEnumerable<StochResult> _stochastic = null!;
     private IEnumerable<SuperTrendResult> _superTrend = null!;
     private readonly IRiskManagement _riskManagement;
@@ -53,11 +48,6 @@ public class Strategy : IStrategy
         _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
         _ema1 = candles.GetEma(_indicatorsOptions.Ema1.Period);
         _ema2 = candles.GetEma(_indicatorsOptions.Ema2.Period);
-        _ema3 = candles.GetEma(_indicatorsOptions.Ema3.Period);
-        _ema4 = candles.GetEma(_indicatorsOptions.Ema4.Period);
-        _ema5 = candles.GetEma(_indicatorsOptions.Ema5.Period);
-        _ema6 = candles.GetEma(_indicatorsOptions.Ema6.Period);
-        _ema7 = candles.GetEma(_indicatorsOptions.Ema7.Period);
         _stochastic = candles.GetStoch(_indicatorsOptions.Stochastic.Period, _indicatorsOptions.Stochastic.SignalPeriod, _indicatorsOptions.Stochastic.SmoothPeriod);
         _superTrend = candles.GetSuperTrend(_indicatorsOptions.SuperTrend.Period, _indicatorsOptions.SuperTrend.Multiplier);
     }
@@ -66,11 +56,6 @@ public class Strategy : IStrategy
             new(nameof(_atr), _atr),
             new(nameof(_ema1), _ema1),
             new(nameof(_ema2), _ema2),
-            new(nameof(_ema3), _ema3),
-            new(nameof(_ema4), _ema4),
-            new(nameof(_ema5), _ema5),
-            new(nameof(_ema6), _ema6),
-            new(nameof(_ema7), _ema7),
             new(nameof(_stochastic), _stochastic),
             new(nameof(_superTrend), _superTrend)
         });
@@ -84,50 +69,53 @@ public class Strategy : IStrategy
 
         DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
 
-        bool isRibbonUp = IsRibbonUp(index);
-        bool isRibbonDown = IsRibbonDown(index);
-        bool isRibbonOk = isRibbonUp || isRibbonDown;
-
-        bool isLong = isRibbonUp && _superTrend.ElementAt(index).UpperBand != null && _stochastic.ElementAt(index).K <= 80 && _stochastic.ElementAt(index).K >= 50;
-        bool isShort = isRibbonDown && _superTrend.ElementAt(index).LowerBand != null && _stochastic.ElementAt(index).K >= 20 && _stochastic.ElementAt(index).K <= 50;
+        bool isLong = _stochastic.ElementAt(index).K >= 80 && _ema2.ElementAt(index).Ema < _ema1.ElementAt(index).Ema;
+        bool isShort = _stochastic.ElementAt(index).K <= 20 && _ema2.ElementAt(index).Ema > _ema1.ElementAt(index).Ema;
 
         bool shouldOpenPosition = false;
-        if (isLong || isShort)
+        if (isLong)
+            // if (isLong || isShort)
             if (!_strategyOptions.InvalidWeekDays.Any() || (_strategyOptions.InvalidWeekDays.Any() && !_strategyOptions.InvalidWeekDays.Where(invalidDate => candleCloseDate.DayOfWeek == invalidDate).Any()))
                 if (!_strategyOptions.InvalidTimePeriods.Any() || (_strategyOptions.InvalidTimePeriods.Any() && !_strategyOptions.InvalidTimePeriods.Where(invalidTimePeriod => candleCloseDate.TimeOfDay <= invalidTimePeriod.End.TimeOfDay && candleCloseDate.TimeOfDay >= invalidTimePeriod.Start.TimeOfDay).Any()))
                     if (!_strategyOptions.InvalidDatePeriods.Any() || (_strategyOptions.InvalidDatePeriods.Any() && !_strategyOptions.InvalidDatePeriods.Where(invalidDatePeriod => candleCloseDate.Date <= invalidDatePeriod.End.Date && candleCloseDate.Date >= invalidDatePeriod.Start.Date).Any()))
                         shouldOpenPosition = true;
 
-        if (shouldOpenPosition)
+        if (shouldOpenPosition && isLong)
         {
             _logger.Information("Candle is valid for a position, sending the message...");
-            _logger.Information("Position direction: {direction}", isLong ? PositionDirection.LONG : PositionDirection.SHORT);
 
             decimal delta = CalculateDelta(index);
 
-            decimal slPrice = CalculateSlPrice(candle.Close, isLong, delta);
-            decimal tpPrice = CalculateTpPrice(candle.Close, isLong, delta);
+            decimal slPrice = CalculateSlPrice(candle.Close, true, delta);
+            decimal tpPrice = CalculateTpPrice(candle.Close, true, delta);
 
-            IMessage message = CreateOpenPositionMessage(candle, timeFrame, isLong ? PositionDirection.LONG : PositionDirection.SHORT, slPrice, tpPrice);
+            IMessage message = CreateOpenPositionMessage(candle, timeFrame, PositionDirection.LONG, slPrice, tpPrice);
             await _messageRepository.CreateMessage(message);
+
+            _logger.Information("Message sent.");
+        }
+
+        if (shouldOpenPosition && isShort)
+        {
+            _logger.Information("Candle is valid for a position, sending the message...");
+
+            decimal delta = CalculateDelta(index);
+
+            decimal slPrice = CalculateSlPrice(candle.Close, false, delta);
+            decimal tpPrice = CalculateTpPrice(candle.Close, false, delta);
+
+            IMessage message = CreateOpenPositionMessage(candle, timeFrame, PositionDirection.SHORT, slPrice, tpPrice);
+            await _messageRepository.CreateMessage(message);
+
             _logger.Information("Message sent.");
         }
     }
 
-    private bool IsRibbonUp(int index) => _ema7.ElementAt(index).Ema >= _ema6.ElementAt(index).Ema && _ema6.ElementAt(index).Ema >= _ema5.ElementAt(index).Ema && _ema5.ElementAt(index).Ema >= _ema4.ElementAt(index).Ema && _ema4.ElementAt(index).Ema >= _ema3.ElementAt(index).Ema && _ema3.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema && _ema2.ElementAt(index).Ema >= _ema1.ElementAt(index).Ema;
+    // private bool IsRibbonUp(int index) => _wma7.ElementAt(index).Wma <= _wma6.ElementAt(index).Wma && _wma6.ElementAt(index).Wma <= _wma5.ElementAt(index).Wma && _wma5.ElementAt(index).Wma <= _wma4.ElementAt(index).Wma && _wma4.ElementAt(index).Wma <= _wma3.ElementAt(index).Wma && _wma3.ElementAt(index).Wma <= _wma2.ElementAt(index).Wma && _wma2.ElementAt(index).Wma <= _wma1.ElementAt(index).Wma;
 
-    private bool IsRibbonDown(int index) => _ema7.ElementAt(index).Ema <= _ema6.ElementAt(index).Ema && _ema6.ElementAt(index).Ema <= _ema5.ElementAt(index).Ema && _ema5.ElementAt(index).Ema <= _ema4.ElementAt(index).Ema && _ema4.ElementAt(index).Ema <= _ema3.ElementAt(index).Ema && _ema3.ElementAt(index).Ema <= _ema2.ElementAt(index).Ema && _ema2.ElementAt(index).Ema <= _ema1.ElementAt(index).Ema;
+    // private bool IsRibbonDown(int index) => _wma7.ElementAt(index).Wma >= _wma6.ElementAt(index).Wma && _wma6.ElementAt(index).Wma >= _wma5.ElementAt(index).Wma && _wma5.ElementAt(index).Wma >= _wma4.ElementAt(index).Wma && _wma4.ElementAt(index).Wma >= _wma3.ElementAt(index).Wma && _wma3.ElementAt(index).Wma >= _wma2.ElementAt(index).Wma && _wma2.ElementAt(index).Wma >= _wma1.ElementAt(index).Wma;
 
-    private decimal CalculateDelta(int index)
-    {
-        return 800;
-        // if (_strategyOptions.SLCalculationMethod == "ATR")
-        // {
-        //     double? atr = _atr.ElementAt(index).Atr;
-        //     if (_strategyOptions._riskManagement.CalculateLeverage())
-        //         (decimal)(atr * _indicatorsOptions.AtrMultiplier)!;
-        // };
-    }
+    private decimal CalculateDelta(int index) => (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
 
     private decimal CalculateSlPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice - delta : entryPrice + delta;
 

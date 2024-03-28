@@ -7,5 +7,5 @@ public class BingxCandle
     public string High { get; set; } = null!;
     public string Low { get; set; } = null!;
     public string Volume { get; set; } = null!;
-    public long Time { get; set; }
+    public long CloseTime { get; set; }
 }

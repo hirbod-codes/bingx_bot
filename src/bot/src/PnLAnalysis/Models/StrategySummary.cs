@@ -3,6 +3,11 @@ namespace bot.src.PnLAnalysis.Models;
 
 public class AnalysisSummary
 {
+    public decimal NetProfitPercentage { get; set; }
+    public decimal HighestNetProfitPercentage { get; set; }
+    public decimal HighestDrawDownPercentage { get; set; }
+    public decimal BuyAndHoldProfitPercentage { get; set; }
+    public decimal BuyAndHoldProfit { get; set; }
     public decimal HighestNetProfit { get; set; }
     public decimal NetProfit { get; set; }
     public decimal HighestDrawDown { get; set; }

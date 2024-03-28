@@ -28,7 +28,7 @@ public class Broker : IBroker
         _positionRepository = positionRepository;
     }
 
-    public Task InitiateCandleStore(int candlesCount = 10000, int? timeFrame = null)
+    public Task InitiateCandleStore(int? candlesCount = null, int? timeFrame = null)
     {
         _logger.Information("Initiating Candle Store...");
 
@@ -46,7 +46,8 @@ public class Broker : IBroker
 
         IEnumerable<Candle> candles = JsonSerializer.Deserialize<IEnumerable<Candle>>(File.ReadAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{_brokerOptions.Symbol}_HistoricalCandles_{timeFrameString}.json"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
 
-        candles = candles.Take(candlesCount);
+        if (candlesCount != null)
+            candles = candles.Take((int)candlesCount);
         // candles = candles.Where(c => c.Date >= DateTime.Parse("2023-12-15T10:20:00"));
 
         _candles = new(candles.ToList());

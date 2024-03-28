@@ -3,19 +3,22 @@ Date.prototype.addMilliseconds = function (ms) {
     return this;
 }
 
-result = results.EmaRsi[0]
-
-// candles = candles.slice(candles.length - 101)
-candles = candles.slice(200, 600)
+result = results.EmaStochasticSuperTrend[0]
 
 console.log('candles.length', candles.length)
 
-// var startDate = new Date("2021-06-27T00:00:00.000Z");
+// candles = candles.slice(candles.length - 101)
+candles = candles.slice(start = candles.length - 1 - 600)
+
+// var startDate = new Date("2024-02-01T00:00:00.0000Z");
 // var endDate = new Date("2024-01-15T08:47:00")
 var startDate = new Date(candles[0].Date)
 var endDate = new Date(candles[candles.length - 1].Date)
 
 candles = candles.filter(c => new Date(c.Date) >= startDate && new Date(c.Date) <= endDate)
+
+// candles = candles.slice(candles.length - 101)
+// candles = candles.slice(0, 600)
 
 closedPositions = result.ClosedPositions.filter(o => new Date(o.OpenedAt) >= new Date(candles[0].Date) && new Date(o.OpenedAt) <= new Date(candles[candles.length - 1].Date))
 
@@ -40,6 +43,8 @@ Object.keys(indicators).forEach(k => {
         y = indicator.map(i => i.Rsi)
     else if (k.includes("_ema"))
         y = indicator.map(i => i.Ema)
+    else if (k.includes("_wma"))
+        y = indicator.map(i => i.Wma)
 
     if (k.includes("_superTrend")) {
         data.push({
@@ -79,7 +84,7 @@ Object.keys(indicators).forEach(k => {
             text: y
         })
     }
-    else
+    else {
         overlayData.push({
             x,
             y,
@@ -88,6 +93,15 @@ Object.keys(indicators).forEach(k => {
             name: k,
             text: y
         })
+        data.push({
+            x,
+            y: y.map(n => (n * 10000 / 100) + 60000),
+            mode: 'lines',
+            type: 'scatter',
+            name: k,
+            text: y
+        })
+    }
 })
 
 data = data.concat([
@@ -177,6 +191,31 @@ Plotly.newPlot(
     'overlay-chart',
     overlayData,
     {
+        shapes: closedPositions.map((p, i) => {
+            if (!p.TPPrice)
+                p.TPPrice = p.OpenedPrice
+
+            return [
+                {
+                    type: 'rect',
+                    xref: 'x',
+                    yref: 'paper',
+                    x0: new Date(p.CreatedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000),
+                    x1: new Date(p.OpenedAt).addMilliseconds(-1 * result.BrokerOptions.TimeFrame * 1000).addMilliseconds(result.BrokerOptions.TimeFrame * 1000),
+                    y1: 1,
+                    y0: 0,
+                    fillcolor: '#aaa',
+                    opacity: 0.3,
+                    line: {
+                        width: 0
+                    },
+                    label: {
+                        text: 'position',
+                        textposition: 'bottom center'
+                    }
+                }
+            ]
+        }).flat(),
         autocolorscale: true,
         paper_bgcolor: '#2d334f',
         plot_bgcolor: '#2d334f',

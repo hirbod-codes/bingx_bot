@@ -58,6 +58,10 @@ var render = (i, strategyName) => {
 
     console.log(positions);
 
+    // positions = positions.filter(p => new Date(p.OpenedAt) >= new Date("2024-02-01T00:00:00.0000Z"))
+
+    console.log(positions);
+
     chart = new Chart(i + '-chart', {
         type: 'bar',
         data: {
@@ -92,52 +96,52 @@ var render = (i, strategyName) => {
                     borderColor: '#0000FF' + colorTransparency,
                     barColor: '#0000FF' + colorTransparency,
                 },
-                {
-                    label: '(Commission/SL)(%) (*1)',
-                    pointRadius: 0,
-                    data: positions.map((e) => e.Commission * 1),
-                    borderWidth: 1,
-                    backgroundColor: '#00FF00' + colorTransparency,
-                    borderColor: '#00FF00' + colorTransparency,
-                    barColor: '#00FF00' + colorTransparency,
-                },
-                {
-                    label: 'with commission',
-                    pointRadius: 0,
-                    data: positions.map((e) => e.ProfitWithCommission * 1),
-                    borderWidth: 1,
-                    backgroundColor: '#00FF00' + colorTransparency,
-                    borderColor: '#00FF00' + colorTransparency,
-                    barColor: '#00FF00' + colorTransparency,
-                },
-                {
-                    label: 'with out commission',
-                    pointRadius: 0,
-                    data: positions.map((e) => e.Profit * 1),
-                    borderWidth: 1,
-                    backgroundColor: '#00FF00' + colorTransparency,
-                    borderColor: '#00FF00' + colorTransparency,
-                    barColor: '#00FF00' + colorTransparency
-                },
-                {
-                    label: 'Leverage (x1)',
-                    pointRadius: 0,
-                    data: positions.map((e) => e.Leverage * 1),
-                    borderWidth: 1,
-                    backgroundColor: '#FFFF00' + colorTransparency,
-                    borderColor: '#FFFF00' + colorTransparency,
-                    barColor: '#FFFF00' + colorTransparency,
-                },
-                {
-                    type: 'line',
-                    label: 'Margin (x1)',
-                    pointRadius: 0,
-                    data: positions.map((e) => e.Margin * 1),
-                    borderWidth: 1,
-                    backgroundColor: '#00FFFF' + colorTransparency,
-                    borderColor: '#00FFFF' + colorTransparency,
-                    barColor: '#00FFFF' + colorTransparency,
-                }
+                // {
+                //     label: '(Commission/SL)(%) (*1)',
+                //     pointRadius: 0,
+                //     data: positions.map((e) => e.Commission * 1),
+                //     borderWidth: 1,
+                //     backgroundColor: '#00FF00' + colorTransparency,
+                //     borderColor: '#00FF00' + colorTransparency,
+                //     barColor: '#00FF00' + colorTransparency,
+                // },
+                // {
+                //     label: 'with commission',
+                //     pointRadius: 0,
+                //     data: positions.map((e) => e.ProfitWithCommission * 1),
+                //     borderWidth: 1,
+                //     backgroundColor: '#00FF00' + colorTransparency,
+                //     borderColor: '#00FF00' + colorTransparency,
+                //     barColor: '#00FF00' + colorTransparency,
+                // },
+                // {
+                //     label: 'with out commission',
+                //     pointRadius: 0,
+                //     data: positions.map((e) => e.Profit * 1),
+                //     borderWidth: 1,
+                //     backgroundColor: '#00FF00' + colorTransparency,
+                //     borderColor: '#00FF00' + colorTransparency,
+                //     barColor: '#00FF00' + colorTransparency
+                // },
+                // {
+                //     label: 'Leverage (x1)',
+                //     pointRadius: 0,
+                //     data: positions.map((e) => e.Leverage * 1),
+                //     borderWidth: 1,
+                //     backgroundColor: '#FFFF00' + colorTransparency,
+                //     borderColor: '#FFFF00' + colorTransparency,
+                //     barColor: '#FFFF00' + colorTransparency,
+                // },
+                // {
+                //     type: 'line',
+                //     label: 'Margin (x1)',
+                //     pointRadius: 0,
+                //     data: positions.map((e) => e.Margin * 1),
+                //     borderWidth: 1,
+                //     backgroundColor: '#00FFFF' + colorTransparency,
+                //     borderColor: '#00FFFF' + colorTransparency,
+                //     barColor: '#00FFFF' + colorTransparency,
+                // }
             ]
         },
         options: {

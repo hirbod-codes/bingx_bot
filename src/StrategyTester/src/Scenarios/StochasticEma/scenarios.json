@@ -7,7 +7,7 @@
             "BrokerCommission": 0.001,
             "Symbol": "BTC-USDT",
             "AccountOptions": {
-                "Balance": 10000
+                "Balance": 100
             },
             "TimeFrame": 900
         },
@@ -58,6 +58,7 @@
         },
         "TesterName": "General",
         "TesterOptions": {
+            "CandlesCount": 95000,
             "TimeFrame": 900
         },
         "NotifierName": "InMemory",

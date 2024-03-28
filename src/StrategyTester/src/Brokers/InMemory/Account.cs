@@ -5,7 +5,7 @@ namespace StrategyTester.src.Brokers.InMemory;
 
 public class Account : IAccount
 {
-    private readonly AccountOptions _accountOptions;
+    private readonly IAccountOptions _accountOptions;
     private readonly ILogger _logger;
 
     public Account(IBrokerOptions brokerOptions, ILogger logger)

@@ -38,9 +38,12 @@ public class Runner : IRunner
             _logger.Information("Runner started at: {dateTime}", _time.GetUtcNow().ToString());
             await _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
 
+            if ((_time.GetUtcNow().AddSeconds(_runnerOptions.TimeFrame) - _time.GetUtcNow()).TotalSeconds >= 120)
+                await Tick();
+
             await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
             {
-                await _time.Sleep(2500);
+                await _time.Sleep(200);
                 await Tick();
             });
 
@@ -61,7 +64,7 @@ public class Runner : IRunner
 
     private async Task Tick()
     {
-        _logger.Information("Runner's ticking...");
+        _logger.Information("Runner's ticking at: {dateTime}", _time.GetUtcNow().ToString());
 
         if (!_hasBrokerInitiated)
         {

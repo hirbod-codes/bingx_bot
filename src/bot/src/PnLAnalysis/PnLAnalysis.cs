@@ -1,3 +1,4 @@
+using bot.src.Brokers;
 using bot.src.Data;
 using bot.src.Data.Models;
 using bot.src.PnLAnalysis.Exceptions;
@@ -8,9 +9,11 @@ namespace bot.src.PnLAnalysis;
 
 public static class PnLAnalysis
 {
-    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository, Dictionary<string, object> indicators, IRiskManagement riskManagement)
+    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository, Dictionary<string, object> indicators, IRiskManagement riskManagement, IBrokerOptions brokerOptions)
     {
-        IEnumerable<Position?> closedPositions = await repo.GetClosedPositions();
+        decimal accountBalance = brokerOptions.AccountOptions.Balance;
+
+        IEnumerable<Position> closedPositions = (await repo.GetClosedPositions()).Where(o => o != null)!;
 
         AnalysisSummary analysisSummary = new()
         {
@@ -28,11 +31,8 @@ public static class PnLAnalysis
             Indicators = indicators
         };
 
-        foreach (Position? position in closedPositions)
+        foreach (Position position in closedPositions)
         {
-            if (position == null)
-                continue;
-
             if (position.PositionDirection == PositionDirection.SHORT)
                 analysisSummary.ShortPositionCount++;
 
@@ -72,6 +72,16 @@ public static class PnLAnalysis
 
         analysisSummary.GrossProfit = analysisSummary.LongGrossProfit + analysisSummary.ShortGrossProfit;
         analysisSummary.GrossLoss = analysisSummary.LongGrossLoss + analysisSummary.ShortGrossLoss;
+
+        analysisSummary.NetProfitPercentage = analysisSummary.NetProfit / accountBalance * 100.0m;
+        analysisSummary.HighestNetProfitPercentage = analysisSummary.HighestNetProfit / accountBalance * 100.0m;
+        analysisSummary.HighestDrawDownPercentage = analysisSummary.HighestDrawDown / accountBalance * 100.0m;
+
+        if (closedPositions.Any())
+        {
+            analysisSummary.BuyAndHoldProfit = Math.Abs((decimal)(closedPositions.First().OpenedPrice - closedPositions.Last()!.ClosedPrice)!) * accountBalance / closedPositions.First().OpenedPrice;
+            analysisSummary.BuyAndHoldProfitPercentage = analysisSummary.BuyAndHoldProfit / accountBalance * 100.0m;
+        }
 
         return analysisSummary;
     }

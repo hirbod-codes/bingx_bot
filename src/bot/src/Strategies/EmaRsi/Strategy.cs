@@ -22,6 +22,8 @@ public class Strategy : IStrategy
     private IEnumerable<AtrResult> _atr = null!;
     private IEnumerable<EmaResult> _ema1 = null!;
     private IEnumerable<EmaResult> _ema2 = null!;
+    private IEnumerable<WmaResult> _wma1 = null!;
+    private IEnumerable<WmaResult> _wma2 = null!;
     private IEnumerable<RsiResult> _rsi = null!;
     private readonly IBroker _broker;
     private readonly INotifier _notifier;
@@ -50,6 +52,8 @@ public class Strategy : IStrategy
         _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
         _ema1 = candles.GetEma(_indicatorsOptions.Ema1.Period);
         _ema2 = candles.GetEma(_indicatorsOptions.Ema2.Period);
+        _wma1 = candles.GetWma(_indicatorsOptions.Ema1.Period);
+        _wma2 = candles.GetWma(_indicatorsOptions.Ema2.Period);
         _rsi = candles.GetRsi(_indicatorsOptions.Rsi.Period);
     }
 
@@ -59,6 +63,8 @@ public class Strategy : IStrategy
             new(nameof(_atr), _atr),
             new(nameof(_ema1), _ema1),
             new(nameof(_ema2), _ema2),
+            new(nameof(_wma1), _wma1),
+            new(nameof(_wma2), _wma2),
             new(nameof(_rsi), _rsi)
         });
 
@@ -120,14 +126,14 @@ public class Strategy : IStrategy
 
     private decimal CalculateTpPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice + (delta * _strategyOptions.RiskRewardRatio) : entryPrice - (delta * _strategyOptions.RiskRewardRatio);
 
-    private bool IsUpTrend(int index) => HasRsiCrossedOverLowerBand(index) && _stochastic.ElementAt(index).K >= 80 && _ema1.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema;
+    private bool IsUpTrend(int index) => HasRsiCrossedOverLowerBand(index) && _stochastic.ElementAt(index).K >= 80 && _wma1.ElementAt(index).Wma >= _wma2.ElementAt(index).Wma;
     // private bool IsUpTrend(int index) => HasRsiCrossedOverLowerBand(index) && _superTrend.ElementAt(index).LowerBand != null;
     // private bool IsUpTrend(int index) => HasRsiCrossedOverLowerBand(index) && _ema1.ElementAt(index).Ema >= _ema2.ElementAt(index).Ema;
 
     private bool HasRsiCrossedOverLowerBand(int index) => _rsi.ElementAt(index).Rsi >= 30 && _rsi.ElementAt(index).Rsi <= 70;
     // private bool HasRsiCrossedOverLowerBand(int index) => _rsi.ElementAt(index - 1).Rsi < _indicatorsOptions.Rsi.LowerBand && _rsi.ElementAt(index).Rsi >= _indicatorsOptions.Rsi.LowerBand;
 
-    private bool IsDownTrend(int index) => HasRsiCrossedUnderUpperBand(index) && _stochastic.ElementAt(index).K <= 20 && _ema1.ElementAt(index).Ema < _ema2.ElementAt(index).Ema;
+    private bool IsDownTrend(int index) => HasRsiCrossedUnderUpperBand(index) && _stochastic.ElementAt(index).K <= 20 && _wma1.ElementAt(index).Wma < _wma2.ElementAt(index).Wma;
     // private bool IsDownTrend(int index) => HasRsiCrossedUnderUpperBand(index) && _superTrend.ElementAt(index).UpperBand != null;
     // private bool IsDownTrend(int index) => HasRsiCrossedUnderUpperBand(index) && _ema1.ElementAt(index).Ema < _ema2.ElementAt(index).Ema;
 

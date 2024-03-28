@@ -175,7 +175,7 @@ public class Program
 
         await tester.Test();
 
-        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement);
+        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement, brokerOptions);
 
         results.Add(new Result
         {

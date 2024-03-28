@@ -7,6 +7,7 @@ public static class StrategyOptionsFactory
         StrategyNames.SMMA_RSI => new SmmaRsi.StrategyOptions(),
         StrategyNames.EMA_RSI => new EmaRsi.StrategyOptions(),
         StrategyNames.STOCHASTIC_EMA => new StochasticEma.StrategyOptions(),
+        StrategyNames.EMA_STOCHASTIC_SUPER_TREND => new EmaStochasticSuperTrend.StrategyOptions(),
         StrategyNames.DOUBLE_UT_BOT => new DoubleUtBot.StrategyOptions(),
         StrategyNames.UT_BOT => new UtBot.StrategyOptions(),
         StrategyNames.LUCK => new Luck.StrategyOptions(),
