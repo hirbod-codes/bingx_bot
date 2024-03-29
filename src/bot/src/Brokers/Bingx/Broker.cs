@@ -528,9 +528,44 @@ public class Broker : Api, IBroker
         return;
     }
 
-    public Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
+    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
     {
-        throw new NotImplementedException();
+        await SetLeverage((int)leverage);
+        _logger.Information("Opening a market order...");
+        _logger.Information("margin: {margin}, leverage: {leverage}, direction: {direction}, slPrice: {slPrice}", margin, leverage, direction, slPrice);
+
+        decimal quantity = margin * leverage / await GetLastPrice();
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
+        {
+            symbol = Symbol,
+            type = "MARKET",
+            side = direction == PositionDirection.LONG ? "BUY" : "SELL",
+            positionSide = direction == PositionDirection.LONG ? "LONG" : "SHORT",
+            quantity,
+            stopLoss = JsonSerializer.Serialize(new
+            {
+                type = "STOP_MARKET",
+                quantity,
+                stopPrice = slPrice,
+                price = slPrice,
+                workingType = "MARK_PRICE"
+            }),
+            takeProfit = JsonSerializer.Serialize(new
+            {
+                type = "TAKE_PROFIT_MARKET",
+                quantity,
+                stopPrice = tpPrice,
+                price = tpPrice,
+                workingType = "MARK_PRICE"
+            })
+        });
+
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
+            throw new OpenMarketOrderException();
+
+        _logger.Information("Finished opening market order...");
+        return;
     }
 
     private async Task<int> GetLeverage()
@@ -596,9 +631,17 @@ public class Broker : Api, IBroker
         throw new NotImplementedException();
     }
 
-    public Task CancelAllPendingPositions()
+    public async Task CancelAllPendingPositions()
     {
-        throw new NotImplementedException();
+        _logger.Information("Closing all the open positions...");
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOpenOrders", "DELETE", ApiKey, ApiSecret, new { symbol = Symbol });
+
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
+            throw new CloseAllPositionsException();
+
+        _logger.Information("Finished Closing all the open positions...");
+        return;
     }
 
     public Task<IEnumerable<Position?>> GetPendingPositions()

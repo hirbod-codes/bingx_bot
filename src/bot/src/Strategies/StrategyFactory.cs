@@ -13,6 +13,7 @@ public static class StrategyFactory
     {
         StrategyNames.SMMA_RSI => new SmmaRsi.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.EMA_STOCHASTIC_SUPER_TREND => new EmaStochasticSuperTrend.Strategy(strategyOptions, indicatorsOptions, riskManagement, broker, notifier, messageRepository, logger),
+        StrategyNames.SUPER_TREND_V1 => new SuperTrendV1.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.EMA_RSI => new EmaRsi.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.STOCHASTIC_EMA => new StochasticEma.Strategy(strategyOptions, indicatorsOptions, broker, notifier, messageRepository, logger),
         StrategyNames.UT_BOT => new UtBot.Strategy(strategyOptions, indicatorsOptions, messageRepository, broker, logger),

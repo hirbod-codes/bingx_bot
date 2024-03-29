@@ -7,6 +7,7 @@ public static class RunnerOptionsFactory
         RunnerNames.SMMA_RSI => new SmmaRsi.RunnerOptions(),
         RunnerNames.EMA_RSI => new EmaRsi.RunnerOptions(),
         RunnerNames.STOCHASTIC_EMA => new StochasticEma.RunnerOptions(),
+        RunnerNames.SUPER_TREND_V1 => new SuperTrendV1.RunnerOptions(),
         RunnerNames.UT_BOT => new UtBot.RunnerOptions(),
         RunnerNames.DOUBLE_UT_BOT => new DoubleUtBot.RunnerOptions(),
         RunnerNames.LUCK => new Luck.RunnerOptions(),

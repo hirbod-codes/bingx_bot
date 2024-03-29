@@ -1,6 +1,7 @@
 ﻿using bot.src.Bots;
 using bot.src.Brokers;
 using bot.src.Data;
+using bot.src.Data.Models;
 using bot.src.Indicators;
 using bot.src.MessageStores;
 using bot.src.Notifiers;
