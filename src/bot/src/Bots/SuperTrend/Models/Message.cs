@@ -1,7 +1,7 @@
 using bot.src.Data.Models;
 using bot.src.MessageStores;
 
-namespace bot.src.Bots.SuperTrend.Models;
+namespace bot.src.Bots.SuperTrendV1.Models;
 
 public class Message : IMessage
 {

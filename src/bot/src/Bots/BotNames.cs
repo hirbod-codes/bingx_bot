@@ -2,7 +2,7 @@ namespace bot.src.Bots;
 
 public static class BotNames
 {
-    public const string SUPER_TREND = "SuperTrend";
+    public const string SUPER_TREND_V1 = "SuperTrendV1";
     public const string GENERAL = "General";
     public const string DOUBLE_UT_BOT = "DoubleUtBot";
     public const string UT_BOT = "UtBot";

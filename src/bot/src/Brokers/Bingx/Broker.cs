@@ -459,40 +459,49 @@ public class Broker : Api, IBroker
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<Position?>> GetOpenPositions()
+    public async Task<int> GetOpenPositionsCount()
     {
         _logger.Information("Getting all the open positions...");
 
-        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/allOrders", "GET", ApiKey, ApiSecret, new
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/positions", "GET", ApiKey, ApiSecret, new
         {
-            symbol = Symbol,
-            startTime = DateTimeOffset.Parse(DateTime.UtcNow.AddHours(-5).ToString()).ToUnixTimeMilliseconds()
+            symbol = Symbol
         });
 
         if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
             throw new CloseAllPositionsException();
 
-        BingxResponse<IEnumerable<BingxPositionDto>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPositionDto>>>(await httpResponseMessage.Content.ReadAsStringAsync(), new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
+        string json = await httpResponseMessage.Content.ReadAsStringAsync();
+        BingxResponse<IEnumerable<BingxPositionDto>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPositionDto>>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
+
+        _logger.Information("Finished getting all the open positions...");
+        return bingxResponse.Data!.Count();
+    }
+
+    public async Task<IEnumerable<Position?>> GetOpenPositions()
+    {
+        _logger.Information("Getting all the open positions...");
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/positions", "GET", ApiKey, ApiSecret, new
+        {
+            symbol = Symbol,
+            // startTime = DateTimeOffset.Parse(DateTime.UtcNow.AddHours(-5).ToString()).ToUnixTimeMilliseconds()
+        });
+
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
+            throw new CloseAllPositionsException();
+
+        string json = await httpResponseMessage.Content.ReadAsStringAsync();
+        BingxResponse<IEnumerable<BingxPositionDto>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPositionDto>>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
 
         _logger.Information("Finished getting all the open positions...");
         return bingxResponse.Data!.ToList().ConvertAll(bp => new Position()
         {
             Id = bp.PositionId,
             Symbol = bp.Symbol,
-            // OpenedPrice = decimal.Parse(bp.AvgPrice),
-            // ClosedPrice = null,
-            // SLPrice = bp.,
-            // TPPrice = bp.,
-            // CommissionRatio = bp.,
-            // Commission = bp.,
-            // Profit = bp.,
-            // ProfitWithCommission = bp.,
-            // Margin = bp.,
-            // Leverage = bp.,
-            // PositionStatus = bp.,
-            // PositionDirection = bp.,
-            // OpenedAt = bp.,
-            // ClosedAt = bp.,
+            PositionDirection =  PositionDirection.Parse(bp.PositionSide),
+            OpenedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime,
+            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime
         });
     }
 

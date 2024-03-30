@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace bot.src.Bots.SuperTrend;
+namespace bot.src.Bots.SuperTrendV1;
 
 [Serializable]
 public class ExpiredSignalException : BotException

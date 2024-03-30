@@ -1,4 +1,4 @@
-namespace bot.src.Bots.SuperTrend;
+namespace bot.src.Bots.SuperTrendV1;
 
 public class BotOptions : IBotOptions
 {

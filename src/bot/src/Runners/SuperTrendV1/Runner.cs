@@ -40,7 +40,7 @@ public class Runner : IRunner
 
             await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
             {
-                await _time.Sleep(2500);
+                await _time.Sleep(500);
                 await Tick();
             });
 

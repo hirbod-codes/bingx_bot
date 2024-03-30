@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using TheBotException = bot.src.Bots.BotException;
 
-namespace bot.src.Bots.SuperTrend;
+namespace bot.src.Bots.SuperTrendV1;
 
 [Serializable]
 public class BotException : TheBotException

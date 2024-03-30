@@ -11,6 +11,7 @@ public static class IndicatorOptionsFactory
         IndicatorsOptionsNames.STOCHASTIC_EMA => new StochasticEma.IndicatorOptions(),
         IndicatorsOptionsNames.EMA_STOCHASTIC_SUPER_TREND => new EmaStochasticSuperTrend.IndicatorOptions(),
         IndicatorsOptionsNames.LUCK => new Luck.IndicatorOptions(),
+        IndicatorsOptionsNames.SUPER_TREND_V1 => new SuperTrendV1.IndicatorOptions(),
         IndicatorsOptionsNames.CANDLES_OPEN_CLOSE => new CandlesOpenClose.IndicatorOptions(),
         _ => throw new Exception("Invalid Indicator options name provided.")
     };

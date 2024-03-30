@@ -7,7 +7,7 @@ using bot.src.Indicators;
 using bot.src.Indicators.SuperTrendV1;
 using bot.src.Brokers;
 using bot.src.Data;
-using bot.src.Bots.SuperTrend.Models;
+using bot.src.Bots.SuperTrendV1.Models;
 using bot.src.Indicators.Models;
 
 namespace bot.src.Strategies.SuperTrendV1;

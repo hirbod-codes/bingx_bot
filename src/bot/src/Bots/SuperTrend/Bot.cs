@@ -1,4 +1,4 @@
-using bot.src.Bots.SuperTrend.Models;
+using bot.src.Bots.SuperTrendV1.Models;
 using bot.src.Brokers;
 using bot.src.Data.Models;
 using bot.src.MessageStores;
@@ -7,7 +7,7 @@ using bot.src.RiskManagement;
 using bot.src.Util;
 using Serilog;
 
-namespace bot.src.Bots.SuperTrend;
+namespace bot.src.Bots.SuperTrendV1;
 
 public class Bot : IBot
 {
@@ -102,11 +102,11 @@ public class Bot : IBot
 
         decimal entryPrice = message.EntryPrice;
 
-        if (!await _riskManagement.IsPositionAcceptable(entryPrice, message.SlPrice))
-        {
-            _logger.Information("Risk management rejects opening a position, skipping...");
-            return;
-        }
+        // if (!await _riskManagement.IsPositionAcceptable(entryPrice, message.SlPrice))
+        // {
+        //     _logger.Information("Risk management rejects opening a position, skipping...");
+        //     return;
+        // }
 
         decimal leverage = _riskManagement.CalculateLeverage(entryPrice, message.SlPrice);
         decimal margin = _riskManagement.GetMargin();
