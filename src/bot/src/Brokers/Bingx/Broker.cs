@@ -5,6 +5,7 @@ using bot.src.Brokers.Bingx.DTOs;
 using bot.src.Brokers.Bingx.Exceptions;
 using bot.src.Brokers.Bingx.Models;
 using bot.src.Data.Models;
+using bot.src.Util;
 using Serilog;
 
 namespace bot.src.Brokers.Bingx;
@@ -13,16 +14,17 @@ public class Broker : Api, IBroker
 {
     private readonly BrokerOptions _brokerOptions;
     private readonly IBingxUtilities _utilities;
+    private readonly ITime _time;
     private readonly ILogger _logger;
     private Candles _candles = null!;
     private bool _areCandlesFetched = false;
     private bool _isListeningForCandles = false;
-    private bool _areCandlesLocked = false;
 
-    public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger) : base(brokerOptions)
+    public Broker(IBrokerOptions brokerOptions, IBingxUtilities utilities, ILogger logger, ITime time) : base(brokerOptions)
     {
         _brokerOptions = (brokerOptions as BrokerOptions)!;
         _utilities = utilities;
+        _time = time;
         _logger = logger.ForContext<Broker>();
     }
 
@@ -79,7 +81,17 @@ public class Broker : Api, IBroker
         });
 
         string response = await httpResponseMessage.Content.ReadAsStringAsync();
-        BingxResponse<IEnumerable<BingxCandle>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxCandle>>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new BingxException("Failure while trying to fetch historical candles.");
+        BingxResponse<IEnumerable<BingxCandle>> bingxResponse;
+        try
+        {
+            bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxCandle>>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new BingxException("Failure while trying to fetch historical candles.");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.Error(ex, "The broker failed: {message}", ex.Message);
+            _logger.Information("The response: {response}", response);
+            throw;
+        }
 
         if (bingxResponse.Data == null)
             throw new BingxException("Failure while trying to fetch historical candles.");
@@ -140,8 +152,6 @@ public class Broker : Api, IBroker
                 Date = DateTimeOffset.FromUnixTimeMilliseconds(o.CloseTime).DateTime,
             });
 
-            File.WriteAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/tttttt.json", JsonSerializer.Serialize(convertedCandles, new JsonSerializerOptions() { WriteIndented = true }));
-
             Candle candle1 = convertedCandles.Last();
             Candle? candle = candles.LastOrDefault();
 
@@ -168,13 +178,13 @@ public class Broker : Api, IBroker
             _logger.Information($"{nameof(candles)}: {{candlesCount}}", candles.Count);
         }
 
-        _areCandlesLocked = true;
-        _candles = new Candles(candles);
-        _candles.SkipLast(2);
+        lock (_candles)
+        {
+            _candles = new Candles(candles);
+            _candles.SkipLast(2);
 
-        File.WriteAllText($"/home/hirbod/projects/bingx_ut_bot/src/bot/{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
-
-        _areCandlesLocked = false;
+            File.WriteAllText($"./{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
+        }
 
         _logger.Information("Finished fetching historical candles...");
     }
@@ -245,10 +255,11 @@ public class Broker : Api, IBroker
                             Date = DateTimeOffset.FromUnixTimeMilliseconds(o.CloseTime).DateTime
                         });
 
-            _areCandlesLocked = true;
-            for (int i = 0; i < convertedCandles.Count; i++)
-                _candles.Add(convertedCandles.ElementAt(i));
-            _areCandlesLocked = false;
+            lock (_candles)
+            {
+                for (int i = 0; i < convertedCandles.Count; i++)
+                    _candles.Add(convertedCandles.ElementAt(i));
+            }
 
             now = DateTime.UtcNow;
 
@@ -264,40 +275,23 @@ public class Broker : Api, IBroker
     {
         timeFrameSeconds ??= _brokerOptions.TimeFrame;
 
-        while (true)
-        {
-            if (_areCandlesLocked)
-                continue;
+        if (!_candles.Any())
+            await InitiateCandleStore(timeFrame: timeFrameSeconds);
 
-            if (!_candles.Any())
-                await InitiateCandleStore(timeFrame: timeFrameSeconds);
-
+        lock (_candles)
             return _candles;
-        }
     }
 
-    public async Task<Candle> GetCandle(int indexFromEnd = 0)
+    public Task<Candle> GetCandle(int indexFromEnd = 0)
     {
-        while (true)
-        {
-            if (_areCandlesLocked)
-                continue;
-
-            Candle candle = _candles.ElementAt((await GetCandles()).Count() - indexFromEnd - 1);
-
-            return candle;
-        }
+        lock (_candles)
+            return Task.FromResult(_candles.ElementAt(GetCandles().GetAwaiter().GetResult().Count() - indexFromEnd - 1));
     }
 
     public Task<int> GetLastCandleIndex()
     {
-        while (true)
-        {
-            if (_areCandlesLocked)
-                continue;
-
+        lock (_candles)
             return Task.FromResult(_candles.Count() - 1);
-        }
     }
 
     public async Task ListenForCandles(int candlesCount, int timeFrame)
@@ -423,22 +417,19 @@ public class Broker : Api, IBroker
                 continue;
             }
 
-            _areCandlesLocked = true;
-
-            if (previousCandle.Date != _candles.Last().Date)
+            lock (_candles)
             {
-                _candles.Add(previousCandle);
-                _logger.Information("new candle added: {@previousCandle}", previousCandle);
-                _logger.Information("current candle: {@candle}", candle);
-                _logger.Information("Candles count: {count}", _candles.Count());
-            }
+                if (previousCandle.Date != _candles.Last().Date)
+                {
+                    _candles.Add(previousCandle);
+                    _logger.Information("new candle added: {@previousCandle} at: {time}", previousCandle, _time.GetUtcNow());
+                    _logger.Information("current candle: {@candle}", candle);
+                    _logger.Information("Candles count: {count}", _candles.Count());
+                }
 
-            if (candlesCount < _candles.Count())
-            {
-                _candles.Skip(_candles.Count() - candlesCount);
+                if (candlesCount < _candles.Count())
+                    _candles.Skip(_candles.Count() - candlesCount);
             }
-
-            _areCandlesLocked = false;
 
             previousCandle = candle;
         }
@@ -499,19 +490,19 @@ public class Broker : Api, IBroker
         {
             Id = bp.PositionId,
             Symbol = bp.Symbol,
-            PositionDirection =  PositionDirection.Parse(bp.PositionSide),
+            PositionDirection = PositionDirection.Parse(bp.PositionSide),
             OpenedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime,
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime
         });
     }
 
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    public async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice)
     {
-        await SetLeverage((int)leverage);
+        await SetLeverage((int)leverage, direction == PositionDirection.LONG);
         _logger.Information("Opening a market order...");
-        _logger.Information("margin: {margin}, leverage: {leverage}, direction: {direction}, slPrice: {slPrice}", margin, leverage, direction, slPrice);
+        _logger.Information("entryPrice: {entryPrice}, margin: {margin}, leverage: {leverage}, direction: {direction}, slPrice: {slPrice}", entryPrice, margin, leverage, direction, slPrice);
 
-        decimal quantity = margin * leverage / await GetLastPrice();
+        decimal quantity = margin * leverage / entryPrice;
 
         HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
         {
@@ -537,13 +528,13 @@ public class Broker : Api, IBroker
         return;
     }
 
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
+    public async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
     {
-        await SetLeverage((int)leverage);
+        await SetLeverage((int)leverage, direction == PositionDirection.LONG);
         _logger.Information("Opening a market order...");
-        _logger.Information("margin: {margin}, leverage: {leverage}, direction: {direction}, slPrice: {slPrice}", margin, leverage, direction, slPrice);
+        _logger.Information("entryPrice: {entryPrice}, margin: {margin}, leverage: {leverage}, direction: {direction}, slPrice: {slPrice}", entryPrice, margin, leverage, direction, slPrice);
 
-        decimal quantity = margin * leverage / await GetLastPrice();
+        decimal quantity = margin * leverage / entryPrice;
 
         HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
         {
@@ -577,7 +568,7 @@ public class Broker : Api, IBroker
         return;
     }
 
-    private async Task<int> GetLeverage()
+    private async Task<int> GetLeverage(bool direction)
     {
         _logger.Information("Getting the leverage...");
 
@@ -591,7 +582,9 @@ public class Broker : Api, IBroker
 
         string response = await httpResponseMessage.Content.ReadAsStringAsync();
 
-        int leverage = ((JsonSerializer.Deserialize<BingxResponse<BingxLeverageDto>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new SetLeverageException()).Data ?? throw new SetLeverageException()).LongLeverage;
+        BingxLeverageDto bingxLeverageDto = (JsonSerializer.Deserialize<BingxResponse<BingxLeverageDto>>(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new SetLeverageException()).Data ?? throw new SetLeverageException();
+
+        int leverage = direction ? bingxLeverageDto.LongLeverage : bingxLeverageDto.ShortLeverage;
 
         _logger.Information("Leverage => {leverage}", leverage);
 
@@ -599,45 +592,23 @@ public class Broker : Api, IBroker
         return leverage;
     }
 
-    private async Task SetLeverage(int leverage)
+    private async Task SetLeverage(int leverage, bool direction)
     {
         _logger.Information("Setting the leverage...");
         _logger.Information("leverage: {leverage}", leverage);
 
-        Task<HttpResponseMessage> task1 = _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/leverage", "POST", ApiKey, ApiSecret, new
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/leverage", "POST", ApiKey, ApiSecret, new
         {
             symbol = Symbol,
-            side = LONG_SIDE,
+            side = direction ? LONG_SIDE : SHORT_SIDE,
             leverage
         });
 
-        Task<HttpResponseMessage> task2 = _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/leverage", "POST", ApiKey, ApiSecret, new
-        {
-            symbol = Symbol,
-            side = SHORT_SIDE,
-            leverage
-        });
-
-        await Task.WhenAll(task1, task2);
-
-        if (!task1.IsCompletedSuccessfully || !task2.IsCompletedSuccessfully)
-            throw new SetLeverageException();
-
-        if (!await _utilities.TryEnsureSuccessfulBingxResponse(task1.Result) || !await _utilities.TryEnsureSuccessfulBingxResponse(task2.Result))
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
             throw new SetLeverageException();
 
         _logger.Information("Finished setting leverage...");
         return;
-    }
-
-    public Task ClosePosition(Position position)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task CancelPosition(string id, DateTime cancelledAt)
-    {
-        throw new NotImplementedException();
     }
 
     public async Task CancelAllPendingPositions()
@@ -653,28 +624,17 @@ public class Broker : Api, IBroker
         return;
     }
 
-    public Task<IEnumerable<Position?>> GetPendingPositions()
-    {
-        throw new NotImplementedException();
-    }
+    public Task ClosePosition(Position position) => throw new NotImplementedException();
 
-    public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice)
-    {
-        throw new NotImplementedException();
-    }
+    public Task CancelPosition(string id, DateTime cancelledAt) => throw new NotImplementedException();
 
-    public Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<IEnumerable<Position?>> GetPendingPositions() => throw new NotImplementedException();
 
-    public Task CancelAllLongPendingPositions()
-    {
-        throw new NotImplementedException();
-    }
+    public Task CancelAllLongPendingPositions() => throw new NotImplementedException();
 
-    public Task CancelAllShortPendingPositions()
-    {
-        throw new NotImplementedException();
-    }
+    public Task CancelAllShortPendingPositions() => throw new NotImplementedException();
+
+    public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice) => throw new NotImplementedException();
+
+    public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice) => throw new NotImplementedException();
 }

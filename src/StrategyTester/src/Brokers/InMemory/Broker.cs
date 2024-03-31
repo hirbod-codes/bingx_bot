@@ -219,7 +219,7 @@ public class Broker : IBroker
 
     public async Task<IEnumerable<Position?>> GetPendingPositions() => await _positionRepository.GetPendingPositions();
 
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
+    public async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice, decimal tpPrice)
     {
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
@@ -240,7 +240,7 @@ public class Broker : IBroker
         });
     }
 
-    public async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    public async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice)
     {
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
@@ -260,7 +260,7 @@ public class Broker : IBroker
         });
     }
 
-    public async Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice)
+    public async Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice)
     {
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
@@ -279,7 +279,7 @@ public class Broker : IBroker
         });
     }
 
-    public async Task OpenLimitPosition(decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
+    public async Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice)
     {
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();

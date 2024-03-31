@@ -1,0 +1,9 @@
+.git
+.vscode
+
+*[lL]ogs*/
+
+src/bot/logs
+
+src/StrategyTester/logs
+src/StrategyTester/src/bot/logs

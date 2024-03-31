@@ -15,7 +15,7 @@ public class Bot : IBot
     private readonly ILogger _logger;
     private readonly ITime _time;
     private readonly IMessageStore _messageStore;
-    private readonly BotOptions _generalBotOptions;
+    private readonly BotOptions _botOptions;
     private readonly IRiskManagement _riskManagement;
     private readonly INotifier _notifier;
     private string? _previousMessageId = null;
@@ -26,7 +26,7 @@ public class Bot : IBot
         _time = time;
         _broker = broker;
         _messageStore = messageStore;
-        _generalBotOptions = (generalBotOptions as BotOptions)!;
+        _botOptions = (generalBotOptions as BotOptions)!;
         _riskManagement = riskManagement;
         _notifier = notifier;
     }
@@ -37,7 +37,7 @@ public class Bot : IBot
         {
             _logger.Information("Bot started at: {dateTime}", DateTime.UtcNow.ToString());
 
-            await _time.StartTimer(_generalBotOptions.TimeFrame, async (o, args) => await Tick());
+            await _time.StartTimer(_botOptions.TimeFrame, async (o, args) => await Tick());
 
             while (true)
             {
@@ -83,9 +83,18 @@ public class Bot : IBot
             openPositions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
             if (openPositions.Any())
             {
-                _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
-                await _broker.CloseAllPositions();
-                _logger.Information("open positions are closed.");
+                if (_botOptions.ShouldSkipOnParallelPositionRequest)
+                {
+                    _logger.Information("Parallel positions is not allowed, Skipping...");
+                    return;
+                }
+                else
+                {
+                    _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
+                    await _broker.CloseAllPositions();
+                    _logger.Information("open positions are closed.");
+                    openPositions = Array.Empty<Position>();
+                }
             }
         }
 
@@ -102,11 +111,11 @@ public class Bot : IBot
 
         decimal entryPrice = message.EntryPrice;
 
-        // if (!await _riskManagement.IsPositionAcceptable(entryPrice, message.SlPrice))
-        // {
-        //     _logger.Information("Risk management rejects opening a position, skipping...");
-        //     return;
-        // }
+        if (!await _riskManagement.IsPositionAcceptable(entryPrice, message.SlPrice))
+        {
+            _logger.Information("Risk management rejects opening a position, skipping...");
+            return;
+        }
 
         decimal leverage = _riskManagement.CalculateLeverage(entryPrice, message.SlPrice);
         decimal margin = _riskManagement.GetMargin();
@@ -114,9 +123,9 @@ public class Bot : IBot
         _logger.Information("Opening a market position...");
 
         if (message.TpPrice == null)
-            await _broker.OpenMarketPosition(margin, leverage, message.Direction, message.SlPrice);
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice);
         else
-            await _broker.OpenMarketPosition(margin, leverage, message.Direction, message.SlPrice, (decimal)message.TpPrice!);
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice, (decimal)message.TpPrice!);
 
         _logger.Information("market position is opened.");
     }
@@ -125,7 +134,7 @@ public class Bot : IBot
     {
         _logger.Information("Checking for signals.");
 
-        IMessage? rawMessage = await _messageStore.GetLastMessage(from: _generalBotOptions.Provider);
+        IMessage? rawMessage = await _messageStore.GetLastMessage(from: _botOptions.Provider);
 
         if (rawMessage is null)
         {
@@ -150,7 +159,7 @@ public class Bot : IBot
             return false;
         }
 
-        if (message.From != _generalBotOptions.Provider)
+        if (message.From != _botOptions.Provider)
         {
             _logger.Information("Received a message with invalid provider.");
             throw new InvalidProviderException();
@@ -166,16 +175,14 @@ public class Bot : IBot
 
         if ((message.OpeningPosition && message.ClosingAllPositions) || (!message.OpeningPosition && !message.ClosingAllPositions))
         {
-            InvalidSignalException ex = new();
-            _logger.Error(ex, "This message is already processed.");
-            throw ex;
+            _logger.Information("This message is already processed.");
+            return false;
         }
 
-        if (message.SentAt.AddSeconds(_generalBotOptions.TimeFrame) < _time.GetUtcNow())
+        if (message.SentAt.AddSeconds(_botOptions.TimeFrame) < _time.GetUtcNow())
         {
-            ExpiredSignalException ex = new();
-            _logger.Error(ex, "This message is expired(too old for this time frame).");
-            throw new ExpiredSignalException();
+            _logger.Information("This message is expired(too old for this time frame).");
+            return false;
         }
 
         return true;

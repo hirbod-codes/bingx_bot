@@ -118,9 +118,9 @@ public class Bot : IBot
         _logger.Information("Opening a market position...");
 
         if (generalMessage.TpPrice == null)
-            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
         else
-            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
 
         _logger.Information("market position is opened.");
 

@@ -83,7 +83,7 @@ public class Bot : IBot
         decimal leverage = _riskManagement.CalculateLeverage(await _broker.GetLastPrice(), utBotMessage.SlPrice);
 
         await CloseAllPositions();
-        await OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
+        await OpenMarketPosition(entryPrice, margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
     }
 
     private async Task<IUtBotMessage?> CheckForSignal()
@@ -204,7 +204,7 @@ public class Bot : IBot
         throw exception!;
     }
 
-    private async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    private async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice)
     {
         _logger.Information("Opening a market position...");
 
@@ -213,7 +213,7 @@ public class Bot : IBot
         for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
             try
             {
-                await _broker.OpenMarketPosition(margin, leverage, direction, slPrice);
+                await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice);
                 _logger.Information("A market position has opened.");
                 return;
             }

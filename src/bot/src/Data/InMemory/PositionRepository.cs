@@ -171,7 +171,7 @@ public class PositionRepository : IPositionRepository
         Position position = await GetPosition(id) ?? throw new PositionNotFoundException();
 
         if (position.PositionStatus != PositionStatus.PENDING)
-            throw new CancellingAPosition();
+            throw new CancellingAPositionException();
 
         position.CancelledAt = cancelledAt;
         position.PositionStatus = PositionStatus.CANCELLED;

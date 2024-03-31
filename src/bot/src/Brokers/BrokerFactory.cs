@@ -8,9 +8,9 @@ namespace bot.src.Brokers;
 
 public static class BrokerFactory
 {
-    public static IBroker CreateBroker(string brokerName, IBrokerOptions brokerOptions, IPositionRepository positionRepository, ICandleRepository candleRepository, ILogger logger) => brokerName switch
+    public static IBroker CreateBroker(string brokerName, IBrokerOptions brokerOptions, ILogger logger, Util.ITime time) => brokerName switch
     {
-        BrokerNames.BINGX => new BingxBroker(brokerOptions, new BingxUtilities(logger), logger),
+        BrokerNames.BINGX => new BingxBroker(brokerOptions, new BingxUtilities(logger), logger, time),
         _ => throw new Exception()
     };
 

@@ -20,8 +20,8 @@ public class Program
     private static async Task Main(string[] args)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
             .AddEnvironmentVariables()
+            .AddJsonFile("appsettings.json")
             .AddCommandLine(args)
             .Build();
 
@@ -29,9 +29,10 @@ public class Program
         .ReadFrom.Configuration(configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
         .CreateLogger();
 
+    start:
+
         try
         {
-            ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.CANDLE_REPOSITORY_TYPE]!);
             IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
             IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
 
@@ -60,11 +61,11 @@ public class Program
                 IRunnerOptions runnerOptions = RunnerOptionsFactory.CreateRunnerOptions(configuration[ConfigurationKeys.RUNNER_NAME]!);
                 configuration.Bind($"{ConfigurationKeys.RUNNER_OPTIONS}:{configuration[ConfigurationKeys.RUNNER_NAME]!}", runnerOptions);
 
-                IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, candleRepository, logger);
+                ITime time = new Time();
+
+                IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, logger, time);
 
                 IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, logger);
-
-                ITime time = new Time();
 
                 IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, logger);
 
@@ -75,26 +76,32 @@ public class Program
                 IRunner runner = RunnerFactory.CreateRunner(configuration[ConfigurationKeys.RUNNER_NAME]!, runnerOptions, bot, broker, strategy, time, notifier, logger);
 
                 await runner.Run();
+
+                logger.Information("Runner terminated at: {dateTime}", time.GetUtcNow().ToString());
+                await notifier.SendMessage($"Runner terminated at: {time.GetUtcNow()}");
             }
             catch (System.Exception ex)
             {
                 logger.Error(ex, "An unhandled exception has been thrown.");
                 try
                 {
-                    logger.Information(ex, "Notifying listeners...");
-                    await notifier.SendMessage($"FATAL: Unhandled exception: {ex.Message}");
-                    logger.Information(ex, "Listeners are notified.");
+                    logger.Information("Notifying listeners...");
+                    await notifier.SendMessage($"Unhandled exception was thrown: {ex.Message}");
+                    logger.Information("Listeners are notified.");
                 }
                 catch (System.Exception)
                 {
-                    logger.Information(ex, "Failed to notify listeners.");
+                    logger.Error(ex, "Failed to notify listeners.");
                     throw;
                 }
-                return;
+
+                logger.Information("Restarting...");
+                goto start;
             }
         }
         catch (System.Exception ex)
         {
+            logger.Information("Runner terminated with a fatal error at: {dateTime}", DateTime.UtcNow.ToString());
             logger.Error(ex, "An unhandled exception has been thrown.");
             return;
         }

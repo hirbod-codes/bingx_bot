@@ -2,15 +2,16 @@ namespace bot.src.RiskManagement.SuperTrendV1;
 
 public record class RiskManagementOptions : IRiskManagementOptions
 {
-    public decimal Margin { get; set; }
-    public decimal SLPercentages { get; set; }
-    public decimal RiskRewardRatio { get; set; }
-    public decimal BrokerCommission { get; set; }
-    public decimal CommissionPercentage { get; set; }
+    public decimal Margin { get; set; } = 100;
+    public decimal SLPercentages { get; set; } = 10;
+    public decimal RiskRewardRatio { get; set; } = 2;
+    public decimal BrokerCommission { get; set; } = 0.001m;
+    public byte BrokerMaximumLeverage { get; set; } = 100;
+    public decimal CommissionPercentage { get; set; } = 10;
     /// <summary>
     /// if zero, no limit will be applied on the number concurrent positions.
     /// </summary>
-    public decimal NumberOfConcurrentPositions { get; set; }
-    public decimal GrossLossLimit { get; set; }
-    public decimal GrossProfitLimit { get; set; }
+    public decimal NumberOfConcurrentPositions { get; set; } = 0;
+    public decimal GrossLossLimit { get; set; } = 0;
+    public decimal GrossProfitLimit { get; set; } = 0;
 }

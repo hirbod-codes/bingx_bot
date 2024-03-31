@@ -51,6 +51,8 @@ public class Strategy : IStrategy
     {
         int index = await _broker.GetLastCandleIndex();
 
+        _logger.Information("SuperTrend: {SuperTrend}, BuySignal: {BuySignal}, SellSignal: {SellSignal}", _superTrend.ElementAt(index).SuperTrend, _superTrend.ElementAt(index).BuySignal, _superTrend.ElementAt(index).SellSignal);
+
         bool isLong = IsLong(index);
         bool isShort = IsShort(index);
 
@@ -74,6 +76,8 @@ public class Strategy : IStrategy
             decimal tpPrice = CalculateTpPrice(candle.Close, isLong, delta);
 
             IMessage message = CreateOpenPositionMessage(candle, timeFrame, isLong ? PositionDirection.LONG : PositionDirection.SHORT, slPrice, tpPrice, candle.Close);
+            _logger.Information("The Message {@message}.", message);
+
             await _messageRepository.CreateMessage(message);
             _logger.Information("Message sent.");
         }
