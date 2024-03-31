@@ -38,7 +38,7 @@ public class Candles : IEnumerable<Candle>
         _candles = new();
 
         if (!candles.Any())
-            throw new ArgumentException("No candle provided.");
+            return;
 
         if (candles.Count == 1)
         {

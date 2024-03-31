@@ -17,7 +17,23 @@ public class BingxUtilities : IBingxUtilities
     {
         _logger.Information("Handling request to bingx...");
 
-        long timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        using HttpClient clientTemp = new();
+        HttpResponseMessage serverTimeResponse = await clientTemp.GetAsync($"{protocol}://{host}/openApi/swap/v2/server/time");
+        string serverTimeResponseJson = await serverTimeResponse.Content.ReadAsStringAsync();
+        BingxResponse<BingxServerTime> bingxServerTime;
+        try
+        {
+            bingxServerTime = JsonSerializer.Deserialize<BingxResponse<BingxServerTime>>(serverTimeResponseJson, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new BingxException("Failure while trying to fetch historical candles.");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.Error(ex, "The broker failed: {message}", ex.Message);
+            _logger.Information("The response: {response}", serverTimeResponseJson);
+            throw;
+        }
+
+        // long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        long timestamp = bingxServerTime.Data!.ServerTime;
         string parameters = $"timestamp={timestamp}";
 
         if (payload != null)

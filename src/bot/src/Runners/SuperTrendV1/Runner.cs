@@ -1,5 +1,6 @@
 using bot.src.Bots;
 using bot.src.Brokers;
+using bot.src.Brokers.Bingx;
 using bot.src.Data.Models;
 using bot.src.Notifiers;
 using bot.src.Strategies;
@@ -38,16 +39,14 @@ public class Runner : IRunner
 
         await Tick();
 
-        await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) =>
-        {
-            // Waiting for broker to get the last candle.
-            // await _time.Sleep(500);
-            await Tick();
-        });
+        await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) => await Tick());
 
         while (true)
         {
             string? r = System.Console.ReadLine();
+
+            if (r is not null && r.ToLower() == "miss")
+                (_broker as Broker)!.FakeMissCandles();
 
             if (r is not null && r.ToLower() == "exit")
                 return;
@@ -74,21 +73,25 @@ public class Runner : IRunner
                 return;
             }
 
+            DateTime now = _time.GetUtcNow();
+            DateTime limitTime = now.AddSeconds(6);
+
             Candle candle;
             do
             {
                 candle = await _broker.GetCandle();
-            } while ((_time.GetUtcNow() - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds > 5);
 
-            _logger.Information("Candle: {@candle}", candle);
+                await Task.Delay(100);
+                now = now.AddMicroseconds(100);
+            } while (now <= limitTime && (now - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds >= 3);
 
-            DateTime now = _time.GetUtcNow();
-            if ((candle.Date - now.AddSeconds(now.Second * -1).AddSeconds(_runnerOptions.TimeFrame * -1)).TotalSeconds >= 1)
+            if (now > limitTime)
             {
-                _logger.Information("now: {now}", now);
-                _logger.Information("Candles missing, skipping...");
+                _logger.Information("Broker failed to provide latest candle!, skipping...");
                 return;
             }
+
+            _logger.Information("Candle: {@candle}", candle);
 
             await _strategy.PrepareIndicators();
 

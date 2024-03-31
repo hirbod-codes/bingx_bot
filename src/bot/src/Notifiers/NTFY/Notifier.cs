@@ -22,6 +22,7 @@ public class Notifier : INotifier
         OnMessageSent(message);
         Logger.Information("MessageSent event raised...");
 
-        if (!response.IsSuccessStatusCode) throw new NotificationException();
+        // if (!response.IsSuccessStatusCode) throw new NotificationException($"response: {await response.Content.ReadAsStringAsync()}");
+        if (!response.IsSuccessStatusCode) Logger.Warning($"{nameof(Notifier)} failed to send a message, the message: {message}, the response:", message, await response.Content.ReadAsStringAsync());
     }
 }

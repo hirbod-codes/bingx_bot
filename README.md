@@ -4,6 +4,12 @@
 
 ## To configure the bot modify appsettings.json file or docker-compose environment variables
 
+## In production
+
+```bash
+sudo docker compose -f docker-compose.production.yml up --build --remove-orphans
+```
+
 ## To configure the seq logger run
 
 ```bash

@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace bot.src.Brokers.Bingx;
+namespace bot.src.Brokers.Bingx.Exceptions;
 
 [Serializable]
 public class CloseAllPositionsException : Exception
