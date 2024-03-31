@@ -1,6 +1,8 @@
 # Instructions
 
-## To configure the bot modify appsettings.json file
+## set docker mtu to 1420
+
+## To configure the bot modify appsettings.json file or docker-compose environment variables
 
 ## To configure the seq logger run
 

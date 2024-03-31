@@ -20,8 +20,8 @@ public class Program
     private static async Task Main(string[] args)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
-            .AddEnvironmentVariables()
             .AddJsonFile("appsettings.json")
+            .AddEnvironmentVariables()
             .AddCommandLine(args)
             .Build();
 
