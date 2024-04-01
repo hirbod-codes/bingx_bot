@@ -102,8 +102,22 @@ public class Runner : IRunner
         }
         catch (BrokerException ex)
         {
-            _logger.Information("Broker Failed. Skipping...");
-            _logger.Information("The exception message: {message}", ex.Message);
+            _logger.Error(ex, "A broker exception is thrown. Skipping...");
+        }
+        catch (StrategyException ex)
+        {
+            _logger.Error(ex, "A strategy exception is thrown. Skipping...");
+        }
+        catch (BotException ex)
+        {
+            _logger.Error(ex, "A bot exception is thrown. Skipping...");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "A system exception is thrown. Skipping...");
+
+            try { await _notifier.SendMessage($"A system exception is thrown. Exception message: {ex.Message}"); }
+            catch (Exception ex1) { _logger.Error(ex1, "System failed to notify."); }
         }
     }
 }

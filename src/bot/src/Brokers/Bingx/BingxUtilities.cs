@@ -19,6 +19,10 @@ public class BingxUtilities : IBingxUtilities
 
         using HttpClient clientTemp = new();
         HttpResponseMessage serverTimeResponse = await clientTemp.GetAsync($"{protocol}://{host}/openApi/swap/v2/server/time");
+
+        if (!await TryEnsureSuccessfulBingxResponse(serverTimeResponse))
+            throw new BingxServerTimeException();
+
         string serverTimeResponseJson = await serverTimeResponse.Content.ReadAsStringAsync();
         BingxResponse<BingxServerTime> bingxServerTime;
         try
@@ -29,11 +33,11 @@ public class BingxUtilities : IBingxUtilities
         {
             _logger.Error(ex, "The broker failed: {message}", ex.Message);
             _logger.Information("The response: {response}", serverTimeResponseJson);
-            throw;
+            throw new BingxServerTimeException();
         }
 
-        // long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         long timestamp = bingxServerTime.Data!.ServerTime;
+
         string parameters = $"timestamp={timestamp}";
 
         if (payload != null)

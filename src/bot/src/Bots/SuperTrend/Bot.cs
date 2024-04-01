@@ -91,7 +91,7 @@ public class Bot : IBot
                 else
                 {
                     _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
-                    await _broker.CloseAllPositions();
+                    await DoOperationWithRetry(new Task(() => _broker.CloseAllPositions()), _botOptions.RetryCount);
                     _logger.Information("open positions are closed.");
                     openPositions = Array.Empty<Position>();
                 }
@@ -123,24 +123,51 @@ public class Bot : IBot
         _logger.Information("Opening a market position...");
 
         if (message.TpPrice == null)
-            await _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice);
+            await DoOperationWithRetry(new Task(() => _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice)), _botOptions.RetryCount);
         else
-            await _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice, (decimal)message.TpPrice!);
+            await DoOperationWithRetry(new Task(() => _broker.OpenMarketPosition(entryPrice, margin, leverage, message.Direction, message.SlPrice, (decimal)message.TpPrice!)), _botOptions.RetryCount);
 
         _logger.Information("market position is opened.");
+    }
+
+    private async Task DoOperationWithRetry(Task operation, int retryCount)
+    {
+        try
+        {
+            retryCount--;
+            await operation;
+        }
+        catch (BrokerException ex)
+        {
+            if (retryCount > 0)
+                _logger.Information("Operation failed, retrying...");
+            else
+                _logger.Error(ex, "Operation failed, terminating...");
+        }
     }
 
     private async Task<Message?> CheckForSignal()
     {
         _logger.Information("Checking for signals.");
 
-        IMessage? rawMessage = await _messageStore.GetLastMessage(from: _botOptions.Provider);
+        IEnumerable<IMessage> rawMessages = await _messageStore.GetMessages(from: _botOptions.Provider);
+
+        if (!rawMessages.Any())
+        {
+            _logger.Information("No message found.");
+            return null;
+        }
+
+        IMessage rawMessage = rawMessages.Last();
 
         if (rawMessage is null)
         {
             _logger.Information("No message found.");
             return null;
         }
+
+        if (rawMessages.Count() >= 1000)
+            await _messageStore.DeleteMessages(from: _botOptions.Provider);
 
         Message? message = Message.CreateMessage(new Message(), rawMessage);
 
