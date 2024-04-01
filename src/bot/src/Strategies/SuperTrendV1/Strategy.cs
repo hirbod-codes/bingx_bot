@@ -49,7 +49,7 @@ public class Strategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         _logger.Information("SuperTrend: {SuperTrend}, BuySignal: {BuySignal}, SellSignal: {SellSignal}", _superTrend.ElementAt(index).SuperTrend, _superTrend.ElementAt(index).BuySignal, _superTrend.ElementAt(index).SellSignal);
 

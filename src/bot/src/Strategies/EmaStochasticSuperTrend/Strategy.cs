@@ -65,7 +65,7 @@ public class Strategy : IStrategy
         if (_atr == null)
             throw new NoIndicatorException();
 
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
 

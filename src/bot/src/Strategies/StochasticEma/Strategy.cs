@@ -64,7 +64,7 @@ public class Strategy : IStrategy
         if (_atr == null || _ema1 == null && _stochastic == null)
             throw new NoIndicatorException();
 
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         bool isLong = IsLong(index, candle.Close);
         bool isShort = !isLong;

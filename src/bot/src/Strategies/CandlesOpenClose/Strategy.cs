@@ -103,7 +103,7 @@ public class Strategy : IStrategy
 
     public async Task HandleCandle(Candle candle, int timeFrame)
     {
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         DateTime candleCloseDate = candle.Date.AddSeconds(timeFrame);
 

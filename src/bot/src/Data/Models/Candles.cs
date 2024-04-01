@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 
 namespace bot.src.Data.Models;
 
@@ -19,18 +20,18 @@ public class Candles : IEnumerable<Candle>
         }
     }
 
-    private List<Candle> _candles;
+    private Collection<Candle> _candles;
 
     public Candles(IEnumerable<Candle> candles)
     {
         Validate(candles.ToList());
-        _candles = candles.ToList();
+        _candles = new Collection<Candle>(candles.ToList());
     }
 
     public Candles(List<Candle> candles)
     {
         Validate(candles);
-        _candles = candles;
+        _candles = new Collection<Candle>(candles);
     }
 
     private void Validate(List<Candle> candles)
@@ -42,7 +43,7 @@ public class Candles : IEnumerable<Candle>
 
         if (candles.Count == 1)
         {
-            _candles = candles.ToList();
+            _candles = new(candles);
             return;
         }
 
@@ -116,10 +117,10 @@ public class Candles : IEnumerable<Candle>
             yield return x;
     }
 
-    public void Skip(int num) => _candles = _candles.Skip(num).ToList();
-    public void SkipLast(int num) => _candles = _candles.SkipLast(num).ToList();
-    public void Take(int num) => _candles = _candles.Take(num).ToList();
-    public void TakeLast(int num) => _candles = _candles.TakeLast(num).ToList();
+    public void Skip(int num) => _candles = new(_candles.Skip(num).ToList());
+    public void SkipLast(int num) => _candles = new(_candles.SkipLast(num).ToList());
+    public void Take(int num) => _candles = new(_candles.Take(num).ToList());
+    public void TakeLast(int num) => _candles = new(_candles.TakeLast(num).ToList());
 
     public IEnumerator<Candle> GetEnumerator() => _candles.GetEnumerator();
 

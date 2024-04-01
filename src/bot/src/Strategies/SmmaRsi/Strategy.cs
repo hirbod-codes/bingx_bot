@@ -68,7 +68,7 @@ public class Strategy : IStrategy
         if (_smma1 == null || _smma2 == null || _smma3 == null || _rsi == null)
             throw new NoIndicatorException();
 
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         bool isUpTrend = IsUpTrend(index);
         bool isDownTrend = IsDownTrend(index);

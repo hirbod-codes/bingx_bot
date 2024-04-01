@@ -68,7 +68,7 @@ public class Strategy : IStrategy
         _logger.Information("candle: {@candle}", candle);
         _logger.Information("Time Frame: {@timeFrame}", timeFrame);
 
-        int index = await _broker.GetLastCandleIndex();
+        int index = (int)await _broker.GetLastCandleIndex();
 
         Signal1(candle, index, out bool buy1, out bool sell1);
         Signal2(candle, index, out bool buy2, out bool sell2);

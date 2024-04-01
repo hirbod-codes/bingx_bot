@@ -7,11 +7,11 @@ public interface IBroker
     public Task CandleClosed();
     public Task InitiateCandleStore(int? candlesCount = null, int? timeFrame = null);
     public Task<decimal> GetLastPrice();
-    public Task<Candle> GetCandle(int indexFromEnd = 0);
-    public Task<Candles> GetCandles(int? timeFrameSeconds = null);
+    public Task<Candle?> GetCandle(int indexFromEnd = 0);
+    public Task<Candles?> GetCandles(int? timeFrameSeconds = null);
     public Task<IEnumerable<Position?>> GetOpenPositions();
     public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null);
-    public Task<int> GetLastCandleIndex();
+    public Task<int?> GetLastCandleIndex();
     public Task<IEnumerable<Position?>> GetPendingPositions();
     public Task CloseAllPositions();
     public Task CancelPosition(string id, DateTime cancelledAt);
