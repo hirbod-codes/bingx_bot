@@ -75,7 +75,6 @@ public class Runner : IRunner
 
             DateTime now = _time.GetUtcNow();
             DateTime limitTime = now.AddSeconds(6);
-
             Candle? candle;
             do
             {

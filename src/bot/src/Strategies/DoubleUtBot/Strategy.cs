@@ -36,7 +36,7 @@ public class Strategy : IStrategy
     {
         _logger.Information("Creating indicators...");
 
-        Candles candles = await _broker.GetCandles();
+        Candles candles = await _broker.GetCandles() ?? throw new CandlesNotFoundException();
         int candlesCount = candles.Count();
 
         // adding one to the atr stop indicator because this strategy needs previous values of this indicator.
@@ -142,7 +142,7 @@ public class Strategy : IStrategy
         }
         catch (Exception)
         {
-            Candle candle = _broker.GetCandle().GetAwaiter().GetResult();
+            Candle? candle = _broker.GetCandle().GetAwaiter().GetResult();
             int atrStopCount = atrStop.Count();
             int emaCount = ema.Count();
             int _atrStop1Count = _atrStop1.Count();
@@ -174,7 +174,7 @@ public class Strategy : IStrategy
         }
         catch (Exception)
         {
-            Candle candle = _broker.GetCandle().GetAwaiter().GetResult();
+            Candle? candle = _broker.GetCandle().GetAwaiter().GetResult();
             int atrStopCount = atrStop.Count();
             int emaCount = ema.Count();
             int _atrStop1Count = _atrStop1.Count();

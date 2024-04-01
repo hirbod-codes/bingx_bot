@@ -80,17 +80,24 @@ public class Runner : IRunner
             return;
         }
 
-        Candle candle = await _broker.GetCandle();
-
-        _logger.Information("Candle: {@candle}", candle);
-
         DateTime now = _time.GetUtcNow();
-        if ((candle.Date - now.AddSeconds(now.Second * -1).AddSeconds(_runnerOptions.TimeFrame * -1)).TotalSeconds >= 1)
+        DateTime limitTime = now.AddSeconds(6);
+        Candle? candle;
+        do
         {
-            _logger.Information("now: {now}", now);
-            _logger.Information("Candles missing, skipping...");
+            candle = await _broker.GetCandle();
+
+            await Task.Delay(100);
+            now = now.AddMicroseconds(100);
+        } while (now <= limitTime && (candle == null || (candle != null && (now - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds >= 3)));
+
+        if (now > limitTime || candle == null)
+        {
+            _logger.Information("Broker failed to provide latest candle!, skipping...");
             return;
         }
+
+        _logger.Information("Candle: {@candle}", candle);
 
         await _strategy.PrepareIndicators();
 

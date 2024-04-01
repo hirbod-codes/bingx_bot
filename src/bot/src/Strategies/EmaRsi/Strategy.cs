@@ -45,7 +45,7 @@ public class Strategy : IStrategy
         if (_indicatorsOptions.Ema1.Period == _indicatorsOptions.Ema2.Period)
             throw new NoIndicatorException("Missing second ema indicator options.");
 
-        Candles candles = await _broker.GetCandles();
+        Candles candles = await _broker.GetCandles() ?? throw new CandlesNotFoundException();
 
         _superTrend = candles.GetSuperTrend(20, 2);
         _stochastic = candles.GetStoch();

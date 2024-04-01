@@ -35,7 +35,7 @@ public class Strategy : IStrategy
     {
         _logger.Information("Creating indicators...");
 
-        Candles candles = await _broker.GetCandles();
+        Candles candles = await _broker.GetCandles() ?? throw new CandlesNotFoundException();
         int candlesCount = candles.Count();
 
         // adding one to the atr stop indicator because this strategy needs previous values of this indicator.

@@ -35,7 +35,7 @@ public class Strategy : IStrategy
 
     public async Task PrepareIndicators()
     {
-        Candles candles = await _broker.GetCandles();
+        Candles candles = await _broker.GetCandles() ?? throw new CandlesNotFoundException();
 
         _atr = candles.GetAtr(_indicatorsOptions.Atr.Period);
 

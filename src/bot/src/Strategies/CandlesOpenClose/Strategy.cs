@@ -55,7 +55,7 @@ public class Strategy : IStrategy
 
     public async Task PrepareIndicators()
     {
-        Candles candles = await _broker.GetCandles();
+        Candles candles = await _broker.GetCandles() ?? throw new CandlesNotFoundException();
 
         _stochastic = candles.GetStoch(_indicatorsOptions.Stochastic.Period, _indicatorsOptions.Stochastic.SignalPeriod, _indicatorsOptions.Stochastic.SmoothPeriod);
         _superTrend = candles.GetSuperTrend(10, 2);
