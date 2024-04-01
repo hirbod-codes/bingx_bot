@@ -263,10 +263,13 @@ public class Broker : Api, IBroker
             string id = Guid.NewGuid().ToString();
             while (true)
             {
-                reqType = "sub",
-                dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
+                if (ws.State != WebSocketState.Open)
+                    continue;
 
-        }
+                await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+                {
+                    id,
+                    reqType = "sub",
                     dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
                 }))), WebSocketMessageType.Text, true, CancellationToken.None);
 
