@@ -8,4 +8,5 @@ public interface IRiskManagement
     public decimal GetMargin();
     public decimal GetMarginRelativeToLimitedLeverage(decimal entryPrice, decimal slPrice);
     public Task<bool> IsPositionAcceptable(decimal entryPrice, decimal slPrice);
+    decimal CalculateSlPrice(decimal leverage, decimal entryPrice, string direction);
 }

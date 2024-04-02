@@ -49,13 +49,6 @@ public class Broker : Api, IBroker
         _ => throw new BingxException("Invalid TimeFrame!")
     };
 
-    public void FakeMissCandles()
-    {
-        _logger.Information("Skipping half of the candles.");
-        _candles.SkipLast(_candles.Count() / 2);
-        _logger.Information("Half of the candles were skipped.");
-    }
-
     public Task InitiateCandleStore(int? candlesCount = null, int? timeFrame = null)
     {
         if (candlesCount == null)
@@ -406,10 +399,14 @@ public class Broker : Api, IBroker
 
     public async Task<Candle?> GetCandle(int indexFromEnd = 0)
     {
-        Candles? candles = await GetCandles();
-        if (candles == null)
-            return null;
-        return _candles.ElementAt(candles.Count() - indexFromEnd - 1);
+        try
+        {
+            Candles? candles = await GetCandles();
+            if (candles == null)
+                return null;
+            return _candles.ElementAt(candles.Count() - indexFromEnd - 1);
+        }
+        catch (System.Exception) { return null; }
     }
 
     public async Task<int?> GetLastCandleIndex()

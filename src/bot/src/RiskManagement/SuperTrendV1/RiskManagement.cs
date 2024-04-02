@@ -21,26 +21,30 @@ public class RiskManagement : IRiskManagement
         _logger = logger.ForContext<RiskManagement>();
     }
 
-    private decimal GetMaximumLeverage()
-    {
-        if (_riskManagementOptions.BrokerCommission <= 0)
-            return _riskManagementOptions.BrokerMaximumLeverage;
-        else
-            return Math.Min(_riskManagementOptions.BrokerMaximumLeverage, _riskManagementOptions.SLPercentages * (_riskManagementOptions.CommissionPercentage / 100.0m) / (100.0m * _riskManagementOptions.BrokerCommission));
-    }
+    private decimal GetMaximumLeverage() => _riskManagementOptions.BrokerMaximumLeverage;
 
     public int GetUnacceptableOrdersCount() => 0;
 
-    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.SLPercentages * entryPrice / 100.0m / Math.Abs(entryPrice - slPrice);
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => 50;
 
     public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)
     {
-        decimal delta = (_riskManagementOptions.RiskRewardRatio * entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage) + (_riskManagementOptions.BrokerCommission * entryPrice);
+        decimal delta = _riskManagementOptions.RiskRewardRatio * entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage;
 
         if (direction == PositionDirection.LONG)
             return delta + entryPrice;
         else
             return entryPrice - delta;
+    }
+
+    public decimal CalculateSlPrice(decimal leverage, decimal entryPrice, string direction)
+    {
+        decimal delta = entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage;
+
+        if (direction == PositionDirection.LONG)
+            return entryPrice - delta;
+        else
+            return delta + entryPrice;
     }
 
     public decimal GetMargin() => _riskManagementOptions.Margin;

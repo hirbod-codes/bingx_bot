@@ -17,10 +17,8 @@ public class Message : IMessage
     public string Direction { get; set; } = null!;
     public bool OpeningPosition { get; set; }
     public decimal EntryPrice { get; set; }
-    public decimal? TpPrice { get; set; }
-    public decimal SlPrice { get; set; }
 
-    public static string CreateMessageBody(bool openingPosition, bool allowingParallelPositions, bool closingAllPositions, string direction, decimal entryPrice, decimal slPrice, decimal? tpPrice = null)
+    public static string CreateMessageBody(bool openingPosition, bool allowingParallelPositions, bool closingAllPositions, string direction, decimal entryPrice)
     {
         string message = $"{MESSAGE_DELIMITER}";
 
@@ -37,15 +35,6 @@ public class Message : IMessage
         message += $"{FIELD_DELIMITER}";
 
         message += $"{nameof(EntryPrice)}{KEY_VALUE_PAIR_DELIMITER}{entryPrice}";
-        message += $"{FIELD_DELIMITER}";
-
-        message += $"{nameof(SlPrice)}{KEY_VALUE_PAIR_DELIMITER}{slPrice}";
-
-        if (tpPrice != null)
-        {
-            message += $"{FIELD_DELIMITER}";
-            message += $"{nameof(TpPrice)}{KEY_VALUE_PAIR_DELIMITER}{tpPrice}";
-        }
 
         message += $"{MESSAGE_DELIMITER}";
 
@@ -98,16 +87,6 @@ public class Message : IMessage
         if (fields.TryGetValue(nameof(EntryPrice), out string? entryPriceString) && decimal.TryParse(entryPriceString, out decimal entryPrice))
             generalMessage.EntryPrice = entryPrice;
         else
-            throw new MessageParseException();
-
-        if (fields.TryGetValue(nameof(SlPrice), out string? slPriceString) && decimal.TryParse(slPriceString, out decimal slPrice))
-            generalMessage.SlPrice = slPrice;
-        else
-            throw new MessageParseException();
-
-        if (fields.TryGetValue(nameof(TpPrice), out string? tpPriceString) && tpPriceString is not null && decimal.TryParse(tpPriceString, out decimal tpPrice))
-            generalMessage.TpPrice = tpPrice;
-        else if (tpPriceString is not null)
             throw new MessageParseException();
 
         return generalMessage;

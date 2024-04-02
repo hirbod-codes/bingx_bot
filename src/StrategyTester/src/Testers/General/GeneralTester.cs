@@ -2,7 +2,6 @@ using bot.src.Bots;
 using bot.src.Data.Models;
 using bot.src.Strategies;
 using Serilog;
-using Skender.Stock.Indicators;
 using StrategyTester.src.Utils;
 
 namespace StrategyTester.src.Testers.General;
@@ -42,7 +41,7 @@ public class GeneralTester : ITester
                 continue;
             }
 
-            Candle candle = await _broker.GetCandle();
+            Candle candle = await _broker.GetCandle() ?? throw new TesterException();
 
             _logger.Information("candle: {@candle}", candle);
 

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS base
 
 WORKDIR /app
 
@@ -12,10 +12,67 @@ RUN dotnet restore -f --force-evaluate -v d
 
 COPY ./src/ ./src/
 
+FROM base AS win_x64
 WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r win-x64 --self-contained
+CMD dotnet /publish/bot.dll
 
-RUN dotnet publish --no-restore -c Release -o /publish
+FROM base AS win_x86
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r win-x86 --self-contained
+CMD dotnet /publish/bot.dll
 
-WORKDIR /publish
+FROM base AS win_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r win-arm64 --self-contained
+CMD dotnet /publish/bot.dll
 
-CMD dotnet bot.dll 
+FROM base AS linux_x64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-x64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS linux_musl_x64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-musl-x64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS linux_musl_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-musl-arm64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS linux_arm
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-arm --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS linux_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-arm64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS linux_bionic_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r linux-bionic-arm64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS osx_x64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r osx-x64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS osx_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r osx-arm64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS ios_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r ios-arm64 --self-contained
+CMD dotnet /publish/bot.dll
+
+FROM base AS android_arm64
+WORKDIR /app/src/bot/
+RUN dotnet publish -c release -o /publish -r android-arm64 --self-contained
+CMD dotnet /publish/bot.dll

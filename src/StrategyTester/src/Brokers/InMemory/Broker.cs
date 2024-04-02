@@ -70,24 +70,24 @@ public class Broker : IBroker
 
     public bool IsFinished() => _passedCandlesIndex + 1 == _candlesCount;
 
-    public async Task<Candles> GetCandles(int? timeFrameSeconds = null)
+    public async Task<Candles?> GetCandles(int? timeFrameSeconds = null)
     {
         if (!_candles.Any())
             await InitiateCandleStore();
         return _candles;
     }
 
-    public Task<Candle> GetCandle(int indexFromEnd = 0) => Task.FromResult(_candles.ElementAt(_passedCandlesIndex - indexFromEnd));
+    public Task<Candle?> GetCandle(int indexFromEnd = 0) => Task.FromResult<Candle?>(_candles.ElementAt(_passedCandlesIndex - indexFromEnd));
 
-    public Task<int> GetLastCandleIndex() => Task.FromResult(_passedCandlesIndex);
+    public Task<int?> GetLastCandleIndex() => Task.FromResult<int?>(_passedCandlesIndex);
 
-    public async Task<decimal> GetLastPrice() => (await GetCandle()).Close;
+    public async Task<decimal> GetLastPrice() => (await GetCandle())!.Close;
 
     public async Task CandleClosed()
     {
         _logger.Information("Getting open positions...");
 
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
 
         if (await _positionRepository.AnyPendingPosition())
         {
@@ -149,7 +149,7 @@ public class Broker : IBroker
 
     public async Task ClosePosition(Position position)
     {
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         bool unknownState = false;
         decimal? closedPrice = null!;
         if (position.PositionDirection == PositionDirection.LONG)
@@ -192,7 +192,7 @@ public class Broker : IBroker
 
     public async Task CloseAllPositions()
     {
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         await CloseAllPositions(candle.Close, candle.Date.AddSeconds(_brokerOptions.TimeFrame));
     }
 
@@ -224,7 +224,7 @@ public class Broker : IBroker
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
 
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         await _positionRepository.CreateOpenPosition(new Position()
         {
             Leverage = leverage,
@@ -245,7 +245,7 @@ public class Broker : IBroker
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
 
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         await _positionRepository.CreateOpenPosition(new Position()
         {
             Leverage = leverage,
@@ -265,7 +265,7 @@ public class Broker : IBroker
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
 
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         await _positionRepository.CreatePendingPosition(new Position()
         {
             Leverage = leverage,
@@ -284,7 +284,7 @@ public class Broker : IBroker
         if (direction != PositionDirection.LONG && direction != PositionDirection.SHORT)
             throw new BrokerException();
 
-        Candle candle = await GetCandle();
+        Candle candle = await GetCandle() ?? throw new BrokerException();
         await _positionRepository.CreatePendingPosition(new Position()
         {
             Leverage = leverage,

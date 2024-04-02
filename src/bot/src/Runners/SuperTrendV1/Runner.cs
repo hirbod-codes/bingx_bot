@@ -45,9 +45,6 @@ public class Runner : IRunner
         {
             string? r = System.Console.ReadLine();
 
-            if (r is not null && r.ToLower() == "miss")
-                (_broker as Broker)!.FakeMissCandles();
-
             if (r is not null && r.ToLower() == "exit")
                 return;
         }

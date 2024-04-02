@@ -111,4 +111,9 @@ public class RiskManagement : IRiskManagement
 
         return true;
     }
+
+    public decimal CalculateSlPrice(decimal leverage, decimal entryPrice, string direction)
+    {
+        throw new NotImplementedException();
+    }
 }

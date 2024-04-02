@@ -9,6 +9,7 @@ using bot.src.Brokers;
 using bot.src.Data;
 using bot.src.Bots.SuperTrendV1.Models;
 using bot.src.Indicators.Models;
+using bot.src.RiskManagement;
 
 namespace bot.src.Strategies.SuperTrendV1;
 
@@ -70,12 +71,7 @@ public class Strategy : IStrategy
             _logger.Information("Candle is valid for a position, sending the message...");
             _logger.Information("Position direction: {direction}", isLong ? PositionDirection.LONG : PositionDirection.SHORT);
 
-            decimal delta = CalculateDelta(index);
-
-            decimal slPrice = CalculateSlPrice(candle.Close, isLong, delta);
-            decimal tpPrice = CalculateTpPrice(candle.Close, isLong, delta);
-
-            IMessage message = CreateOpenPositionMessage(candle, timeFrame, isLong ? PositionDirection.LONG : PositionDirection.SHORT, slPrice, tpPrice, candle.Close);
+            IMessage message = CreateOpenPositionMessage(candle, timeFrame, isLong ? PositionDirection.LONG : PositionDirection.SHORT, candle.Close);
             _logger.Information("The Message {@message}.", message);
 
             await _messageRepository.CreateMessage(message);
@@ -87,13 +83,7 @@ public class Strategy : IStrategy
 
     private bool IsShort(int index) => _superTrend.ElementAt(index).SellSignal;
 
-    private decimal CalculateDelta(int index) => (decimal)(_atr.ElementAt(index).Atr * _indicatorsOptions.AtrMultiplier)!;
-
-    private decimal CalculateSlPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice - delta : entryPrice + delta;
-
-    private decimal CalculateTpPrice(decimal entryPrice, bool isUpTrend, decimal delta) => isUpTrend ? entryPrice + (delta * _strategyOptions.RiskRewardRatio) : entryPrice - (delta * _strategyOptions.RiskRewardRatio);
-
-    private IMessage CreateOpenPositionMessage(Candle candle, int timeFrame, string direction, decimal slPrice, decimal? tpPrice, decimal entryPrice) => new Message()
+    private IMessage CreateOpenPositionMessage(Candle candle, int timeFrame, string direction, decimal entryPrice) => new Message()
     {
         From = _strategyOptions.ProviderName,
         Body = Message.CreateMessageBody(
@@ -101,9 +91,7 @@ public class Strategy : IStrategy
                 allowingParallelPositions: false,
                 closingAllPositions: false,
                 direction,
-                entryPrice,
-                slPrice,
-                tpPrice
+                entryPrice
             ),
         SentAt = candle.Date.AddSeconds(timeFrame)
     };
