@@ -3,8 +3,7 @@ version: "3.8"
 services:
     bot:
         container_name: bot
-        image: ghcr.io/hirbod-codes/bot:latest
-        restart: always
+        image: ghcr.io/hirbod-codes/bot:latest_linux_x64
         depends_on:
             - seq
         environment:

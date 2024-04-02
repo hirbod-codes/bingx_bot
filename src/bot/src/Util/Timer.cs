@@ -1,5 +1,4 @@
 using System.Timers;
-using MongoDB.Driver.Linq;
 
 namespace bot.src.Util;
 
