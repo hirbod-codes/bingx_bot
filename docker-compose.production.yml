@@ -6,6 +6,11 @@ services:
         image: ghcr.io/hirbod-codes/bot:latest
         depends_on:
             - seq
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
         environment:
             Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             MessageStoreName: InMemory
@@ -13,12 +18,12 @@ services:
             BrokerOptions__Bingx__ApiKey: ce7YRR5dNQwhPnGjTxbKm8y9ArYGtfi9V7gh4qYxebYTZtOjY49MxkD3al76uKoFtxoTVpfr84z11J2KRxAOw
             BrokerOptions__Bingx__ApiSecret: GjBZow7grcgclbKQMZHikttkMWDiUfdtZNOdjc7vHIoNu7egNfSvjGBOwCS6MvTgt5dl2zV34NsmrCr8PRyw
             BrokerOptions__Bingx__BaseUrl: open-api-vst.bingx.com
-            BrokerOptions__Bingx__TimeFrame: 180
+            BrokerOptions__Bingx__TimeFrame: 300
             BrokerOptions__Bingx__BrokerCommission: 0.001
             BrokerOptions__Bingx__Symbol: BTC-USDT
             RiskManagementName: SuperTrendV1
             RiskManagementOptions__SuperTrendV1__Margin: 100
-            RiskManagementOptions__SuperTrendV1__SLPercentages: 10
+            RiskManagementOptions__SuperTrendV1__SLPercentages: 12.5
             RiskManagementOptions__SuperTrendV1__BrokerCommission: 0.001
             RiskManagementOptions__SuperTrendV1__RiskRewardRatio: 2
             RiskManagementOptions__SuperTrendV1__CommissionPercentage: 100
@@ -29,7 +34,7 @@ services:
             IndicatorOptionsName: SuperTrendV1
             IndicatorOptionsName__SuperTrendV1__Atr__Period: 14
             IndicatorOptionsName__SuperTrendV1__Atr__Source: close
-            IndicatorOptionsName__SuperTrendV1__AtrMultiplier: 4
+            IndicatorOptionsName__SuperTrendV1__AtrMultiplier: 3.2
             IndicatorOptionsName__SuperTrendV1__SuperTrendOptions__Multiplier: 3.2
             IndicatorOptionsName__SuperTrendV1__SuperTrendOptions__Period: 30
             IndicatorOptionsName__SuperTrendV1__SuperTrendOptions__CandlePart: 10
@@ -40,11 +45,11 @@ services:
             # StrategyOptions__SuperTrendV1__InvalidWeekDays__0: 6
             BotName: SuperTrendV1
             BotOptions__SuperTrendV1__Provider: SuperTrendV1
-            BotOptions__SuperTrendV1__TimeFrame: 180
+            BotOptions__SuperTrendV1__TimeFrame: 300
             BotOptions__SuperTrendV1__ShouldSkipOnParallelPositionRequest: false
             RunnerName: SuperTrendV1
-            RunnerOptions__SuperTrendV1__TimeFrame: 180
-            RunnerOptions__SuperTrendV1__HistoricalCandlesCount: 20000
+            RunnerOptions__SuperTrendV1__TimeFrame: 300
+            RunnerOptions__SuperTrendV1__HistoricalCandlesCount: 5000
             NotifierName: ntfy
             PositionRepositoryType: InMemory
             CandleRepositoryType: InMemory
@@ -54,5 +59,10 @@ services:
         ports:
           - 8081:80
         restart: always
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
         environment:
             - ACCEPT_EULA=Y
