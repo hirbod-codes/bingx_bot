@@ -4,7 +4,6 @@ using bot.src.Brokers;
 using bot.src.Brokers.Bingx;
 using bot.src.Data;
 using bot.src.Indicators;
-using bot.src.Indicators.SuperTrendV1;
 using bot.src.MessageStores;
 using bot.src.Notifiers;
 using bot.src.RiskManagement;
@@ -22,42 +21,43 @@ namespace bot;
 
 public class Program
 {
+    private static IConfigurationRoot _configuration = null!;
     private static ILogger _logger = null!;
 
     private static async Task Main(string[] args)
     {
-        IConfigurationRoot configuration = new ConfigurationBuilder()
+        _configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
             .AddEnvironmentVariables()
             .AddCommandLine(args)
             .Build();
 
         _logger = new LoggerConfiguration()
-        .ReadFrom.Configuration(configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
+        .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
         .CreateLogger();
 
 
 
     start:
 
+        ApplySettings(out IMessageStoreOptions messageStoreOptions, out IBrokerOptions brokerOptions, out IRiskManagementOptions riskManagementOptions, out IIndicatorOptions indicatorOptions, out IStrategyOptions strategyOptions, out IBotOptions botOptions, out IRunnerOptions runnerOptions, out IPositionRepository positionRepository, out IMessageRepository messageRepository, out INotifier notifier);
         try
         {
-            ApplySettings(out IMessageStoreOptions messageStoreOptions, out IBrokerOptions brokerOptions, out IRiskManagementOptions riskManagementOptions, out IIndicatorOptions indicatorOptions, out IStrategyOptions strategyOptions, out IBotOptions botOptions, out IRunnerOptions runnerOptions, out IPositionRepository positionRepository, out IMessageRepository messageRepository, out INotifier notifier);
             try
             {
                 ITime time = new Time();
 
-                IBroker broker = BrokerFactory.CreateBroker(configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger, time);
+                IBroker broker = BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger, time);
 
-                IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
+                IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
 
-                IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, _logger);
+                IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(_configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, _logger);
 
-                IStrategy strategy = StrategyFactory.CreateStrategy(configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorOptions, riskManagement, broker, notifier, messageRepository, _logger);
+                IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorOptions, riskManagement, broker, notifier, messageRepository, _logger);
 
-                IBot bot = BotFactory.CreateBot(configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, _logger);
+                IBot bot = BotFactory.CreateBot(_configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, _logger);
 
-                IRunner runner = RunnerFactory.CreateRunner(configuration[ConfigurationKeys.RUNNER_NAME]!, runnerOptions, bot, broker, strategy, time, notifier, _logger);
+                IRunner runner = RunnerFactory.CreateRunner(_configuration[ConfigurationKeys.RUNNER_NAME]!, runnerOptions, bot, broker, strategy, time, notifier, _logger);
 
                 await runner.Run();
 
@@ -93,8 +93,11 @@ public class Program
 
     private static void ApplySettings(out IMessageStoreOptions messageStoreOptions, out IBrokerOptions brokerOptions, out IRiskManagementOptions riskManagementOptions, out IIndicatorOptions indicatorOptions, out IStrategyOptions strategyOptions, out IBotOptions botOptions, out IRunnerOptions runnerOptions, out IPositionRepository positionRepository, out IMessageRepository messageRepository, out INotifier notifier)
     {
+        _configuration[ConfigurationKeys.MESSAGE_STORE_NAME] = MessageStoreNames.IN_MEMORY;
         messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(MessageStoreNames.IN_MEMORY);
+        _logger.Information("messageStoreOptions: {@messageStoreOptions}", messageStoreOptions);
 
+        _configuration[ConfigurationKeys.BROKER_NAME] = BrokerNames.BINGX;
         brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(BrokerNames.BINGX);
         (brokerOptions as BrokerOptions)!.ApiKey = "ce7YRR5dNQwhPnGjTxbKm8y9ArYGtfi9V7gh4qYxebYTZtOjY49MxkD3al76uKoFtxoTVpfr84z11J2KRxAOw";
         (brokerOptions as BrokerOptions)!.ApiSecret = "GjBZow7grcgclbKQMZHikttkMWDiUfdtZNOdjc7vHIoNu7egNfSvjGBOwCS6MvTgt5dl2zV34NsmrCr8PRyw";
@@ -102,7 +105,9 @@ public class Program
         (brokerOptions as BrokerOptions)!.BrokerCommission = 0.001m;
         (brokerOptions as BrokerOptions)!.Symbol = "BTC-USDT";
         (brokerOptions as BrokerOptions)!.TimeFrame = 3600;
+        _logger.Information("brokerOptions: {@brokerOptions}", brokerOptions);
 
+        _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME] = RiskManagementNames.SUPER_TREND_V1;
         riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(RiskManagementNames.SUPER_TREND_V1);
         (riskManagementOptions as RiskManagementOptions)!.BrokerCommission = 0.001m;
         (riskManagementOptions as RiskManagementOptions)!.BrokerMaximumLeverage = 100;
@@ -113,22 +118,34 @@ public class Program
         (riskManagementOptions as RiskManagementOptions)!.NumberOfConcurrentPositions = 0;
         (riskManagementOptions as RiskManagementOptions)!.RiskRewardRatio = 2;
         (riskManagementOptions as RiskManagementOptions)!.SLPercentages = 12.5m;
+        _logger.Information("riskManagementOptions: {@riskManagementOptions}", riskManagementOptions);
 
         indicatorOptions = IndicatorOptionsFactory.CreateIndicatorOptions(IndicatorsOptionsNames.SUPER_TREND_V1);
+        _logger.Information("indicatorOptions: {@indicatorOptions}", indicatorOptions);
 
+        _configuration[ConfigurationKeys.STRATEGY_NAME] = StrategyNames.SUPER_TREND_V1;
         strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(StrategyNames.SUPER_TREND_V1);
         (strategyOptions as StrategyOptions)!.RiskRewardRatio = 2;
+        _logger.Information("strategyOptions: {@strategyOptions}", strategyOptions);
 
+        _configuration[ConfigurationKeys.BOT_NAME] = BotNames.SUPER_TREND_V1;
         botOptions = BotOptionsFactory.CreateBotOptions(BotNames.SUPER_TREND_V1);
         (botOptions as BotOptions)!.TimeFrame = 3600;
+        _logger.Information("botOptions: {@botOptions}", botOptions);
 
+        _configuration[ConfigurationKeys.RUNNER_NAME] = RunnerNames.SUPER_TREND_V1;
         runnerOptions = RunnerOptionsFactory.CreateRunnerOptions(RunnerNames.SUPER_TREND_V1);
         (runnerOptions as RunnerOptions)!.HistoricalCandlesCount = 5000;
         (runnerOptions as RunnerOptions)!.TimeFrame = 3600;
+        _logger.Information("runnerOptions: {@runnerOptions}", runnerOptions);
 
         positionRepository = PositionRepositoryFactory.CreateRepository(PositionRepositoryNames.IN_MEMORY);
+        _logger.Information("positionRepository: {@positionRepository}", positionRepository);
+
         messageRepository = MessageRepositoryFactory.CreateRepository(MessageRepositoryNames.IN_MEMORY);
+        _logger.Information("messageRepository: {@messageRepository}", messageRepository);
 
         notifier = NotifierFactory.CreateNotifier(NotifierNames.IN_MEMORY, messageRepository, _logger);
+        _logger.Information("notifier: {@notifier}", notifier);
     }
 }
