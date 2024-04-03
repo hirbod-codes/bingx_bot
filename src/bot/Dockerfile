@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS base
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -19,12 +19,26 @@ COPY ./src/bot/bot.csproj ./src/bot/
 COPY ./src/StrategyTester/StrategyTester.csproj ./src/StrategyTester/
 COPY ./Tests/unit_tests/unit_tests.csproj ./Tests/unit_tests/
 
-RUN dotnet restore -f --force-evaluate -a $TARGETARCH
+FROM base AS dev
+
+WORKDIR /app
+
+RUN dotnet restore
 
 COPY ./src/bot/ ./src/bot/
 
 WORKDIR /app/src/bot/
 
-RUN dotnet publish --no-restore -c Release -o /publish -a $TARGETARCH
+RUN dotnet build --no-restore -o /build
 
-CMD dotnet /publish/bot.dll
+CMD dotnet /build/bot.dll
+
+FROM base AS publish
+
+COPY ./src/bot/ ./src/bot/
+
+WORKDIR /app/src/bot/
+
+RUN dotnet publish -c Release -o /app/src/bot/publish -a $TARGETARCH
+
+CMD dotnet /app/src/bot/publish/bot.dll
