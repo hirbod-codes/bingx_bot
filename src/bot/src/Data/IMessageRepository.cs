@@ -5,7 +5,7 @@ namespace bot.src.Data;
 public interface IMessageRepository
 {
     public Task<IMessage> CreateMessage(IMessage message);
-    public Task<IMessage> CreateMessage(string message);
+    public Task<IMessage> CreateMessage(string body, string from);
     public Task<IMessage?> GetMessage(string id);
     public Task<IMessage?> GetLastMessage();
     public Task<IMessage?> GetLastMessage(string from);

@@ -6,8 +6,7 @@ namespace bot.src.Strategies.SmmaRsi;
 public class StrategyOptions : IStrategyOptions
 {
     public string ProviderName { get; set; } = null!;
-    public decimal TPDifference { get; set; }
-    public decimal SLDifference { get; set; }
+    public decimal RiskRewardRatio { get; set; }
     /// <summary>
     /// Can be left empty.
     /// </summary>
@@ -20,6 +19,4 @@ public class StrategyOptions : IStrategyOptions
     /// Can be left empty.
     /// </summary>
     public IEnumerable<DateTimePeriod> InvalidDatePeriods { get; set; } = Array.Empty<DateTimePeriod>();
-    public int NaturalTrendIndicatorLength { get; set; } = 0;
-    public decimal NaturalTrendIndicatorLimit { get; set; } = 0;
 }

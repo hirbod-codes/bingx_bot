@@ -5,9 +5,9 @@
         "appsettings.*.json",
         "cspell.json",
         "Properties/*",
-        "mongodb/*",
         "dockerComposeDevelopmentFileInitializer.js",
-        "dockerComposeProductionFileInitializer.js"
+        "dockerComposeProductionFileInitializer.js",
+        "src/StrategyTester/src/UI/Candlesticks/app.js"
     ],
     "dictionaryDefinitions": [],
     "dictionaries": [],

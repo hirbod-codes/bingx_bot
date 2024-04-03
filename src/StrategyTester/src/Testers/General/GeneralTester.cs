@@ -1,6 +1,4 @@
 using bot.src.Bots;
-using bot.src.Brokers;
-using bot.src.Data;
 using bot.src.Data.Models;
 using bot.src.Strategies;
 using Serilog;
@@ -10,16 +8,16 @@ namespace StrategyTester.src.Testers.General;
 
 public class GeneralTester : ITester
 {
-    private readonly ICandleRepository _candleRepository;
+    private readonly TesterOptions _testerOptions;
     private readonly ITime _time;
     private readonly IStrategy _strategy;
-    private readonly IBroker _broker;
+    private readonly Brokers.IBroker _broker;
     private readonly IBot _bot;
     private readonly ILogger _logger;
 
-    public GeneralTester(ICandleRepository candleRepository, ITime time, IStrategy strategy, IBroker broker, IBot bot, ILogger logger)
+    public GeneralTester(ITesterOptions testerOptions, ITime time, IStrategy strategy, Brokers.IBroker broker, IBot bot, ILogger logger)
     {
-        _candleRepository = candleRepository;
+        _testerOptions = (testerOptions as TesterOptions)!;
         _time = time;
         _strategy = strategy;
         _broker = broker;
@@ -29,27 +27,40 @@ public class GeneralTester : ITester
 
     public async Task Test()
     {
-        Candles candles = await _candleRepository.GetCandles();
-        int timeFrame = candles.TimeFrame;
+        _logger.Information("Testing...");
 
-        _strategy.InitializeIndicators(candles);
+        await _broker.InitiateCandleStore(_testerOptions.CandlesCount, _testerOptions.TimeFrame);
 
-        _logger.Information($"number of candles: {candles.Count()}");
+        await _strategy.PrepareIndicators();
 
-        for (int i = candles.Count() - 1; i > -1; i--)
+        while (!_broker.IsFinished())
         {
-            _logger.Information($"candle index: {i}");
+            if (await _broker.GetLastCandleIndex() < 203)
+            {
+                _broker.NextCandle();
+                continue;
+            }
 
-            Candle candle = candles.ElementAt(i);
+            Candle candle = await _broker.GetCandle() ?? throw new TesterException();
 
-            await _broker.SetCurrentCandle(candle);
+            _logger.Information("candle: {@candle}", candle);
 
-            _time.SetUtcNow(candle.Date);
-
-            await _strategy.HandleCandle(candle, i, timeFrame);
+            _time.SetUtcNow(candle.Date.AddSeconds(_testerOptions.TimeFrame));
 
             await _broker.CandleClosed();
+
+            try { await _strategy.HandleCandle(candle, _testerOptions.TimeFrame); }
+            catch (NotEnoughCandlesException)
+            {
+                _broker.NextCandle();
+                continue;
+            }
+
             await _bot.Tick();
+
+            _broker.NextCandle();
         }
+
+        _logger.Information("Finished testing...");
     }
 }

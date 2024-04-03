@@ -23,3 +23,8 @@ src/*log*
 security/
 
 Tests/manual_tests
+
+src/StrategyTester/src/Scenarios/**/results.js*
+src/StrategyTester/src/Scenarios/results.js*
+
+src/StrategyTester/src/UI/Candlesticks/Candles.js

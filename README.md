@@ -1,11 +1,24 @@
 # Instructions
 
-## To configure the bot modify appsettings.json file
+## set docker mtu to 1420
+
+## To configure the bot modify appsettings.json file or docker-compose environment variables
+
+## To Build images
+```bash
+sudo docker buildx build --push --tag ghcr.io/hirbod-codes/bot:latest --platform linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm -f src/bot/Dockerfile.production .
+```
+
+## In production
+
+```bash
+sudo docker compose -f docker-compose.production.yml up --build --remove-orphans
+```
 
 ## To configure the seq logger run
 
 ```bash
-sudo docker run -d --name seq1 -e ACCEPT_EULA=Y -v ./logs:/data:rw -p 8081:80 --restart unless-stopped datalust/seq
+sudo docker run --rm -e ACCEPT_EULA=Y -v ./src/bot/logs:/data:rw -p 8081:80 datalust/seq
 ```
 
 ## To start the bot run with required StrategyName configuration variable(you can also specify in appsettings.json)

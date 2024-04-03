@@ -1,13 +1,11 @@
-using bot.src.MessageStores;
-
 namespace bot.src.Notifiers;
 
 public class MessageSentEventArgs
 {
-    public MessageSentEventArgs(IMessage message)
+    public MessageSentEventArgs(string message)
     {
         Message = message;
     }
 
-    public IMessage Message { get; set; }
+    public string Message { get; set; }
 }

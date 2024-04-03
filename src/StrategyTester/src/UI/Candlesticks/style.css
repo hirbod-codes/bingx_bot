@@ -1,0 +1,10 @@
+body {
+    background-color: #aaa;
+    margin: 0px;
+    padding: 0px;
+}
+
+.chart {
+    height: 100vh;
+    margin: 5px;
+}

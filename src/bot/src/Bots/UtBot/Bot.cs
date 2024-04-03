@@ -18,9 +18,7 @@ public class Bot : IBot
     private readonly IMessageStore _messageStore;
     private readonly BotOptions _botOptions;
     private readonly IRiskManagement _riskManagement;
-    private string? _firstMessageDirection = null;
-    private string? _secondMessageId = null;
-    private string? _secondMessageDirection = null;
+    private string? _messageId = null;
 
     public Bot(IBotOptions botOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger, INotifier notifier)
     {
@@ -73,44 +71,19 @@ public class Bot : IBot
             return;
         }
 
-        if (!await _riskManagement.PermitOpenPosition())
+        decimal entryPrice = await _broker.GetLastPrice();
+
+        if (!await _riskManagement.IsPositionAcceptable(entryPrice, utBotMessage.SlPrice))
         {
             _logger.Information("Risk management rejects opening a position, skipping...");
             return;
         }
 
         decimal margin = _riskManagement.GetMargin();
-        decimal leverage = _riskManagement.GetLeverage(await _broker.GetLastPrice(), utBotMessage.SlPrice);
+        decimal leverage = _riskManagement.CalculateLeverage(await _broker.GetLastPrice(), utBotMessage.SlPrice);
 
         await CloseAllPositions();
-        await OpenMarketPosition(margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
-
-        await DeleteMessages(_botOptions.Provider);
-    }
-
-    private async Task DeleteMessages(string from)
-    {
-        _logger.Information("Deleting messages...");
-
-        Exception? exception = null;
-
-        for (int i = 0; i < _botOptions.MessageStoreFailureRetryCount; i++)
-            try
-            {
-                await _messageStore.DeleteMessages(from);
-                _logger.Information("Messages has been deleted...");
-            }
-            catch (MessageStoreException ex)
-            {
-                exception = ex;
-                _logger.Error(ex, "A message store failure encountered, retrying...");
-                await _time.Sleep(1000);
-            }
-
-        string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
-        _logger.Error(errorMessage);
-        await _notifier.SendMessage(errorMessage);
-        throw exception!;
+        await OpenMarketPosition(entryPrice, margin, leverage, utBotMessage.Direction, utBotMessage.SlPrice);
     }
 
     private async Task<IUtBotMessage?> CheckForSignal()
@@ -144,11 +117,19 @@ public class Bot : IBot
             {
                 exception = ex;
                 _logger.Error(ex, "A message store failure encountered, retrying...");
-                await _time.Sleep(1000);
+                await _time.Sleep(_botOptions.MessageStoreFailureRetryInterval);
             }
 
         string errorMessage = "failure in message store api has exceeded the configured retry count, terminating...";
         _logger.Error(errorMessage);
+
+        if (!_botOptions.ShouldTerminateAfterMessageStoreFailure)
+        {
+            _logger.Information("Skipping...");
+            return null;
+        }
+
+        _logger.Information("Terminating...");
         await _notifier.SendMessage(errorMessage);
         throw exception!;
     }
@@ -167,7 +148,7 @@ public class Bot : IBot
             return false;
         }
 
-        if (message.Id == _secondMessageId)
+        if (message.Id == _messageId)
         {
             _logger.Information("This message is already processed.");
             return false;
@@ -185,11 +166,9 @@ public class Bot : IBot
             return false;
         }
 
-        _firstMessageDirection = _secondMessageDirection;
-        _secondMessageId = message.Id;
-        _secondMessageDirection = message.Direction;
+        _messageId = message.Id;
 
-        return _firstMessageDirection == _secondMessageDirection;
+        return true;
     }
 
     private async Task CloseAllPositions()
@@ -208,16 +187,24 @@ public class Bot : IBot
             {
                 exception = ex;
                 _logger.Error(ex, "A broker failure encountered, retrying...");
-                await _time.Sleep(1000);
+                await _time.Sleep(_botOptions.BrokerFailureRetryInterval);
             }
 
-        string message = "failure in broker api has exceeded the configured retry count, terminating...";
+        string message = "failure in broker api has exceeded the configured retry count.";
         _logger.Error(message);
+
+        if (!_botOptions.ShouldTerminateAfterBrokerFailure)
+        {
+            _logger.Information("Skipping...");
+            return;
+        }
+
+        _logger.Information("Terminating...");
         await _notifier.SendMessage(message);
         throw exception!;
     }
 
-    private async Task OpenMarketPosition(decimal margin, decimal leverage, string direction, decimal slPrice)
+    private async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice)
     {
         _logger.Information("Opening a market position...");
 
@@ -226,7 +213,7 @@ public class Bot : IBot
         for (int i = 0; i < _botOptions.BrokerFailureRetryCount; i++)
             try
             {
-                await _broker.OpenMarketPosition(margin, leverage, direction, slPrice);
+                await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice);
                 _logger.Information("A market position has opened.");
                 return;
             }
@@ -234,11 +221,19 @@ public class Bot : IBot
             {
                 exception = ex;
                 _logger.Error(ex, "A broker failure encountered, retrying...");
-                await _time.Sleep(1000);
+                await _time.Sleep(_botOptions.BrokerFailureRetryInterval);
             }
 
         string message = "failure in broker api has exceeded the configured retry count, terminating...";
         _logger.Error(message);
+
+        if (!_botOptions.ShouldTerminateAfterBrokerFailure)
+        {
+            _logger.Information("Skipping...");
+            return;
+        }
+
+        _logger.Information("Terminating...");
         await _notifier.SendMessage(message);
         throw exception!;
     }

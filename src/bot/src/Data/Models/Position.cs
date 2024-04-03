@@ -38,6 +38,12 @@ public class Position
                 throw new ArgumentException("Invalid value provided", paramName: nameof(PositionDirection));
         }
     }
-    public DateTime OpenedAt { get; set; }
+    /// <summary>
+    /// Happens when a single candle crosses both tp and sl prices!
+    /// </summary>
+    public bool UnknownCloseState { get; set; } = false;
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
 }

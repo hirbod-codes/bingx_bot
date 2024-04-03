@@ -11,7 +11,7 @@ public class MessageStore : IMessageStore
     public MessageStore(IMessageRepository messageRepository, ILogger logger)
     {
         _messageRepository = messageRepository;
-        _logger = logger;
+        _logger = logger.ForContext<MessageStore>();
     }
 
     public Task<bool> DeleteMessage(string id) => _messageRepository.DeleteMessage(id);

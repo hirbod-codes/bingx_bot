@@ -5,20 +5,21 @@ public class BingxPositionDto
     public string PositionId { get; set; } = null!;
     public string Symbol { get; set; } = null!;
     public string Currency { get; set; } = null!;
-    public string PositionAmt { get; set; } = null!;
-    public string AvailableAmt { get; set; } = null!;
+    public decimal PositionAmt { get; set; }
+    public decimal AvailableAmt { get; set; }
     public string PositionSide { get; set; } = null!;
     public bool Isolated { get; set; }
-    public string AvgPrice { get; set; } = null!;
-    public string InitialMargin { get; set; } = null!;
-    public string Leverage { get; set; } = null!;
-    public string UnrealizedProfit { get; set; } = null!;
-    public string RealisedProfit { get; set; } = null!;
+    public decimal AvgPrice { get; set; }
+    public decimal InitialMargin { get; set; }
+    public int Leverage { get; set; }
+    public decimal UnrealizedProfit { get; set; }
+    public decimal RealisedProfit { get; set; }
     public decimal LiquidationPrice { get; set; }
-    public string PnlRatio { get; set; } = null!;
-    public string MaxMarginReduction { get; set; } = null!;
-    public string RiskRate { get; set; } = null!;
-    public string MarkPrice { get; set; } = null!;
-    public string PositionValue { get; set; } = null!;
+    public decimal PnlRatio { get; set; }
+    public decimal MaxMarginReduction { get; set; }
+    public decimal RiskRate { get; set; }
+    public decimal MarkPrice { get; set; }
+    public decimal PositionValue { get; set; }
     public bool OnlyOnePosition { get; set; }
+    public long UpdateTime { get; set; }
 }

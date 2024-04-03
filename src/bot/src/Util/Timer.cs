@@ -10,22 +10,22 @@ public class Time : ITime
 
     public Task StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
     {
-
-        System.Timers.Timer t = new()
+        System.Timers.Timer timer = new()
         {
+            Enabled = true,
             AutoReset = false,
             Interval = GetInterval(interval)
         };
 
-        t.Elapsed += new ElapsedEventHandler((o, args) =>
+        timer.Elapsed += elapsedEventHandler;
+
+        timer.Elapsed += new ElapsedEventHandler((o, args) =>
         {
-            t.Interval = GetInterval(interval);
-            t.Start();
+            timer.Interval = GetInterval(interval);
+            timer.Start();
         });
 
-        t.Elapsed += elapsedEventHandler;
-
-        t.Start();
+        timer.Start();
 
         return Task.CompletedTask;
     }
@@ -33,6 +33,18 @@ public class Time : ITime
     private static double GetInterval(int interval)
     {
         DateTime now = DateTime.UtcNow;
-        return (interval - now.Second) * 1000 - now.Millisecond;
+        DateTime tempNow = new(now.Ticks, DateTimeKind.Utc);
+
+        while (DateTimeOffset.Parse(tempNow.ToString()).ToUnixTimeSeconds() % interval != 0)
+            tempNow = tempNow.AddSeconds(1);
+
+        tempNow = tempNow.AddMilliseconds(-1 * tempNow.Millisecond);
+
+        double totalMilliseconds = (tempNow - now).TotalMilliseconds;
+
+        if (totalMilliseconds <= 0)
+            return (interval * 1000) - now.Millisecond;
+        else
+            return totalMilliseconds;
     }
 }

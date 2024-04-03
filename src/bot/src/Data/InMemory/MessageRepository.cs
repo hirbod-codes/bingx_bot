@@ -14,13 +14,14 @@ public class MessageRepository : IMessageRepository
         return Task.FromResult(message);
     }
 
-    public Task<IMessage> CreateMessage(string body)
+    public Task<IMessage> CreateMessage(string body, string from)
     {
         IMessage message = new Message
         {
             Id = !_messages.Any() ? "0" : (int.Parse(_messages.Last().Id) + 1).ToString(),
             Body = body,
-            SentAt=DateTime.UtcNow
+            From = from,
+            SentAt = DateTime.UtcNow
         };
         _messages = _messages.Append(message);
         return Task.FromResult(message);
