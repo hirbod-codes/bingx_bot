@@ -17,6 +17,8 @@ public class Bot : IBot
     private readonly BotOptions _generalBotOptions;
     private readonly IRiskManagement _riskManagement;
     private string? _previousMessageId = null;
+    private string _previousTrend = string.Empty;
+    private decimal _inTrendPositionsCount = 0;
 
     public Bot(IBotOptions generalBotOptions, IBroker broker, ITime time, IMessageStore messageStore, IRiskManagement riskManagement, ILogger logger)
     {
@@ -73,39 +75,56 @@ public class Bot : IBot
             return;
         }
 
-        if (!generalMessage.AllowingParallelPositions && (await _broker.GetOpenPositions()).Any())
+        IEnumerable<Position> openPositions = (await _broker.GetOpenPositions()).Where(o => o != null)!;
+
+        if (!generalMessage.AllowingParallelPositions && openPositions.Any())
         {
-            _logger.Information("Parallel positions is not allowed, skip until the position is closed.");
+            _logger.Information("Parallel positions is not allowed, Skipping...");
+            // _logger.Information("Parallel positions is not allowed, Closing all of the open positions...");
+            // await _broker.CloseAllPositions();
+            // _logger.Information("open positions are closed.");
             return;
         }
 
-        IEnumerable<Position> positions = await _broker.GetOpenPositions();
         if (
-            (generalMessage.Direction == PositionDirection.LONG && positions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
-            (generalMessage.Direction == PositionDirection.SHORT && positions.Any(o => o.PositionDirection == PositionDirection.LONG))
+            (generalMessage.Direction == PositionDirection.LONG && openPositions.Any(o => o.PositionDirection == PositionDirection.SHORT)) ||
+            (generalMessage.Direction == PositionDirection.SHORT && openPositions.Any(o => o.PositionDirection == PositionDirection.LONG))
         )
         {
             _logger.Information("There are open positions with opposite direction from the provided signal, skipping...");
             return;
         }
 
-        if (!await _riskManagement.PermitOpenPosition())
+        decimal entryPrice = await _broker.GetLastPrice();
+
+        if (!await _riskManagement.IsPositionAcceptable(entryPrice, generalMessage.SlPrice))
         {
             _logger.Information("Risk management rejects opening a position, skipping...");
             return;
         }
 
+        if (_previousTrend != generalMessage.Direction)
+        {
+            _inTrendPositionsCount = 0;
+            _previousTrend = generalMessage.Direction;
+        }
+
+        decimal leverage = _riskManagement.CalculateLeverage(entryPrice, generalMessage.SlPrice);
         decimal margin = _riskManagement.GetMargin();
-        decimal leverage = _riskManagement.GetLeverage((await _broker.GetCurrentCandle()).Close, generalMessage.SlPrice);
+
+        if (_generalBotOptions.ShouldDivideMargin && _inTrendPositionsCount <= 2)
+            margin /= (decimal)Math.Pow(2, (double)_inTrendPositionsCount);
 
         _logger.Information("Opening a market position...");
 
-        if (generalMessage.TpPrice is null)
-            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
+        if (generalMessage.TpPrice == null)
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, generalMessage.Direction, generalMessage.SlPrice);
         else
-            await _broker.OpenMarketPosition(margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
+            await _broker.OpenMarketPosition(entryPrice, margin, leverage, generalMessage.Direction, generalMessage.SlPrice, (decimal)generalMessage.TpPrice!);
 
         _logger.Information("market position is opened.");
+
+        _inTrendPositionsCount++;
     }
 
     private async Task<IGeneralMessage?> CheckForSignal()
@@ -131,7 +150,6 @@ public class Bot : IBot
 
     private bool ValidateMessage(IGeneralMessage? message)
     {
-
         if (message is null)
         {
             _logger.Information("Message has no signal!");
