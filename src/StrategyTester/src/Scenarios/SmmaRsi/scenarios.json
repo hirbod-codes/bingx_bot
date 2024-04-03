@@ -1,0 +1,74 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {},
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0.001,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 900
+        },
+        "RiskManagementName": "SmmaRsi",
+        "RiskManagementOptions": {
+            "Margin": 100,
+            "SLPercentages": 10,
+            "BrokerCommission": 0.001,
+            "CommissionPercentage": 10,
+            "RiskRewardRatio": 2,
+            "NumberOfConcurrentPositions": 0,
+            "GrossLossLimit": 0,
+            "GrossProfitLimit": 0
+        },
+        "IndicatorOptionsName": "SmmaRsi",
+        "IndicatorOptions": {
+            "AtrMultiplier": 2,
+            "Atr": {
+                "Period": 14,
+                "Source": "close"
+            },
+            "Smma1": {
+                "Period": 20,
+                "Source": "close"
+            },
+            "Smma2": {
+                "Period": 20,
+                "Source": "close"
+            },
+            "Smma3": {
+                "Period": 30,
+                "Source": "close"
+            },
+            "Rsi": {
+                "Period": 14,
+                "Source": "close",
+                "UpperBand": 54,
+                "LowerBand": 46
+            }
+        },
+        "StrategyName": "SmmaRsi",
+        "StrategyOptions": {
+            "ProviderName": "SmmaRsi",
+            "RiskRewardRatio": 2,
+            "InvalidWeekDays": [
+                0,
+                6
+            ]
+        },
+        "BotName": "General",
+        "BotOptions": {
+            "Provider": "SmmaRsi",
+            "TimeFrame": 900
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "TimeFrame": 900
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]

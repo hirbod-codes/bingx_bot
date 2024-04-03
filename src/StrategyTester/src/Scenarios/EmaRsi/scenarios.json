@@ -1,0 +1,43 @@
+[
+    {
+        "MessageStoreName": "InMemory",
+        "MessageStoreOptions": {},
+        "BrokerName": "InMemory",
+        "BrokerOptions": {
+            "BrokerCommission": 0.001,
+            "Symbol": "BTC-USDT",
+            "AccountOptions": {
+                "Balance": 10000
+            },
+            "TimeFrame": 900
+        },
+        "RiskManagementName": "EmaRsi",
+        "RiskManagementOptions": {
+            "BrokerCommission": 0.001,
+            "RiskRewardRatio": 2
+        },
+        "IndicatorOptionsName": "EmaRsi",
+        "StrategyName": "EmaRsi",
+        "StrategyOptions": {
+            "ProviderName": "EmaRsiStrategy",
+            "RiskRewardRatio": 2,
+            "InvalidWeekDays": [
+                0
+            ]
+        },
+        "BotName": "General",
+        "BotOptions": {
+            "Provider": "EmaRsiStrategy",
+            "TimeFrame": 900
+        },
+        "TesterName": "General",
+        "TesterOptions": {
+            "CandlesCount": 95000,
+            "TimeFrame": 900
+        },
+        "NotifierName": "InMemory",
+        "PositionRepositoryType": "InMemory",
+        "CandleRepositoryType": "InMemory",
+        "MessageRepositoryType": "InMemory"
+    }
+]

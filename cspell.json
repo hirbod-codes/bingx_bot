@@ -1,0 +1,20 @@
+{
+    "version": "0.2",
+    "ignorePaths": [
+        "appsettings.json",
+        "appsettings.*.json",
+        "cspell.json",
+        "Properties/*",
+        "dockerComposeDevelopmentFileInitializer.js",
+        "dockerComposeProductionFileInitializer.js",
+        "src/StrategyTester/src/UI/Candlesticks/app.js"
+    ],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [
+        "APIKEY",
+        "retoken"
+    ],
+    "ignoreWords": [],
+    "import": []
+}
