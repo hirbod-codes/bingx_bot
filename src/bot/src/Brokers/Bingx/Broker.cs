@@ -180,7 +180,11 @@ public class Broker : Api, IBroker
         _candles = new Candles(candles);
         _candles.SkipLast(2);
 
-        File.WriteAllText($"./{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
+        try
+        {
+            File.WriteAllText($"./{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
+        }
+        catch (System.Exception ex) { _logger.Error(ex, "Failure when trying to store fetched candles in hard dick."); }
 
         _logger.Information("Finished fetching historical candles...");
     }
