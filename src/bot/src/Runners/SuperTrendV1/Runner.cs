@@ -83,7 +83,7 @@ public class Runner : IRunner
 
             if (now > limitTime || candle == null)
             {
-                _logger.Information("Broker failed to provide latest candle!, skipping...");
+                _logger.Warning("Broker failed to provide latest candle on time!, skipping...");
                 return;
             }
 
@@ -97,18 +97,9 @@ public class Runner : IRunner
 
             _logger.Information("Runner finished ticking.");
         }
-        catch (BrokerException ex)
-        {
-            _logger.Error(ex, "A broker exception is thrown. Skipping...");
-        }
-        catch (StrategyException ex)
-        {
-            _logger.Error(ex, "A strategy exception is thrown. Skipping...");
-        }
-        catch (BotException ex)
-        {
-            _logger.Error(ex, "A bot exception is thrown. Skipping...");
-        }
+        catch (BrokerException ex) { _logger.Error(ex, "A broker exception is thrown. Skipping..."); }
+        catch (StrategyException ex) { _logger.Error(ex, "A strategy exception is thrown. Skipping..."); }
+        catch (BotException ex) { _logger.Error(ex, "A bot exception is thrown. Skipping..."); }
         catch (Exception ex)
         {
             _logger.Error(ex, "A system exception is thrown. Skipping...");
