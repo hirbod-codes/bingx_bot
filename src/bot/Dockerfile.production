@@ -19,7 +19,7 @@ COPY ./src/bot/bot.csproj ./src/bot/
 COPY ./src/StrategyTester/StrategyTester.csproj ./src/StrategyTester/
 COPY ./Tests/unit_tests/unit_tests.csproj ./Tests/unit_tests/
 
-RUN dotnet restore -f --force-evaluate -v d -a $TARGETARCH
+RUN dotnet restore -f --force-evaluate -a $TARGETARCH
 
 COPY ./src/bot/ ./src/bot/
 
