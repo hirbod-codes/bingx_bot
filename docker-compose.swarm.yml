@@ -4,14 +4,13 @@ networks:
         driver: overlay
 
 services:
-    bot:
-        container_name: bot
-        image: ghcr.io/hirbod-codes/bot:latest
-        ports:
-          - 443:443
+    seq:
+        image: datalust/seq:latest
         restart: always
+        ports:
+          - 444:80
         environment:
-            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            - ACCEPT_EULA=Y
         networks:
             - bot-network
         deploy:
@@ -20,12 +19,15 @@ services:
                 limits:
                     cpus: '0.75'
                     memory: 200M
-    seq:
-        image: datalust/seq:latest
+    bot:
+        image: ghcr.io/hirbod-codes/bot:latest
         ports:
-          - 444:80
+          - 443:443
+        restart: always
         environment:
-            - ACCEPT_EULA=Y
+            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            USER_MANAGEMENT_ASPNETCORE_ENVIRONMENT: Production
+            USER_MANAGEMENT_ENVIRONMENT: Production
         networks:
             - bot-network
         deploy:
