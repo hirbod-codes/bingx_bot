@@ -1,0 +1,34 @@
+version: "3.8"
+networks:
+    bot-network:
+        driver: overlay
+
+services:
+    bot:
+        container_name: bot
+        image: ghcr.io/hirbod-codes/bot:latest
+        ports:
+          - 443:443
+        restart: always
+        environment:
+            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+        networks:
+            - bot-network
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
+    seq:
+        image: datalust/seq:latest
+        ports:
+          - 444:80
+        environment:
+            - ACCEPT_EULA=Y
+        networks:
+            - bot-network
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
