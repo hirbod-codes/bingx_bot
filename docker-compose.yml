@@ -3,11 +3,14 @@ version: "3.8"
 services:
     bot:
         container_name: bot
-        image: ghcr.io/hirbod-codes/bot:latest
+        build:
+            context: ./src/bot
+            dockerfile: Dockerfile
         depends_on:
             - seq
         restart: always
         deploy:
+            replicas: 1
             resources:
                 limits:
                     cpus: '0.75'
@@ -61,6 +64,7 @@ services:
           - 8081:80
         restart: always
         deploy:
+            replicas: 1
             resources:
                 limits:
                     cpus: '0.75'
