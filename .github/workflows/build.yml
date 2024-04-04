@@ -32,7 +32,7 @@ jobs:
         with:
           push: true
           context: ./
-          file: ./src/bot/Dockerfile.production
+          file: ./src/bot/Dockerfile
           tags: ghcr.io/hirbod-codes/bot:latest
           target: publish
           cache-from: type=gha
