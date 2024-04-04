@@ -327,10 +327,10 @@ public class Broker : Api, IBroker
 
             string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 
-            _logger.Information(message);
-
             if (message == "Ping")
             {
+                _logger.Debug(message);
+
                 await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("Pong")), WebSocketMessageType.Binary, true, CancellationToken.None);
                 buffer = new byte[1024 * 4];
                 continue;
