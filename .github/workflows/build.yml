@@ -34,6 +34,7 @@ jobs:
           context: ./
           file: ./src/bot/Dockerfile.production
           tags: ghcr.io/hirbod-codes/bot:latest
+          target: publish
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm

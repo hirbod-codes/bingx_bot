@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using bot.src.MessageStores;
 using bot.src.MessageStores.InMemory.Models;
 
@@ -5,12 +6,12 @@ namespace bot.src.Data.InMemory;
 
 public class MessageRepository : IMessageRepository
 {
-    private IEnumerable<IMessage> _messages = Array.Empty<IMessage>();
+    private Collection<IMessage> _messages = new();
 
     public Task<IMessage> CreateMessage(IMessage message)
     {
         message.Id = !_messages.Any() ? "0" : (int.Parse(_messages.Last().Id) + 1).ToString();
-        _messages = _messages.Append(message);
+        _messages.Add(message);
         return Task.FromResult(message);
     }
 
@@ -23,25 +24,25 @@ public class MessageRepository : IMessageRepository
             From = from,
             SentAt = DateTime.UtcNow
         };
-        _messages = _messages.Append(message);
+        _messages.Add(message);
         return Task.FromResult(message);
     }
 
     public Task<bool> DeleteMessage(string id)
     {
-        _messages = _messages.Where(o => o.Id != id);
+        _messages = new(_messages.Where(o => o.Id != id).ToList());
         return Task.FromResult(true);
     }
 
     public Task<bool> DeleteMessages(IEnumerable<string> ids)
     {
-        _messages = _messages.Where(o => !ids.Contains(o.Id));
+        _messages = new(_messages.Where(o => !ids.Contains(o.Id)).ToList());
         return Task.FromResult(true);
     }
 
     public Task<bool> DeleteMessages(string from)
     {
-        _messages = _messages.Where(o => o.From != from);
+        _messages = new(_messages.Where(o => o.From != from).ToList());
         return Task.FromResult(true);
     }
 
@@ -51,7 +52,7 @@ public class MessageRepository : IMessageRepository
 
     public Task<IMessage?> GetMessage(string id) => Task.FromResult(_messages.FirstOrDefault(o => o.Id == id));
 
-    public Task<IEnumerable<IMessage>> GetMessages() => Task.FromResult(_messages);
+    public Task<IEnumerable<IMessage>> GetMessages() => Task.FromResult(_messages.AsEnumerable());
 
     public Task<IEnumerable<IMessage>> GetMessages(IEnumerable<string> ids) => Task.FromResult(_messages.Where(o => ids.Contains(o.Id)));
 

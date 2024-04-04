@@ -130,38 +130,52 @@ public class Bot : IBot
 
     private async Task CloseAllPositions(int retryCount)
     {
-        try
+        BrokerException? brokerException = null;
+        while (retryCount > 0)
         {
-            retryCount--;
-            await _broker.CloseAllPositions();
+            try
+            {
+                retryCount--;
+                await _broker.CloseAllPositions();
+                return;
+            }
+            catch (BrokerException ex)
+            {
+                brokerException = ex;
+                if (retryCount > 0)
+                    _logger.Information("Operation failed, retrying...");
+            }
         }
-        catch (BrokerException ex)
-        {
-            if (retryCount > 0)
-                _logger.Information("Operation failed, retrying...");
-            else
-                _logger.Error(ex, "Operation failed, terminating...");
-        }
+
+        _logger.Error(brokerException, "Operation failed, retrying...");
+        throw brokerException!;
     }
 
     private async Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice, decimal? tpPrice, int retryCount)
     {
-        try
+        BrokerException? brokerException = null;
+        while (retryCount > 0)
         {
-            retryCount--;
+            try
+            {
+                retryCount--;
 
-            if (tpPrice == null)
-                await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice);
-            else
-                await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice, (decimal)tpPrice!);
+                if (tpPrice == null)
+                    await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice);
+                else
+                    await _broker.OpenMarketPosition(entryPrice, margin, leverage, direction, slPrice, (decimal)tpPrice!);
+                return;
+            }
+            catch (BrokerException ex)
+            {
+                brokerException = ex;
+                if (retryCount > 0)
+                    _logger.Information("Operation failed, retrying...");
+            }
         }
-        catch (BrokerException ex)
-        {
-            if (retryCount > 0)
-                _logger.Information("Operation failed, retrying...");
-            else
-                _logger.Error(ex, "Operation failed, terminating...");
-        }
+
+        _logger.Error(brokerException, "Operation failed, retrying...");
+        throw brokerException!;
     }
 
     private async Task<Message?> CheckForSignal()
