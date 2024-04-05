@@ -9,4 +9,11 @@ public static class BrokerOptionsFactory
         BrokerNames.BINGX => new BingxBrokerOptions(),
         _ => throw new Exception()
     };
+
+    public static Type? GetInstanceType(string? name) => name switch
+    {
+        null => null,
+        BrokerNames.BINGX => typeof(BingxBrokerOptions),
+        _ => throw new Exception()
+    };
 }
