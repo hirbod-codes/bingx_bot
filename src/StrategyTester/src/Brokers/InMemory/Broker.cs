@@ -319,4 +319,19 @@ public class Broker : IBroker
         Position?[] positions = (await GetPendingPositions()).Where(o => o != null && o.PositionDirection == PositionDirection.SHORT).ToArray();
         await CancelAllPendingPositions(positions);
     }
+
+    public void StopListening()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void StartListening()
+    {
+        throw new NotImplementedException();
+    }
+
+    public decimal GetBalance()
+    {
+        throw new NotImplementedException();
+    }
 }
