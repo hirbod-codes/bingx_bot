@@ -1,5 +1,5 @@
 using bot.src.Brokers;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace StrategyTester.src.Brokers.InMemory;
 

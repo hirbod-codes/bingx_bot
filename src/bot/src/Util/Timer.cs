@@ -1,4 +1,5 @@
 using System.Timers;
+using Timer = System.Timers.Timer;
 
 namespace bot.src.Util;
 
@@ -8,16 +9,14 @@ public class Time : ITime
 
     public async Task Sleep(int milliseconds) => await Task.Delay(milliseconds);
 
-    public Task StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
+    public Task<Timer> StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
     {
-        System.Timers.Timer timer = new()
+        Timer timer = new()
         {
             Enabled = true,
             AutoReset = false,
             Interval = GetInterval(interval)
         };
-
-        timer.Elapsed += elapsedEventHandler;
 
         timer.Elapsed += new ElapsedEventHandler((o, args) =>
         {
@@ -25,9 +24,11 @@ public class Time : ITime
             timer.Start();
         });
 
+        timer.Elapsed += elapsedEventHandler;
+
         timer.Start();
 
-        return Task.CompletedTask;
+        return Task.FromResult(timer);
     }
 
     private static double GetInterval(int interval)

@@ -1,7 +1,7 @@
 using bot.src.Data.Models;
 using bot.src.MessageStores;
 using bot.src.Notifiers;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using Skender.Stock.Indicators;
 using bot.src.Indicators;
 using bot.src.Indicators.SuperTrendV1;

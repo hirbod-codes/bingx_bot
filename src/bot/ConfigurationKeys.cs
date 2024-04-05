@@ -18,9 +18,9 @@ public static class ConfigurationKeys
     public const string INDICATOR_OPTIONS = "IndicatorOptions";
     public const string RISK_MANAGEMENT_NAME = "RiskManagementName";
     public const string RISK_MANAGEMENT_OPTIONS = "RiskManagementOptions";
-    public const string POSITION_REPOSITORY_TYPE = "PositionRepositoryType";
-    public const string CANDLE_REPOSITORY_TYPE = "CandleRepositoryType";
-    public const string MESSAGE_REPOSITORY_TYPE = "MessageRepositoryType";
+    public const string POSITION_REPOSITORY_NAME = "PositionRepositoryName";
+    public const string CANDLE_REPOSITORY_NAME = "CandleRepositoryName";
+    public const string MESSAGE_REPOSITORY_NAME = "MessageRepositoryName";
     public const string TESTER_NAME = "TesterName";
     public const string TESTER_OPTIONS = "TesterOptions";
 }

@@ -9,9 +9,9 @@ namespace bot.src.PnLAnalysis;
 
 public static class PnLAnalysis
 {
-    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository, Dictionary<string, object> indicators, IRiskManagement riskManagement, IBrokerOptions brokerOptions)
+    public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository, Dictionary<string, object> indicators, IRiskManagement riskManagement, IBroker broker)
     {
-        decimal accountBalance = brokerOptions.AccountOptions.Balance;
+        decimal accountBalance = broker.GetBalance();
 
         IEnumerable<Position> closedPositions = (await repo.GetClosedPositions()).Where(o => o != null)!;
 

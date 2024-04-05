@@ -1,6 +1,6 @@
 using bot.src.MessageStores;
 using Moq;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace unit_tests;
 

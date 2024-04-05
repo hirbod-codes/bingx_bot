@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using bot.src.Brokers.Bingx.Exceptions;
 using bot.src.Brokers.Bingx.Models;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Brokers.Bingx;
 

@@ -11,4 +11,12 @@ public static class PositionRepositoryFactory
         PositionRepositoryNames.NONE => new NonePositionRepository(),
         _ => throw new Exception()
     };
+
+    public static Type? GetInstanceType(string? name) => name switch
+    {
+        null => null,
+        PositionRepositoryNames.IN_MEMORY => typeof(InMemoryPositionRepository),
+        PositionRepositoryNames.NONE => typeof(NonePositionRepository),
+        _ => throw new Exception()
+    };
 }

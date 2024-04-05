@@ -1,5 +1,6 @@
 using System.Timers;
 using bot.src.Util;
+using Timer = System.Timers.Timer;
 
 namespace StrategyTester.src.Utils;
 
@@ -16,7 +17,7 @@ public class Time : ITime
         throw new NotImplementedException();
     }
 
-    public Task StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
+    public Task<Timer> StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
     {
         throw new NotImplementedException();
     }

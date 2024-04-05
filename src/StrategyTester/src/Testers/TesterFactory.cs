@@ -2,7 +2,7 @@ using bot.src.Bots;
 using bot.src.Strategies;
 using StrategyTester.src.Utils;
 using StrategyTester.src.Testers.General;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace StrategyTester.src.Testers;
 
