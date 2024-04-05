@@ -37,8 +37,6 @@ public class Program
         _configuration.AddJsonFile("appsettings.json");
         _configuration.AddEnvironmentVariables(ENV_PREFIX);
 
-        _logger.Information("Environment: {Environment}", builder.Environment.EnvironmentName);
-
         if (builder.Environment.IsProduction())
             _configuration.AddDockerSecrets(allowedPrefixesCommaDelimited: _configuration["SECRETS_PREFIX"]);
         else
@@ -47,6 +45,8 @@ public class Program
         _logger = new LoggerConfiguration()
             .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
             .CreateLogger();
+
+        _logger.Information("Environment: {Environment}", builder.Environment.EnvironmentName);
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddOpenApiDocument(config =>
