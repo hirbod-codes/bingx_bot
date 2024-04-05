@@ -66,9 +66,9 @@ public class Broker : Api, IBroker
         {
             // In case _candles is empty or it is not empty but is 500 candles old
             if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
-                await FetchHistoricalCandles(_timeFrame, _candlesCount);
+                await FetchHistoricalCandles(_candlesCount, _timeFrame);
 
-            await FetchRecentCandles(_timeFrame, _candlesCount);
+            await FetchRecentCandles(_candlesCount, _timeFrame);
 
             if (_candles.Count() + 3 < _candlesCount)
                 throw new BingxException("System failed to fetch enough candles.");
@@ -115,6 +115,7 @@ public class Broker : Api, IBroker
 
         _candlesCount = (int)candlesCount;
 
+        // Make public able to use other arbitrary time frames.
         timeFrame ??= _brokerOptions.TimeFrame;
         _timeFrame = (int)timeFrame;
 
@@ -128,7 +129,7 @@ public class Broker : Api, IBroker
         return Task.CompletedTask;
     }
 
-    private async Task FetchHistoricalCandles(int timeFrame, int candlesCount)
+    private async Task FetchHistoricalCandles(int candlesCount, int timeFrame)
     {
         _logger.Information("Fetching historical candles...");
         _logger.Information($"{nameof(candlesCount)}: {{candlesCount}}", candlesCount);
