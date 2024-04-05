@@ -9,13 +9,7 @@ using bot.src.Runners;
 using bot.src.Strategies;
 using bot.src.Util;
 using ILogger = Serilog.ILogger;
-using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
-using Serilog;
-using bot.src.Configuration.Providers.DockerSecrets;
-using bot.src.Models;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Serilog;
 using bot.src.Configuration.Providers.DockerSecrets;
 using bot.src.Models;
@@ -30,28 +24,10 @@ public class Program
     public static string RootPath { get; set; } = "";
 
     private static ConfigurationManager _configuration = null!;
-    public const string ENV_PREFIX = "BOT_";
-    public static string RootPath { get; set; } = "";
-
-    private static ConfigurationManager _configuration = null!;
     private static ILogger _logger = null!;
 
     private static void Main(string[] args)
-    private static void Main(string[] args)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-
-        _configuration = builder.Configuration;
-
-        RootPath = builder.Environment.ContentRootPath;
-
-        _configuration.AddJsonFile("appsettings.json");
-        _configuration.AddEnvironmentVariables(ENV_PREFIX);
-
-        if (builder.Environment.IsProduction())
-            _configuration.AddDockerSecrets(allowedPrefixesCommaDelimited: _configuration["SECRETS_PREFIX"]);
-        else
-            _configuration.AddJsonFile("appsettings.development.json");
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
         _configuration = builder.Configuration;
@@ -69,90 +45,7 @@ public class Program
         _logger = new LoggerConfiguration()
             .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
             .CreateLogger();
-            .ReadFrom.Configuration(_configuration, new ConfigurationReaderOptions() { SectionName = ConfigurationKeys.SERILOG })
-            .CreateLogger();
 
-        _logger.Information("Environment: {Environment}", builder.Environment.EnvironmentName);
-
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddOpenApiDocument(config =>
-        {
-            config.DocumentName = "TodoAPI";
-            config.Title = "TodoAPI v1";
-            config.Version = "v1";
-        });
-
-        var app = builder.Build();
-
-        OptionsNames.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
-        OptionsNames.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
-        OptionsNames.NotifierName = _configuration[ConfigurationKeys.NOTIFIER_NAME];
-        OptionsNames.MessageStoreName = _configuration[ConfigurationKeys.MESSAGE_STORE_NAME];
-        OptionsNames.BrokerName = _configuration[ConfigurationKeys.BROKER_NAME];
-        OptionsNames.RiskManagementName = _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME];
-        OptionsNames.StrategyName = _configuration[ConfigurationKeys.STRATEGY_NAME];
-        OptionsNames.IndicatorOptionsName = _configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME];
-        OptionsNames.BotName = _configuration[ConfigurationKeys.BOT_NAME];
-        OptionsNames.RunnerName = _configuration[ConfigurationKeys.RUNNER_NAME];
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseOpenApi();
-            app.UseSwaggerUi(config =>
-            {
-                config.DocumentTitle = "Bot";
-                config.Path = "/swagger";
-                config.DocumentPath = "/swagger/{documentName}/swagger.json";
-                config.DocExpansion = "list";
-            });
-        }
-
-        Options? options = new();
-        Services? services = null;
-
-        if (app.Environment.IsDevelopment())
-            options = Options.ApplyDefaults();
-
-        async Task WaitForRunnerToTick()
-        {
-            long timeFrame = options.TimeFrame ?? 60;
-            DateTime dt = DateTime.UtcNow;
-            do
-            {
-                await Task.Delay(1000);
-                dt = dt.AddSeconds(1);
-            } while (DateTimeOffset.Parse(dt.ToString()).ToUnixTimeSeconds() % timeFrame < 7);
-        }
-
-        // ------------------------------------------------------------------------------------------------ Options
-
-        app.MapGet("/options", () => Results.Ok(
-            new
-            {
-                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, OptionsNames.BotOptionsType!), OptionsNames.BotOptionsType!),
-                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, OptionsNames.RunnerOptionsType!), OptionsNames.RunnerOptionsType!),
-                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, OptionsNames.StrategyOptionsType!), OptionsNames.StrategyOptionsType!),
-                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, OptionsNames.IndicatorOptionsType!), OptionsNames.IndicatorOptionsType!),
-                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, OptionsNames.RiskManagementOptionsType!), OptionsNames.RiskManagementOptionsType!),
-                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, OptionsNames.BrokerOptionsType!), OptionsNames.BrokerOptionsType!)
-            }
-        ));
-
-        app.MapPatch("/bot-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.BotOptions = (IBotOptions)opt.Deserialize(OptionsNames.BotOptionsType!)!;
-
-                return Results.Ok();
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
-
-        app.MapPatch("/runner-options", async (JsonNode opt) =>
         _logger.Information("Environment: {Environment}", builder.Environment.EnvironmentName);
 
         builder.Services.AddEndpointsApiExplorer();
