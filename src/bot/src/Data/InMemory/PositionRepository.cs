@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using bot.src.Brokers.InMemory.Exceptions;
 using bot.src.Data.Models;
@@ -7,15 +8,15 @@ namespace bot.src.Data.InMemory;
 public class PositionRepository : IPositionRepository
 {
     private int _lastId = 0;
-    private List<Position> _positions = new();
-    private readonly List<Position?> _openPositions = new();
+    private Collection<Position> _positions = new();
+    private readonly Collection<Position?> _openPositions = new();
     private bool _anyOpenedPosition = false;
     private bool _anyPendingPosition = false;
     private bool _anyCancelledPosition = false;
     private bool _anyClosedPosition = false;
-    private readonly List<Position?> _cancelledPositions = new();
-    private readonly List<Position?> _closedPositions = new();
-    private readonly List<Position?> _pendingPositions = new();
+    private readonly Collection<Position?> _cancelledPositions = new();
+    private readonly Collection<Position?> _closedPositions = new();
+    private readonly Collection<Position?> _pendingPositions = new();
 
     private Task<Position> CreatePosition(Position position, string status)
     {

@@ -4,8 +4,8 @@ namespace bot.src.Strategies.SuperTrendV1;
 
 public class StrategyOptions : IStrategyOptions
 {
-    public string ProviderName { get; set; } = null!;
-    public decimal RiskRewardRatio { get; set; }
+    public string ProviderName { get; set; } = StrategyNames.SUPER_TREND_V1;
+    public decimal RiskRewardRatio { get; set; } = 2;
     /// <summary>
     /// Can be left empty.
     /// </summary>
