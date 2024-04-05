@@ -25,6 +25,9 @@ WORKDIR /app
 
 RUN dotnet restore
 
+RUN dotnet dev-certs https --clean
+RUN dotnet dev-certs https --trust
+
 COPY ./src/bot/ ./src/bot/
 
 WORKDIR /app/src/bot/
