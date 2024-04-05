@@ -13,4 +13,12 @@ public static class NotifierFactory
         NotifierNames.IN_MEMORY => new InMemoryNotifier(messageRepository, logger),
         _ => throw new Exception()
     };
+
+    public static Type? GetInstanceType(string? name) => name switch
+    {
+        null => null,
+        NotifierNames.NTFY => typeof(NtfyNotifier),
+        NotifierNames.IN_MEMORY => typeof(InMemoryNotifier),
+        _ => throw new Exception()
+    };
 }
