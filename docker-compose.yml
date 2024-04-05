@@ -31,10 +31,9 @@ services:
                     cpus: '0.75'
                     memory: 200M
         environment:
-            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
-            BOT_ASPNETCORE_ENVIRONMENT: Development
-            BOT_ENVIRONMENT: Development
-            BOT_SECRETS_PREFIX: BOT_
+            ASPNETCORE_ENVIRONMENT: Development
+            ENVIRONMENT: Development
+            BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
             BOT_RiskManagementName: SuperTrendV1
