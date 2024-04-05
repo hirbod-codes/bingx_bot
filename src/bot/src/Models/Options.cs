@@ -31,8 +31,8 @@ public class Options
         BotOptions = new BotOptions() { TimeFrame = 180 },
         BrokerOptions = new BrokerOptions()
         {
-            ApiKey = "ce7YRR5dNQwhPnGjTxbKm8y9ArYGtfi9V7gh4qYxebYTZtOjY49MxkD3al76uKoFtxoTVpfr84z11J2KRxAOw",
-            ApiSecret = "GjBZow7grcgclbKQMZHikttkMWDiUfdtZNOdjc7vHIoNu7egNfSvjGBOwCS6MvTgt5dl2zV34NsmrCr8PRyw",
+            ApiKey = "",
+            ApiSecret = "",
             BaseUrl = "open-api-vst.bingx.com",
             BrokerCommission = 0.001m,
             Symbol = "BTC-USDT",
