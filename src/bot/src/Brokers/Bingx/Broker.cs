@@ -69,8 +69,6 @@ public class Broker : Api, IBroker
                 if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
                     await FetchHistoricalCandles(_timeFrame, _candlesCount);
 
-                await FetchRecentCandles(_candlesCount, _timeFrame);
-
                 if (_candles.Count() + 3 < _candlesCount)
                     throw new BingxException("System failed to fetch enough candles.");
 
@@ -89,23 +87,24 @@ public class Broker : Api, IBroker
     private async Task StartCandleWebSocket()
     {
         if (!_isListeningForCandles && !_shouldStopListening)
-            try { await ListenForCandles(_candlesCount, _timeFrame); }
-            catch (MissingCandlesException ex)
-            {
-                _logger.Error(ex, "Missing candles detected!");
-                _areCandlesFetched = false;
-                RefetchCandles?.Invoke(this, EventArgs.Empty);
+            if (!_isListeningForCandles && !_shouldStopListening)
+                try { await ListenForCandles(_candlesCount, _timeFrame); }
+                catch (MissingCandlesException ex)
+                {
+                    _logger.Error(ex, "Missing candles detected!");
+                    _areCandlesFetched = false;
+                    RefetchCandles?.Invoke(this, EventArgs.Empty);
 
-                _isListeningForCandles = false;
-                RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
-            }
-            catch (System.Exception ex)
-            {
-                _logger.Error(ex, "The broker's listener has failed, Restarting...");
+                    _isListeningForCandles = false;
+                    RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
+                }
+                catch (System.Exception ex)
+                {
+                    _logger.Error(ex, "The broker's listener has failed, Restarting...");
 
-                _isListeningForCandles = false;
-                RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
-            }
+                    _isListeningForCandles = false;
+                    RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
+                }
     }
 
     public Task InitiateCandleStore(int? candlesCount = null, int? timeFrame = null)
@@ -266,46 +265,46 @@ public class Broker : Api, IBroker
 
         _candles.TakeLast(_candlesCount);
 
+        _candles.TakeLast(_candlesCount);
+
         _logger.Information("Last candle's date: {lastCandleDate}", _candles.Last().Date);
         _logger.Information("Finished fetching recent candles...");
     }
 
     public async Task ListenForCandles(int candlesCount, int timeFrame)
     {
-        _logger.Information("Listening for candles...");
-
-        ClientWebSocket ws = new();
-
-        await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
-
-        string id = Guid.NewGuid().ToString();
-        while (true)
+        try
         {
-            if (ws.State != WebSocketState.Open)
-                continue;
+            _logger.Information("Listening for candles...");
 
-            await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+            ClientWebSocket ws = new();
+
+            await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
+
+            string id = Guid.NewGuid().ToString();
+            while (true)
             {
-                id,
-                reqType = "sub",
-                dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
-            }))), WebSocketMessageType.Text, true, CancellationToken.None);
+                if (ws.State != WebSocketState.Open)
+                    continue;
 
-            break;
-        }
+                await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+                {
+                    id,
+                    reqType = "sub",
+                    dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
+                }))), WebSocketMessageType.Text, true, CancellationToken.None);
 
-        byte[] buffer = new byte[1024 * 4];
-        Candle? previousCandle = null;
-        while (true)
-        {
-            if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
-                continue;
+                break;
+            }
 
             byte[] buffer = new byte[1024 * 4];
             _previousCandle = null;
             while (true)
             {
-                string state = ws.State switch
+                if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
+                    continue;
+
+                if (ws.State == WebSocketState.Closed || ws.State == WebSocketState.Aborted || ws.State == WebSocketState.CloseReceived)
                 {
                     _logger.Information("Websocket state: {state}", ws.State);
                     break;
@@ -324,8 +323,7 @@ public class Broker : Api, IBroker
 
                 byte[] bytes = await _utilities.DecompressBytes(buffer);
 
-            if (!_isListeningForCandles)
-                _isListeningForCandles = true;
+                string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 
                 if (message == "Ping")
                 {
@@ -336,16 +334,23 @@ public class Broker : Api, IBroker
                     continue;
                 }
 
-            if (result.MessageType == WebSocketMessageType.Close)
-                break;
+                BingxWsResponse? wsResponse = JsonSerializer.Deserialize<BingxWsResponse>(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
-            byte[] bytes = await _utilities.DecompressBytes(buffer);
+                if (wsResponse != null && wsResponse.Id != null && wsResponse.Id != id)
+                    throw new BingxException("Invalid id provided by the server.");
 
-            string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
+                    continue;
 
-            if (message == "Ping")
-            {
-                _logger.Debug(message);
+                Candle candle = new()
+                {
+                    Open = decimal.Parse(wsResponse.Data!.First().o),
+                    Close = decimal.Parse(wsResponse.Data!.First().c),
+                    High = decimal.Parse(wsResponse.Data!.First().h),
+                    Low = decimal.Parse(wsResponse.Data!.First().l),
+                    Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
+                    Volume = decimal.Parse(wsResponse.Data!.First().v)
+                };
 
                 if (!_areCandlesFetched)
                 {
@@ -364,21 +369,7 @@ public class Broker : Api, IBroker
                     _logger.Information("Last candle close date: {lastCandleDate}", _candles.Last()!.Date.AddSeconds(_brokerOptions.TimeFrame));
                     _logger.Information("Closed candle open date: {closedCandleDate}", _previousCandle.Date);
 
-            Candle candle = new()
-            {
-                Open = decimal.Parse(wsResponse.Data!.First().o),
-                Close = decimal.Parse(wsResponse.Data!.First().c),
-                High = decimal.Parse(wsResponse.Data!.First().h),
-                Low = decimal.Parse(wsResponse.Data!.First().l),
-                Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
-                Volume = decimal.Parse(wsResponse.Data!.First().v)
-            };
-
-            if (!_areCandlesFetched)
-            {
-                previousCandle = candle;
-                continue;
-            }
+                    _areCandlesFetched = false;
 
                     throw new MissingCandlesException();
                 }
@@ -391,16 +382,15 @@ public class Broker : Api, IBroker
                     _logger.Information("Candles count: {count}", _candles.Count());
                 }
 
-                throw new MissingCandlesException();
-            }
+                if (candlesCount < _candles.Count())
+                    _candles.Skip(_candles.Count() - candlesCount);
 
                 _previousCandle = candle;
             }
 
-            if (candlesCount < _candles.Count())
-                _candles.Skip(_candles.Count() - candlesCount);
+            await ws.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
 
-            previousCandle = candle;
+            _logger.Information("Finished listening for candles...");
         }
         finally
         {
@@ -460,7 +450,7 @@ public class Broker : Api, IBroker
         if (_previousCandle != null)
         {
             _logger.Information("Getting last price of the symbol...");
-            lastPrice= _previousCandle.Close;
+            lastPrice = _previousCandle.Close;
             _logger.Information("Got symbol's last price: {price}", _previousCandle.Close);
             return lastPrice;
         }

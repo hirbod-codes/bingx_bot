@@ -1,17 +1,12 @@
 ﻿using bot.src.Bots;
-using bot.src.Bots.SuperTrendV1;
 using bot.src.Brokers;
-using bot.src.Brokers.Bingx;
 using bot.src.Data;
 using bot.src.Indicators;
 using bot.src.MessageStores;
 using bot.src.Notifiers;
 using bot.src.RiskManagement;
-using bot.src.RiskManagement.SuperTrendV1;
 using bot.src.Runners;
-using bot.src.Runners.SuperTrendV1;
 using bot.src.Strategies;
-using bot.src.Strategies.SuperTrendV1;
 using bot.src.Util;
 using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
@@ -267,63 +262,5 @@ public class Program
         services.Runner = RunnerFactory.CreateRunner(OptionsNames.RunnerName!, options.RunnerOptions!, services.Bot, services.Broker, services.Strategy, services.Time, services.Notifier!, _logger);
 
         return services;
-    }
-
-    private static void ApplySettings(out IMessageStoreOptions messageStoreOptions, out IBrokerOptions brokerOptions, out IRiskManagementOptions riskManagementOptions, out IIndicatorOptions indicatorOptions, out IStrategyOptions strategyOptions, out IBotOptions botOptions, out IRunnerOptions runnerOptions, out IPositionRepository positionRepository, out IMessageRepository messageRepository, out INotifier notifier)
-    {
-        _configuration[ConfigurationKeys.MESSAGE_STORE_NAME] = MessageStoreNames.IN_MEMORY;
-        messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(MessageStoreNames.IN_MEMORY);
-        _logger.Information("messageStoreOptions: {@messageStoreOptions}", messageStoreOptions);
-
-        _configuration[ConfigurationKeys.BROKER_NAME] = BrokerNames.BINGX;
-        brokerOptions = BrokerOptionsFactory.CreateBrokerOptions(BrokerNames.BINGX);
-        (brokerOptions as BrokerOptions)!.ApiKey = "ce7YRR5dNQwhPnGjTxbKm8y9ArYGtfi9V7gh4qYxebYTZtOjY49MxkD3al76uKoFtxoTVpfr84z11J2KRxAOw";
-        (brokerOptions as BrokerOptions)!.ApiSecret = "GjBZow7grcgclbKQMZHikttkMWDiUfdtZNOdjc7vHIoNu7egNfSvjGBOwCS6MvTgt5dl2zV34NsmrCr8PRyw";
-        (brokerOptions as BrokerOptions)!.BaseUrl = "open-api-vst.bingx.com";
-        (brokerOptions as BrokerOptions)!.BrokerCommission = 0.001m;
-        (brokerOptions as BrokerOptions)!.Symbol = "BTC-USDT";
-        (brokerOptions as BrokerOptions)!.TimeFrame = 3600;
-        _logger.Information("brokerOptions: {@brokerOptions}", brokerOptions);
-
-        _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME] = RiskManagementNames.SUPER_TREND_V1;
-        riskManagementOptions = RiskManagementOptionsFactory.RiskManagementOptions(RiskManagementNames.SUPER_TREND_V1);
-        (riskManagementOptions as RiskManagementOptions)!.BrokerCommission = 0.001m;
-        (riskManagementOptions as RiskManagementOptions)!.BrokerMaximumLeverage = 100;
-        (riskManagementOptions as RiskManagementOptions)!.CommissionPercentage = 100;
-        (riskManagementOptions as RiskManagementOptions)!.GrossLossLimit = 0;
-        (riskManagementOptions as RiskManagementOptions)!.GrossProfitLimit = 0;
-        (riskManagementOptions as RiskManagementOptions)!.Margin = 100;
-        (riskManagementOptions as RiskManagementOptions)!.NumberOfConcurrentPositions = 0;
-        (riskManagementOptions as RiskManagementOptions)!.RiskRewardRatio = 2;
-        (riskManagementOptions as RiskManagementOptions)!.SLPercentages = 12.5m;
-        _logger.Information("riskManagementOptions: {@riskManagementOptions}", riskManagementOptions);
-
-        indicatorOptions = IndicatorOptionsFactory.CreateIndicatorOptions(IndicatorsOptionsNames.SUPER_TREND_V1);
-        _logger.Information("indicatorOptions: {@indicatorOptions}", indicatorOptions);
-
-        _configuration[ConfigurationKeys.STRATEGY_NAME] = StrategyNames.SUPER_TREND_V1;
-        strategyOptions = StrategyOptionsFactory.CreateStrategyOptions(StrategyNames.SUPER_TREND_V1);
-        (strategyOptions as StrategyOptions)!.RiskRewardRatio = 2;
-        _logger.Information("strategyOptions: {@strategyOptions}", strategyOptions);
-
-        _configuration[ConfigurationKeys.BOT_NAME] = BotNames.SUPER_TREND_V1;
-        botOptions = BotOptionsFactory.CreateBotOptions(BotNames.SUPER_TREND_V1);
-        (botOptions as BotOptions)!.TimeFrame = 3600;
-        _logger.Information("botOptions: {@botOptions}", botOptions);
-
-        _configuration[ConfigurationKeys.RUNNER_NAME] = RunnerNames.SUPER_TREND_V1;
-        runnerOptions = RunnerOptionsFactory.CreateRunnerOptions(RunnerNames.SUPER_TREND_V1);
-        (runnerOptions as RunnerOptions)!.HistoricalCandlesCount = 5000;
-        (runnerOptions as RunnerOptions)!.TimeFrame = 3600;
-        _logger.Information("runnerOptions: {@runnerOptions}", runnerOptions);
-
-        positionRepository = PositionRepositoryFactory.CreateRepository(PositionRepositoryNames.IN_MEMORY);
-        _logger.Information("positionRepository: {@positionRepository}", positionRepository);
-
-        messageRepository = MessageRepositoryFactory.CreateRepository(MessageRepositoryNames.IN_MEMORY);
-        _logger.Information("messageRepository: {@messageRepository}", messageRepository);
-
-        notifier = NotifierFactory.CreateNotifier(NotifierNames.IN_MEMORY, messageRepository, _logger);
-        _logger.Information("notifier: {@notifier}", notifier);
     }
 }
