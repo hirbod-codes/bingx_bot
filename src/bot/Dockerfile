@@ -35,10 +35,8 @@ CMD dotnet /build/bot.dll
 
 FROM base AS publish
 
-COPY ./src/bot/ ./src/bot/
-
 WORKDIR /app/src/bot/
 
-RUN dotnet publish -c Release -o /app/src/bot/publish -a $TARGETARCH
+RUN dotnet publish -c Release -o /publish -a $TARGETARCH
 
-CMD dotnet /app/src/bot/publish/bot.dll
+CMD dotnet /publish/bot.dll
