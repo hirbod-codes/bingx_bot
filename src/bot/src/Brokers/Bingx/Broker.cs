@@ -272,38 +272,40 @@ public class Broker : Api, IBroker
 
     public async Task ListenForCandles(int candlesCount, int timeFrame)
     {
-        try
+        _logger.Information("Listening for candles...");
+
+        ClientWebSocket ws = new();
+
+        await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
+
+        string id = Guid.NewGuid().ToString();
+        while (true)
         {
-            _logger.Information("Listening for candles...");
+            if (ws.State != WebSocketState.Open)
+                continue;
 
-            ClientWebSocket ws = new();
-
-            await ws.ConnectAsync(new Uri("wss://open-api-swap.bingx.com/swap-market"), CancellationToken.None);
-
-            string id = Guid.NewGuid().ToString();
-            while (true)
+            await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
             {
-                if (ws.State != WebSocketState.Open)
-                    continue;
+                id,
+                reqType = "sub",
+                dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
+            }))), WebSocketMessageType.Text, true, CancellationToken.None);
 
-                await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
-                {
-                    id,
-                    reqType = "sub",
-                    dataType = $"{Symbol}@kline_{GetStringTimeFrame(timeFrame)}"
-                }))), WebSocketMessageType.Text, true, CancellationToken.None);
+            break;
+        }
 
-                break;
-            }
+        byte[] buffer = new byte[1024 * 4];
+        Candle? previousCandle = null;
+        while (true)
+        {
+            if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
+                continue;
 
             byte[] buffer = new byte[1024 * 4];
             _previousCandle = null;
             while (true)
             {
-                if (ws.State == WebSocketState.None || ws.State == WebSocketState.Connecting)
-                    continue;
-
-                if (ws.State == WebSocketState.Closed || ws.State == WebSocketState.Aborted || ws.State == WebSocketState.CloseReceived)
+                string state = ws.State switch
                 {
                     _logger.Information("Websocket state: {state}", ws.State);
                     break;
@@ -322,7 +324,8 @@ public class Broker : Api, IBroker
 
                 byte[] bytes = await _utilities.DecompressBytes(buffer);
 
-                string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+            if (!_isListeningForCandles)
+                _isListeningForCandles = true;
 
                 if (message == "Ping")
                 {
@@ -333,23 +336,16 @@ public class Broker : Api, IBroker
                     continue;
                 }
 
-                BingxWsResponse? wsResponse = JsonSerializer.Deserialize<BingxWsResponse>(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (result.MessageType == WebSocketMessageType.Close)
+                break;
 
-                if (wsResponse != null && wsResponse.Id != null && wsResponse.Id != id)
-                    throw new BingxException("Invalid id provided by the server.");
+            byte[] bytes = await _utilities.DecompressBytes(buffer);
 
-                if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
-                    continue;
+            string message = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 
-                Candle candle = new()
-                {
-                    Open = decimal.Parse(wsResponse.Data!.First().o),
-                    Close = decimal.Parse(wsResponse.Data!.First().c),
-                    High = decimal.Parse(wsResponse.Data!.First().h),
-                    Low = decimal.Parse(wsResponse.Data!.First().l),
-                    Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
-                    Volume = decimal.Parse(wsResponse.Data!.First().v)
-                };
+            if (message == "Ping")
+            {
+                _logger.Debug(message);
 
                 if (!_areCandlesFetched)
                 {
@@ -368,7 +364,21 @@ public class Broker : Api, IBroker
                     _logger.Information("Last candle close date: {lastCandleDate}", _candles.Last()!.Date.AddSeconds(_brokerOptions.TimeFrame));
                     _logger.Information("Closed candle open date: {closedCandleDate}", _previousCandle.Date);
 
-                    _areCandlesFetched = false;
+            Candle candle = new()
+            {
+                Open = decimal.Parse(wsResponse.Data!.First().o),
+                Close = decimal.Parse(wsResponse.Data!.First().c),
+                High = decimal.Parse(wsResponse.Data!.First().h),
+                Low = decimal.Parse(wsResponse.Data!.First().l),
+                Date = DateTimeOffset.FromUnixTimeMilliseconds(wsResponse.Data!.First().T).DateTime,
+                Volume = decimal.Parse(wsResponse.Data!.First().v)
+            };
+
+            if (!_areCandlesFetched)
+            {
+                previousCandle = candle;
+                continue;
+            }
 
                     throw new MissingCandlesException();
                 }
@@ -381,15 +391,16 @@ public class Broker : Api, IBroker
                     _logger.Information("Candles count: {count}", _candles.Count());
                 }
 
-                if (candlesCount < _candles.Count())
-                    _candles.Skip(_candles.Count() - candlesCount);
+                throw new MissingCandlesException();
+            }
 
                 _previousCandle = candle;
             }
 
-            await ws.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
+            if (candlesCount < _candles.Count())
+                _candles.Skip(_candles.Count() - candlesCount);
 
-            _logger.Information("Finished listening for candles...");
+            previousCandle = candle;
         }
         finally
         {
