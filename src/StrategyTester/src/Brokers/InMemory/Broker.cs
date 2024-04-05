@@ -2,7 +2,7 @@ using System.Text.Json;
 using StrategyTester.src.Brokers.InMemory.Exceptions;
 using bot.src.Data;
 using bot.src.Data.Models;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Brokers;
 using StrategyTester.src.Utils;
 using BrokerException = StrategyTester.src.Brokers.InMemory.Exceptions.BrokerException;

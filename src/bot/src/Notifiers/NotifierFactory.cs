@@ -1,4 +1,4 @@
-using Serilog;
+using ILogger = Serilog.ILogger;
 using NtfyNotifier = bot.src.Notifiers.NTFY.Notifier;
 using InMemoryNotifier = bot.src.Notifiers.InMemory.Notifier;
 using bot.src.Data;

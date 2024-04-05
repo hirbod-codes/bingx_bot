@@ -5,7 +5,7 @@ using bot.src.MessageStores;
 using bot.src.Notifiers;
 using bot.src.RiskManagement;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Bots.SuperTrendV1;
 

@@ -2,7 +2,7 @@ using bot.src.Brokers;
 using bot.src.MessageStores;
 using bot.src.RiskManagement;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Notifiers;
 
 namespace bot.src.Bots;

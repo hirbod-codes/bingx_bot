@@ -1,5 +1,6 @@
 using System.Timers;
 using bot.src.Util;
+using Timer = System.Timers.Timer;
 
 namespace StrategyTester.src.Utils;
 

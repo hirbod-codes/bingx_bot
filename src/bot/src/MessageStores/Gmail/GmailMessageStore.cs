@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using Message = bot.src.MessageStores.Gmail.Models.Message;
 using GmailMessage = Google.Apis.Gmail.v1.Data.Message;
 using bot.src.MessageStores.Gmail.Models;

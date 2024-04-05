@@ -1,6 +1,6 @@
 using bot.src.Indicators;
 using bot.src.Notifiers;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Brokers;
 using bot.src.Data;
 using bot.src.RiskManagement;

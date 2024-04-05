@@ -2,7 +2,7 @@ using bot.src.Data;
 using bot.src.MessageStores.Gmail;
 using bot.src.MessageStores.Gmail.Models;
 using bot.src.MessageStores.InMemory;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.MessageStores;
 

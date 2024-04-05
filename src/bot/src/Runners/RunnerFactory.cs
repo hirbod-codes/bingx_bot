@@ -3,7 +3,7 @@ using bot.src.Brokers;
 using bot.src.Notifiers;
 using bot.src.Strategies;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Runners;
 

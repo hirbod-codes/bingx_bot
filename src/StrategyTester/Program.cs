@@ -3,7 +3,7 @@ using bot.src.Bots;
 using bot.src.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
 using bot.src.Strategies;
 using StrategyTester.src.Testers;
@@ -20,6 +20,7 @@ using BrokerOptionsFactory = StrategyTester.src.Brokers.BrokerOptionsFactory;
 using BrokerFactory = StrategyTester.src.Brokers.BrokerFactory;
 using Serilog.Core;
 using StrategyTester.Dtos;
+using Serilog;
 
 namespace StrategyTester;
 

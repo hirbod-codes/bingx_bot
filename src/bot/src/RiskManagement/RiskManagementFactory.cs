@@ -1,6 +1,6 @@
 using bot.src.Brokers;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.RiskManagement;
 
