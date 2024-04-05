@@ -32,8 +32,8 @@ services:
                     memory: 200M
         environment:
             Serilog__WriteTo__1__Args__serverUrl: http://seq:80
-            BOT_ASPNETCORE_ENVIRONMENT: Production
-            BOT_ENVIRONMENT: Production
+            BOT_ASPNETCORE_ENVIRONMENT: Development
+            BOT_ENVIRONMENT: Development
             BOT_SECRETS_PREFIX: BOT_
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
