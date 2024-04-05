@@ -51,7 +51,7 @@ public class Runner : IRunner
 
         Status = RunnerStatus.RUNNING;
         _broker.StartListening();
-        _timer?.Start();
+        await SetTimer();
     }
 
     public Task Stop()
@@ -83,7 +83,12 @@ public class Runner : IRunner
         Task notifierTask = _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
 
         await _broker.InitiateCandleStore(_runnerOptions.HistoricalCandlesCount);
+        await SetTimer();
+    }
 
+    private async Task SetTimer()
+    {
+        _timer?.Stop();
         _timer = await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) => await Tick());
     }
 
