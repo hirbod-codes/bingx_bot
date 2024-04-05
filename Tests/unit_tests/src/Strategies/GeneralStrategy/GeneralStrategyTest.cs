@@ -2,7 +2,7 @@
 // using bot.src.MessageStores;
 // using bot.src.MessageStores.InMemory.Models;
 // using bot.src.Strategies.GeneralStrategy;
-// using Serilog;
+// using ILogger = Serilog.ILogger;
 
 // namespace unit_tests.src.Strategies.GeneralStrategy;
 

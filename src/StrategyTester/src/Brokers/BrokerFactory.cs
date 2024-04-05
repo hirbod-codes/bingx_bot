@@ -1,4 +1,4 @@
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Data;
 using bot.src.Brokers;
 using InMemoryBroker = StrategyTester.src.Brokers.InMemory.Broker;

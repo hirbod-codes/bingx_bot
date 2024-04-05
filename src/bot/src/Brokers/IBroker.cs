@@ -23,4 +23,7 @@ public interface IBroker
     public Task OpenMarketPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal slPrice);
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice);
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice);
+    public void StopListening();
+    public void StartListening();
+    public decimal GetBalance();
 }
