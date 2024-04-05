@@ -3,7 +3,7 @@ using bot.src.Bots;
 using bot.src.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
 using bot.src.Strategies;
 using StrategyTester.src.Testers;
@@ -20,6 +20,7 @@ using BrokerOptionsFactory = StrategyTester.src.Brokers.BrokerOptionsFactory;
 using BrokerFactory = StrategyTester.src.Brokers.BrokerFactory;
 using Serilog.Core;
 using StrategyTester.Dtos;
+using Serilog;
 
 namespace StrategyTester;
 
@@ -154,8 +155,8 @@ public class Program
         var testerOptions = TesterOptionsFactory.CreateTesterOptions(_configuration[ConfigurationKeys.TESTER_NAME]!);
         _configuration.Bind($"{ConfigurationKeys.TESTER_OPTIONS}", testerOptions);
 
-        IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.POSITION_REPOSITORY_TYPE]!);
-        IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_REPOSITORY_TYPE]!);
+        IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME]!);
+        IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME]!);
 
         IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
 
@@ -175,7 +176,7 @@ public class Program
 
         await tester.Test();
 
-        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement, brokerOptions);
+        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement, broker);
 
         results.Add(new Result
         {

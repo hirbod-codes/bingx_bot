@@ -27,7 +27,7 @@ jobs:
           username: ${{github.repository_owner}}
           password: ${{secrets.GITHUB_TOKEN}}
 
-      - name: Build and push user_management service docker image  to GHCR and Docker Hub
+      - name: Build and push bot service docker image to GHCR and Docker Hub
         uses: docker/build-push-action@v5
         with:
           push: true

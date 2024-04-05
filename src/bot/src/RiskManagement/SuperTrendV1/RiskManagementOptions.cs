@@ -3,6 +3,7 @@ namespace bot.src.RiskManagement.SuperTrendV1;
 public record class RiskManagementOptions : IRiskManagementOptions
 {
     public decimal Margin { get; set; } = 100;
+    public decimal Leverage { get; set; } = 50;
     public decimal SLPercentages { get; set; } = 10;
     public decimal RiskRewardRatio { get; set; } = 2;
     public decimal BrokerCommission { get; set; } = 0.001m;

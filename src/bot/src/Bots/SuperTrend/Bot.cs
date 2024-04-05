@@ -5,7 +5,7 @@ using bot.src.MessageStores;
 using bot.src.Notifiers;
 using bot.src.RiskManagement;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Bots.SuperTrendV1;
 
@@ -109,11 +109,11 @@ public class Bot : IBot
             return;
         }
 
-        decimal entryPrice = message.EntryPrice;
+        decimal entryPrice = await _broker.GetLastPrice();
         decimal margin = _riskManagement.GetMargin();
         decimal leverage = _riskManagement.CalculateLeverage(entryPrice, 0);
-        decimal slPrice = _riskManagement.CalculateTpPrice(leverage, entryPrice, message.Direction);
-        decimal tpPrice = _riskManagement.CalculateSlPrice(leverage, entryPrice, message.Direction);
+        decimal tpPrice = _riskManagement.CalculateTpPrice(leverage, entryPrice, message.Direction);
+        decimal slPrice = _riskManagement.CalculateSlPrice(leverage, entryPrice, message.Direction);
 
         if (!await _riskManagement.IsPositionAcceptable(entryPrice, slPrice))
         {

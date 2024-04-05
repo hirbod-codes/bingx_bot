@@ -2,7 +2,7 @@ using System.Text.Json;
 using StrategyTester.src.Brokers.InMemory.Exceptions;
 using bot.src.Data;
 using bot.src.Data.Models;
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Brokers;
 using StrategyTester.src.Utils;
 using BrokerException = StrategyTester.src.Brokers.InMemory.Exceptions.BrokerException;
@@ -318,5 +318,20 @@ public class Broker : IBroker
     {
         Position?[] positions = (await GetPendingPositions()).Where(o => o != null && o.PositionDirection == PositionDirection.SHORT).ToArray();
         await CancelAllPendingPositions(positions);
+    }
+
+    public void StopListening()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void StartListening()
+    {
+        throw new NotImplementedException();
+    }
+
+    public decimal GetBalance()
+    {
+        throw new NotImplementedException();
     }
 }
