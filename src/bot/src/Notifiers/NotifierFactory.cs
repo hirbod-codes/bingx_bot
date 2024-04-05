@@ -1,4 +1,4 @@
-using Serilog;
+using ILogger = Serilog.ILogger;
 using NtfyNotifier = bot.src.Notifiers.NTFY.Notifier;
 using InMemoryNotifier = bot.src.Notifiers.InMemory.Notifier;
 using bot.src.Data;
@@ -11,6 +11,14 @@ public static class NotifierFactory
     {
         NotifierNames.NTFY => new NtfyNotifier(logger),
         NotifierNames.IN_MEMORY => new InMemoryNotifier(messageRepository, logger),
+        _ => throw new Exception()
+    };
+
+    public static Type? GetInstanceType(string? name) => name switch
+    {
+        null => null,
+        NotifierNames.NTFY => typeof(NtfyNotifier),
+        NotifierNames.IN_MEMORY => typeof(InMemoryNotifier),
         _ => throw new Exception()
     };
 }

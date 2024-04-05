@@ -6,5 +6,5 @@ public interface ITime
 {
     public DateTime GetUtcNow();
     public Task Sleep(int milliseconds);
-    public Task StartTimer(int interval, ElapsedEventHandler elapsedEventHandler);
+    public Task<System.Timers.Timer> StartTimer(int interval, ElapsedEventHandler elapsedEventHandler);
 }

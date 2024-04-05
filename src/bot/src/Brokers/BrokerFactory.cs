@@ -1,4 +1,4 @@
-using Serilog;
+using ILogger = Serilog.ILogger;
 using bot.src.Data;
 using bot.src.Brokers.Bingx;
 using BingxBroker = bot.src.Brokers.Bingx.Broker;

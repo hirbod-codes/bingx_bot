@@ -9,30 +9,43 @@ services:
         restart: always
         ports:
           - 444:80
-        environment:
-            - ACCEPT_EULA=Y
-        networks:
-            - bot-network
         deploy:
             replicas: 1
             resources:
                 limits:
                     cpus: '0.75'
                     memory: 200M
+        networks:
+            - bot-network
+        environment:
+            - ACCEPT_EULA=Y
     bot:
         image: ghcr.io/hirbod-codes/bot:latest
         ports:
-          - 443:443
+          - 443:5001
         restart: always
-        environment:
-            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
-            USER_MANAGEMENT_ASPNETCORE_ENVIRONMENT: Production
-            USER_MANAGEMENT_ENVIRONMENT: Production
-        networks:
-            - bot-network
         deploy:
             replicas: 1
             resources:
                 limits:
                     cpus: '0.75'
                     memory: 200M
+        networks:
+            - bot-network
+        environment:
+            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            BOT_ASPNETCORE_ENVIRONMENT: Production
+            BOT_ENVIRONMENT: Production
+            BOT_SECRETS_PREFIX: BOT_
+            BOT_MessageStoreName: InMemory
+            BOT_BrokerName: Bingx
+            BOT_RiskManagementName: SuperTrendV1
+            BOT_IndicatorOptionsName: SuperTrendV1
+            BOT_StrategyName: SuperTrendV1
+            BOT_StrategyOptions__SuperTrendV1__ProviderName: SuperTrendV1
+            BOT_BotName: SuperTrendV1
+            BOT_RunnerName: SuperTrendV1
+            BOT_NotifierName: NTFY
+            BOT_PositionRepositoryName: InMemory
+            BOT_CandleRepositoryName: InMemory
+            BOT_MessageRepositoryName: InMemory

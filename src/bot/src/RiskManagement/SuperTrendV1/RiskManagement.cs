@@ -2,7 +2,7 @@ using bot.src.Brokers;
 using bot.src.Data.Models;
 using bot.src.RiskManagement.SuperTrendV1.Exceptions;
 using bot.src.Util;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.RiskManagement.SuperTrendV1;
 
@@ -25,26 +25,30 @@ public class RiskManagement : IRiskManagement
 
     public int GetUnacceptableOrdersCount() => 0;
 
-    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => 50;
+    public decimal CalculateLeverage(decimal entryPrice, decimal slPrice) => _riskManagementOptions.Leverage;
+
+    private decimal CalculateDelta(decimal leverage, decimal entryPrice) => _riskManagementOptions.SLPercentages * entryPrice / 100.0m / leverage;
 
     public decimal CalculateTpPrice(decimal leverage, decimal entryPrice, string direction)
     {
-        decimal delta = _riskManagementOptions.RiskRewardRatio * entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage;
+        decimal delta = _riskManagementOptions.RiskRewardRatio * CalculateDelta(leverage, entryPrice);
+        _logger.Debug("leverage: {leverage}, entryPrice: {entryPrice}, direction: {direction}, delta: {delta}", leverage, entryPrice, direction, delta);
 
         if (direction == PositionDirection.LONG)
-            return delta + entryPrice;
+            return entryPrice + delta;
         else
             return entryPrice - delta;
     }
 
     public decimal CalculateSlPrice(decimal leverage, decimal entryPrice, string direction)
     {
-        decimal delta = entryPrice * (_riskManagementOptions.SLPercentages / 100.0m) / leverage;
+        decimal delta = CalculateDelta(leverage, entryPrice);
+        _logger.Debug("leverage: {leverage}, entryPrice: {entryPrice}, direction: {direction}, delta: {delta}", leverage, entryPrice, direction, delta);
 
         if (direction == PositionDirection.LONG)
             return entryPrice - delta;
         else
-            return delta + entryPrice;
+            return entryPrice + delta;
     }
 
     public decimal GetMargin() => _riskManagementOptions.Margin;

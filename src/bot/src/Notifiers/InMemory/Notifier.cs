@@ -1,5 +1,5 @@
 using bot.src.Data;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Notifiers.InMemory;
 
