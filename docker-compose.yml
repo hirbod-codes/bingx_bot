@@ -44,5 +44,4 @@ services:
             BOT_RunnerName: SuperTrendV1
             BOT_NotifierName: NTFY
             BOT_PositionRepositoryName: InMemory
-            BOT_CandleRepositoryName: InMemory
             BOT_MessageRepositoryName: InMemory

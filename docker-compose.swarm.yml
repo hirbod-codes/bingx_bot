@@ -33,10 +33,10 @@ services:
         networks:
             - bot-network
         environment:
-            Serilog__WriteTo__1__Args__serverUrl: http://seq:80
-            BOT_ASPNETCORE_ENVIRONMENT: Production
-            BOT_ENVIRONMENT: Production
-            BOT_SECRETS_PREFIX: BOT_
+            ASPNETCORE_ENVIRONMENT: Production
+            ENVIRONMENT: Production
+            SECRETS_PREFIX: BOT_
+            BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
             BOT_RiskManagementName: SuperTrendV1
@@ -47,5 +47,4 @@ services:
             BOT_RunnerName: SuperTrendV1
             BOT_NotifierName: NTFY
             BOT_PositionRepositoryName: InMemory
-            BOT_CandleRepositoryName: InMemory
             BOT_MessageRepositoryName: InMemory

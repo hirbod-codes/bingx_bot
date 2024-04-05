@@ -7,7 +7,7 @@ using bot.src.Strategies;
 
 namespace bot.src.Models;
 
-public static class OptionsNames
+public static class OptionsMetaData
 {
     public static string? PositionRepositoryName { get; set; }
     public static string? MessageRepositoryName { get; set; }

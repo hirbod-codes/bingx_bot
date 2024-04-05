@@ -62,26 +62,27 @@ public class Broker : Api, IBroker
     {
         _areCandlesFetched = false;
 
-        if (!_areCandlesFetched)
-            try
-            {
-                // In case _candles is empty or it is not empty but is 500 candles old
-                if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
-                    await FetchHistoricalCandles(_timeFrame, _candlesCount);
+        try
+        {
+            // In case _candles is empty or it is not empty but is 500 candles old
+            if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
+                await FetchHistoricalCandles(_timeFrame, _candlesCount);
 
-                if (_candles.Count() + 3 < _candlesCount)
-                    throw new BingxException("System failed to fetch enough candles.");
+            await FetchRecentCandles(_timeFrame, _candlesCount);
 
-                _areCandlesFetched = true;
+            if (_candles.Count() + 3 < _candlesCount)
+                throw new BingxException("System failed to fetch enough candles.");
 
-                _logger.Information("Finished Candle Store initiation.");
-            }
-            catch (System.Exception ex)
-            {
-                _logger.Error(ex, "The broker has failed to fetch historical candles, Restarting...");
-                _areCandlesFetched = false;
-                RefetchCandles?.Invoke(this, EventArgs.Empty);
-            }
+            _areCandlesFetched = true;
+
+            _logger.Information("Finished Candle Store initiation.");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.Error(ex, "The broker has failed to fetch historical candles, Restarting...");
+            _areCandlesFetched = false;
+            RefetchCandles?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private async Task StartCandleWebSocket()
@@ -424,16 +425,15 @@ public class Broker : Api, IBroker
         return _candles;
     }
 
-    public async Task<Candle?> GetCandle(int indexFromEnd = 0)
+    public Task<Candle?> GetCandle(int indexFromEnd = 0)
     {
         try
         {
-            Candles? candles = await GetCandles();
-            if (candles == null)
-                return null;
-            return _candles.ElementAt(candles.Count() - indexFromEnd - 1);
+            if (_candles == null || !_candles.Any())
+                return Task.FromResult<Candle?>(null);
+            return Task.FromResult<Candle?>(_candles.ElementAt(_candles.Count() - indexFromEnd - 1));
         }
-        catch (System.Exception) { return null; }
+        catch (System.Exception) { return Task.FromResult<Candle?>(null); }
     }
 
     public async Task<int?> GetLastCandleIndex()
