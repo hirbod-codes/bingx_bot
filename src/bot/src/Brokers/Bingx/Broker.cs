@@ -7,6 +7,7 @@ using bot.src.Brokers.Bingx.Models;
 using bot.src.Data.Models;
 using bot.src.Util;
 using ILogger = Serilog.ILogger;
+using ILogger = Serilog.ILogger;
 
 namespace bot.src.Brokers.Bingx;
 
@@ -21,6 +22,8 @@ public class Broker : Api, IBroker
     private bool _isListeningForCandles = false;
     private int _candlesCount;
     private int _timeFrame;
+    private bool _shouldStopListening = false;
+    private Candle? _previousCandle;
     private bool _shouldStopListening = false;
     private Candle? _previousCandle;
 
@@ -67,6 +70,8 @@ public class Broker : Api, IBroker
             {
                 // In case _candles is empty or it is not empty but is 500 candles old
                 if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
+                // In case _candles is empty or it is not empty but is 500 candles old
+                if (!_candles.Any() || (_time.GetUtcNow() - _candles.Last().Date).TotalSeconds > (5000 * _timeFrame))
                     await FetchHistoricalCandles(_timeFrame, _candlesCount);
 
                 await FetchRecentCandles(_candlesCount, _timeFrame);
@@ -88,6 +93,7 @@ public class Broker : Api, IBroker
 
     private async Task StartCandleWebSocket()
     {
+        if (!_isListeningForCandles && !_shouldStopListening)
         if (!_isListeningForCandles && !_shouldStopListening)
             try { await ListenForCandles(_candlesCount, _timeFrame); }
             catch (MissingCandlesException ex)
@@ -128,6 +134,7 @@ public class Broker : Api, IBroker
         return Task.CompletedTask;
     }
 
+    private async Task FetchHistoricalCandles(int timeFrame, int candlesCount)
     private async Task FetchHistoricalCandles(int timeFrame, int candlesCount)
     {
         _logger.Information("Fetching historical candles...");
@@ -181,6 +188,7 @@ public class Broker : Api, IBroker
 
         try
         {
+            File.WriteAllText($"{Program.RootPath}/{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
             File.WriteAllText($"{Program.RootPath}/{Symbol}_HistoricalCandles_{GetStringTimeFrame(timeFrame)}.json", JsonSerializer.Serialize(_candles, new JsonSerializerOptions() { WriteIndented = true }));
         }
         catch (System.Exception ex) { _logger.Error(ex, "Failure when trying to store fetched candles in hard dick."); }
@@ -266,6 +274,8 @@ public class Broker : Api, IBroker
 
         _candles.TakeLast(_candlesCount);
 
+        _candles.TakeLast(_candlesCount);
+
         _logger.Information("Last candle's date: {lastCandleDate}", _candles.Last().Date);
         _logger.Information("Finished fetching recent candles...");
     }
@@ -315,6 +325,7 @@ public class Broker : Api, IBroker
                 if (!_isListeningForCandles)
                     _isListeningForCandles = true;
 
+                WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                 if (result.MessageType == WebSocketMessageType.Close)
@@ -456,7 +467,24 @@ public class Broker : Api, IBroker
         else
         {
             _logger.Information("Getting last price of the symbol...");
+    {
+        decimal lastPrice;
+        if (_previousCandle != null)
+        {
+            _logger.Information("Getting last price of the symbol...");
+            lastPrice= _previousCandle.Close;
+            _logger.Information("Got symbol's last price: {price}", _previousCandle.Close);
+            return lastPrice;
+        }
+        else
+        {
+            _logger.Information("Getting last price of the symbol...");
 
+            HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/quote/price", "GET", ApiKey, ApiSecret, new
+            {
+                symbol = Symbol,
+            });
+            await _utilities.EnsureSuccessfulBingxResponse(httpResponseMessage);
             HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/quote/price", "GET", ApiKey, ApiSecret, new
             {
                 symbol = Symbol,
@@ -464,13 +492,20 @@ public class Broker : Api, IBroker
             await _utilities.EnsureSuccessfulBingxResponse(httpResponseMessage);
 
             string response = await httpResponseMessage.Content.ReadAsStringAsync();
+            string response = await httpResponseMessage.Content.ReadAsStringAsync();
 
+            Dictionary<string, JsonElement?>? dictionary = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(response);
             Dictionary<string, JsonElement?>? dictionary = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(response);
 
             Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value);
+            Dictionary<string, JsonElement?>? data = JsonSerializer.Deserialize<Dictionary<string, JsonElement?>>(dictionary!["data"]!.Value);
 
             lastPrice = decimal.Parse(data!["price"]!.Value.GetString()!);
+            lastPrice = decimal.Parse(data!["price"]!.Value.GetString()!);
 
+            _logger.Information("Got symbol's last price: {price}", lastPrice);
+            return lastPrice;
+        }
             _logger.Information("Got symbol's last price: {price}", lastPrice);
             return lastPrice;
         }
@@ -698,6 +733,8 @@ public class Broker : Api, IBroker
         _logger.Information("Finished Closing all the open positions...");
         return;
     }
+
+    public decimal GetBalance() => _brokerOptions.AccountOptions.Balance;
 
     public decimal GetBalance() => _brokerOptions.AccountOptions.Balance;
 
