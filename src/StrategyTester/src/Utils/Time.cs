@@ -17,7 +17,7 @@ public class Time : ITime
         throw new NotImplementedException();
     }
 
-    public Task StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
+    public Task<Timer> StartTimer(int interval, ElapsedEventHandler elapsedEventHandler)
     {
         throw new NotImplementedException();
     }
