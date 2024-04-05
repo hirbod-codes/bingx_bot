@@ -34,12 +34,23 @@ WORKDIR /app/src/bot/
 
 RUN dotnet build --no-restore -o /build
 
+EXPOSE 5001 5000
+
 CMD dotnet /build/bot.dll
 
 FROM base AS publish
 
+WORKDIR /app
+
+COPY ./src/bot/ ./src/bot/
+
 WORKDIR /app/src/bot/
 
+RUN dotnet dev-certs https --clean
+RUN dotnet dev-certs https --trust
+
 RUN dotnet publish -c Release -o /publish -a $TARGETARCH
+
+EXPOSE 5001
 
 CMD dotnet /publish/bot.dll
