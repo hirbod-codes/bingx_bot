@@ -23,4 +23,6 @@ public static class ConfigurationKeys
     public const string MESSAGE_REPOSITORY_NAME = "MessageRepositoryName";
     public const string TESTER_NAME = "TesterName";
     public const string TESTER_OPTIONS = "TesterOptions";
+
+    public const string API_KEY = "ApiKey";
 }

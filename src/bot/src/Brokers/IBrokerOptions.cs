@@ -1,5 +1,7 @@
 namespace bot.src.Brokers;
 
-public interface IBrokerOptions
+public interface IBrokerOptions : IEquatable<IBrokerOptions>
 {
+    public int TimeFrame { get; set; }
+    public new bool Equals(IBrokerOptions? other);
 }

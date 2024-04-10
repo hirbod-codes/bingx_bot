@@ -15,6 +15,9 @@ using bot.src.Configuration.Providers.DockerSecrets;
 using bot.src.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using bot.src.Authentication.ApiKey;
 
 namespace bot;
 
@@ -56,7 +59,37 @@ public class Program
             config.Version = "v1";
         });
 
+        builder.Services.AddCors((corsOptions) =>
+        {
+            corsOptions.AddDefaultPolicy((cpb) =>
+            {
+                cpb.AllowAnyHeader();
+                cpb.AllowAnyMethod();
+                cpb.AllowAnyOrigin();
+            });
+        });
+
+        builder.Services.AddRateLimiter(_ => _
+            .AddFixedWindowLimiter(policyName: "fixed", options =>
+            {
+                options.PermitLimit = 20;
+                options.Window = TimeSpan.FromSeconds(1);
+                options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 10;
+            }));
+
+        builder.Services.AddAuthentication("ApiKey")
+            .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationSchemeHandler>("ApiKey", (opt) => opt.ApiKey = _configuration[ConfigurationKeys.API_KEY]!);
+        builder.Services.AddAuthorization();
+
         var app = builder.Build();
+
+        app.UseCors();
+
+        app.UseRateLimiter();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
         OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
@@ -115,7 +148,9 @@ public class Program
 
         // ------------------------------------------------------------------------------------------------ Options
 
-        app.MapGet("/options", () => Results.Ok(
+        RouteGroupBuilder AuthRoutes = app.MapGroup("").RequireAuthorization();
+
+        AuthRoutes.MapGet("/options", () => Results.Ok(
             new
             {
                 BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, OptionsMetaData.BotOptionsType!), OptionsMetaData.BotOptionsType!),
@@ -127,84 +162,114 @@ public class Program
             }
         ));
 
-        app.MapPatch("/bot-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/bot-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.BotOptions = (IBotOptions)opt.Deserialize(OptionsMetaData.BotOptionsType!)!;
+                options.BotOptions = (IBotOptions)opt.Deserialize(OptionsMetaData.BotOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.BotOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         });
 
-        app.MapPatch("/runner-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/runner-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(OptionsMetaData.RunnerOptionsType!)!;
+                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(OptionsMetaData.RunnerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RunnerOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         });
 
-        app.MapPatch("/strategy-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/strategy-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(OptionsMetaData.StrategyOptionsType!)!;
+                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(OptionsMetaData.StrategyOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.StrategyOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         });
 
-        app.MapPatch("/indicator-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/indicator-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(OptionsMetaData.IndicatorOptionsType!)!;
+                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(OptionsMetaData.IndicatorOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.IndicatorOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         });
 
-        app.MapPatch("/risk-management-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/risk-management-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(OptionsMetaData.RiskManagementOptionsType!)!;
+                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(OptionsMetaData.RiskManagementOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RiskManagementOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         });
 
-        app.MapPatch("/broker-options", async (JsonNode opt) =>
+        AuthRoutes.MapPatch("/broker-options", async (JsonNode opt) =>
         {
             try
             {
                 await WaitForRunnerToTick();
 
+                IBrokerOptions? oldOptionsBrokerOptions = options.BrokerOptions;
+
                 string json = JsonSerializer.Serialize(opt);
-                options.BrokerOptions = (IBrokerOptions)opt.Deserialize(OptionsMetaData.BrokerOptionsType!)!;
+                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(OptionsMetaData.BrokerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+
+                if (options.BrokerOptions == null)
+                {
+                    options.BrokerOptions = input;
+                    return Results.Ok(options.BrokerOptions);
+                }
+
+                if (options.BrokerOptions.Equals(input))
+                    return Results.Ok(options.BrokerOptions);
+
+                if (input.TimeFrame != options.BrokerOptions.TimeFrame)
+                    options.BrokerOptions.TimeFrame = input.TimeFrame;
+
+                if (options.BrokerOptions.Equals(input))
+                    return Results.Ok(options.BrokerOptions);
+
+                Stop();
+                options.BrokerOptions = input;
+                try
+                {
+                    services = CreateServices(options!);
+                    Start();
+                }
+                catch (Exception)
+                {
+                    options.BrokerOptions = oldOptionsBrokerOptions;
+                    return Results.BadRequest(new { Message = $"We failed to update broker options, invalid options provided. Bot Status is: {RunnerStatus.STOPPED}" });
+                }
 
                 return Results.Ok(options.BrokerOptions);
             }
@@ -213,14 +278,12 @@ public class Program
 
         // ------------------------------------------------------------------------------------------------ Status
 
-        app.MapGet("/status", () =>
+        AuthRoutes.MapGet("/status", () =>
         {
-            if (services == null || services.Runner == null)
-                return Results.BadRequest(new { Message = "You have not started any bots yet." });
-            else
-                return Results.Ok(new { Status = services.Runner!.Status.ToString() });
+            return Results.Ok(new { Status = services?.Runner!.Status.ToString() ?? RunnerStatus.STOPPED.ToString() });
         });
-        app.MapPost("/start", async () =>
+        AuthRoutes.MapPost("/start", Start());
+        Func<Task<IResult>> Start() => async () =>
         {
             if (services == null)
                 try { services = CreateServices(options!); }
@@ -231,23 +294,27 @@ public class Program
 
             await services.Runner!.Continue();
             return Results.Ok();
-        });
-        app.MapPost("/suspend", async () =>
+        };
+
+        AuthRoutes.MapPost("/suspend", Suspend());
+        Func<Task<IResult>> Suspend() => async () =>
         {
             if (services == null || services.Runner == null)
                 return Results.BadRequest(new { Message = "You have not started any bots yet." });
 
             await services.Runner!.Suspend();
             return Results.Ok();
-        });
-        app.MapPost("/stop", async () =>
+        };
+
+        AuthRoutes.MapPost("/stop", Stop());
+        Func<Task<IResult>> Stop() => async () =>
         {
             if (services == null || services.Runner == null)
                 return Results.BadRequest(new { Message = "You have not started any bots yet." });
 
             await services.Runner!.Stop();
             return Results.Ok();
-        });
+        };
 
         app.Run();
     }

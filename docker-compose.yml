@@ -21,6 +21,7 @@ services:
             target: dev
         ports:
           - 443:5001
+          - 442:5000
         depends_on:
             - seq
         restart: always
@@ -33,6 +34,7 @@ services:
         environment:
             ASPNETCORE_ENVIRONMENT: Development
             ENVIRONMENT: Development
+            BOT_ApiKey: abcdefg
             BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx

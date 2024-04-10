@@ -2,6 +2,9 @@ version: "3.8"
 networks:
     bot-network:
         driver: overlay
+secrets:
+  BOT_ApiKey:
+    external: true
 
 services:
     seq:
@@ -48,3 +51,5 @@ services:
             BOT_NotifierName: NTFY
             BOT_PositionRepositoryName: InMemory
             BOT_MessageRepositoryName: InMemory
+        secrets:
+            - BOT_ApiKey
