@@ -34,7 +34,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: true
           default_prerelease_bump: false
-          dry_run: true
 
       - uses: docker/metadata-action@v5
         id: docker_meta
