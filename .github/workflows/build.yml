@@ -28,13 +28,31 @@ jobs:
           username: ${{github.repository_owner}}
           password: ${{secrets.GITHUB_TOKEN}}
 
+      - id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: true
+          default_prerelease_bump: false
+          dry_run: true
+
+      - uses: docker/metadata-action@v5
+        id: docker_meta
+        with:
+          images: ghcr.io/${{github.repository_owner}}/bot
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.previoustag.outputs.tag }}
+
       - uses: docker/build-push-action@v5
         with:
           push: true
           context: ./
           file: ./src/bot/Dockerfile
-          tags: ghcr.io/hirbod-codes/bot:latest
           target: publish
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm
