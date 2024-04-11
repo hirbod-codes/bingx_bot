@@ -34,6 +34,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: true
           default_prerelease_bump: false
+          dry_run: true
 
       - uses: docker/metadata-action@v5
         id: docker_meta
@@ -42,7 +43,7 @@ jobs:
           flavor: |
             latest=true
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.previoustag.outputs.tag }}
+            type=semver,pattern={{version}},value=${{ steps.tag_version.outputs.tag }}
 
       - uses: docker/build-push-action@v5
         with:
