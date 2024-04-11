@@ -26,6 +26,7 @@ services:
         image: ghcr.io/hirbod-codes/bot:latest
         ports:
           - 443:5001
+          - 80:5000
         restart: always
         deploy:
             replicas: 1

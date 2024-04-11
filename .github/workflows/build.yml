@@ -11,27 +11,24 @@ on:
 
 jobs:
   build:
+    name: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{github.repository_owner}}
           password: ${{secrets.GITHUB_TOKEN}}
 
-      - name: Build and push bot service docker image to GHCR and Docker Hub
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v5
         with:
           push: true
           context: ./
@@ -42,23 +39,29 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm
 
-      - name: "Generate release changelog"
-        id: changelog_generator
+  release:
+    name: release
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - id: changelog_generator
         uses: heinrichreimer/action-github-changelog-generator@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           unreleased: false
 
-      - name: Bump version and push tag
-        id: tag_version
+      - id: tag_version
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: true
           default_prerelease_bump: false
 
-      - name: Create Release
-        id: create_release
+      - id: create_release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -61,7 +61,9 @@ public class Program
 
         builder.Services.AddCors((corsOptions) =>
         {
-            corsOptions.AddDefaultPolicy((cpb) =>
+            corsOptions.DefaultPolicyName = "General-Cors";
+
+            corsOptions.AddPolicy("General-Cors", (cpb) =>
             {
                 cpb.AllowAnyHeader();
                 cpb.AllowAnyMethod();
@@ -83,8 +85,6 @@ public class Program
         builder.Services.AddAuthorization();
 
         var app = builder.Build();
-
-        app.UseCors();
 
         app.UseRateLimiter();
 
@@ -148,7 +148,7 @@ public class Program
 
         // ------------------------------------------------------------------------------------------------ Options
 
-        RouteGroupBuilder AuthRoutes = app.MapGroup("").RequireAuthorization();
+        RouteGroupBuilder AuthRoutes = app.MapGroup("").RequireAuthorization().RequireCors("General-Cors");
 
         AuthRoutes.MapGet("/options", () => Results.Ok(
             new
@@ -315,6 +315,8 @@ public class Program
             await services.Runner!.Stop();
             return Results.Ok();
         };
+
+        app.UseCors("General-Cors");
 
         app.Run();
     }

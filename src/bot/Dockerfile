@@ -51,6 +51,6 @@ RUN dotnet dev-certs https --trust
 
 RUN dotnet publish -c Release -o /publish -a $TARGETARCH
 
-EXPOSE 5001
+EXPOSE 5001 5000
 
 CMD dotnet /publish/bot.dll

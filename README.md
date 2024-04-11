@@ -6,7 +6,7 @@
 
 ## To Build images
 ```bash
-sudo docker buildx build --push --tag ghcr.io/hirbod-codes/bot:latest --platform linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm -f src/bot/Dockerfile.production .
+sudo docker buildx build --push --tag ghcr.io/hirbod-codes/bot:latest --platform linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm -f src/bot/Dockerfile .
 ```
 
 ## In production
