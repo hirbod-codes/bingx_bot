@@ -18,6 +18,7 @@ using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using bot.src.Authentication.ApiKey;
+using System.Net;
 
 namespace bot;
 
@@ -90,6 +91,11 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
+
+        app.UseCors("General-Cors");
+
+        if (app.Environment.IsProduction())
+            app.UseHttpsRedirection();
 
         OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
         OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
@@ -315,8 +321,6 @@ public class Program
             await services.Runner!.Stop();
             return Results.Ok();
         };
-
-        app.UseCors("General-Cors");
 
         app.Run();
     }

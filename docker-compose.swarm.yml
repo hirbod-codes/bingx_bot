@@ -3,8 +3,10 @@ networks:
     bot-network:
         driver: overlay
 secrets:
-  BOT_ApiKey:
-    external: true
+    BOT_ApiKey:
+        external: true
+    AppHttpsP12:
+        external: true
 
 services:
     seq:
@@ -40,6 +42,7 @@ services:
             ASPNETCORE_ENVIRONMENT: Production
             ENVIRONMENT: Production
             SECRETS_PREFIX: BOT_
+            BOT_Kestrel__Endpoints__Https__Certificate__Path: /run/secrets/AppHttpsP12
             BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
@@ -54,3 +57,4 @@ services:
             BOT_MessageRepositoryName: InMemory
         secrets:
             - BOT_ApiKey
+            - AppHttpsP12
