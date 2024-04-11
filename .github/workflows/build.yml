@@ -44,9 +44,7 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: read
+    permissions: write-all
 
     steps:
       - id: changelog_generator
