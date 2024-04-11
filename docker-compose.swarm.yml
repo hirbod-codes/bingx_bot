@@ -5,30 +5,41 @@ networks:
 secrets:
     BOT_ApiKey:
         external: true
-    AppHttpsP12:
+    caCrt:
+        external: true
+    caKey:
         external: true
 
 services:
+    nginx:
+        image: ghcr.io/hirbod-codes/nginx:latest
+        restart: always
+        ports:
+          - 443:443
+        networks:
+            - bot-network
+        depends_on:
+            - bot
+        secrets:
+          - caCrt
+          - caKey
     seq:
         image: datalust/seq:latest
         restart: always
-        ports:
-          - 444:80
+        networks:
+            - bot-network
         deploy:
             replicas: 1
             resources:
                 limits:
                     cpus: '0.75'
                     memory: 200M
-        networks:
-            - bot-network
         environment:
             - ACCEPT_EULA=Y
     bot:
         image: ghcr.io/hirbod-codes/bot:latest
-        ports:
-          - 443:5001
-          - 80:5000
+        networks:
+            - bot-network
         restart: always
         deploy:
             replicas: 1
@@ -36,13 +47,10 @@ services:
                 limits:
                     cpus: '0.75'
                     memory: 200M
-        networks:
-            - bot-network
         environment:
             ASPNETCORE_ENVIRONMENT: Production
             ENVIRONMENT: Production
             SECRETS_PREFIX: BOT_
-            BOT_Kestrel__Endpoints__Https__Certificate__Path: /run/secrets/AppHttpsP12
             BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
@@ -57,4 +65,3 @@ services:
             BOT_MessageRepositoryName: InMemory
         secrets:
             - BOT_ApiKey
-            - AppHttpsP12
