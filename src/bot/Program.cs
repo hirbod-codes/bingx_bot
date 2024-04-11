@@ -94,9 +94,6 @@ public class Program
 
         app.UseCors("General-Cors");
 
-        if (app.Environment.IsProduction())
-            app.UseHttpsRedirection();
-
         OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
         OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
         OptionsMetaData.NotifierName = _configuration[ConfigurationKeys.NOTIFIER_NAME];
