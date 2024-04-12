@@ -68,7 +68,8 @@ public class Program
             {
                 cpb.AllowAnyHeader();
                 cpb.AllowAnyMethod();
-                cpb.AllowAnyOrigin();
+                cpb.SetIsOriginAllowed(o => true);
+                cpb.AllowCredentials();
             });
         });
 
