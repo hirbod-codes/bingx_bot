@@ -152,9 +152,7 @@ public class Program
 
         // ------------------------------------------------------------------------------------------------ Options
 
-        RouteGroupBuilder AuthRoutes = app.MapGroup("").RequireAuthorization().RequireCors("General-Cors");
-
-        AuthRoutes.MapGet("/options", () => Results.Ok(
+        app.MapGet("/options", () => Results.Ok(
             new
             {
                 BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, OptionsMetaData.BotOptionsType!), OptionsMetaData.BotOptionsType!),
@@ -164,9 +162,9 @@ public class Program
                 RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, OptionsMetaData.RiskManagementOptionsType!), OptionsMetaData.RiskManagementOptionsType!),
                 BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, OptionsMetaData.BrokerOptionsType!), OptionsMetaData.BrokerOptionsType!)
             }
-        ));
+        )).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/bot-options", async (JsonNode opt) =>
+        app.MapPatch("/bot-options", async (JsonNode opt) =>
         {
             try
             {
@@ -178,9 +176,9 @@ public class Program
                 return Results.Ok(options.BotOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/runner-options", async (JsonNode opt) =>
+        app.MapPatch("/runner-options", async (JsonNode opt) =>
         {
             try
             {
@@ -192,9 +190,9 @@ public class Program
                 return Results.Ok(options.RunnerOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/strategy-options", async (JsonNode opt) =>
+        app.MapPatch("/strategy-options", async (JsonNode opt) =>
         {
             try
             {
@@ -206,9 +204,9 @@ public class Program
                 return Results.Ok(options.StrategyOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/indicator-options", async (JsonNode opt) =>
+        app.MapPatch("/indicator-options", async (JsonNode opt) =>
         {
             try
             {
@@ -220,9 +218,9 @@ public class Program
                 return Results.Ok(options.IndicatorOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/risk-management-options", async (JsonNode opt) =>
+        app.MapPatch("/risk-management-options", async (JsonNode opt) =>
         {
             try
             {
@@ -234,9 +232,9 @@ public class Program
                 return Results.Ok(options.RiskManagementOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
-        AuthRoutes.MapPatch("/broker-options", async (JsonNode opt) =>
+        app.MapPatch("/broker-options", async (JsonNode opt) =>
         {
             try
             {
@@ -278,15 +276,16 @@ public class Program
                 return Results.Ok(options.BrokerOptions);
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        });
+        }).RequireAuthorization().RequireCors("General-Cors");
 
         // ------------------------------------------------------------------------------------------------ Status
 
-        AuthRoutes.MapGet("/status", () =>
+        app.MapGet("/status", () =>
         {
             return Results.Ok(new { Status = services?.Runner!.Status.ToString() ?? RunnerStatus.STOPPED.ToString() });
-        });
-        AuthRoutes.MapPost("/start", Start());
+        }).RequireAuthorization().RequireCors("General-Cors");
+
+        app.MapPost("/start", Start()).RequireAuthorization().RequireCors("General-Cors");
         Func<Task<IResult>> Start() => async () =>
         {
             if (services == null)
@@ -300,7 +299,7 @@ public class Program
             return Results.Ok();
         };
 
-        AuthRoutes.MapPost("/suspend", Suspend());
+        app.MapPost("/suspend", Suspend()).RequireAuthorization().RequireCors("General-Cors");
         Func<Task<IResult>> Suspend() => async () =>
         {
             if (services == null || services.Runner == null)
@@ -310,7 +309,7 @@ public class Program
             return Results.Ok();
         };
 
-        AuthRoutes.MapPost("/stop", Stop());
+        app.MapPost("/stop", Stop()).RequireAuthorization().RequireCors("General-Cors");
         Func<Task<IResult>> Stop() => async () =>
         {
             if (services == null || services.Runner == null)
