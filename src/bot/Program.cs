@@ -90,10 +90,10 @@ public class Program
 
         app.UseRateLimiter();
 
+        app.UseCors("General-Cors");
+
         app.UseAuthentication();
         app.UseAuthorization();
-
-        app.UseCors("General-Cors");
 
         OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
         OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
