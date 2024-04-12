@@ -20,6 +20,12 @@ services:
             - bot-network
         depends_on:
             - bot
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.5'
+                    memory: 100M
         secrets:
           - caCrt
           - caKey
@@ -32,10 +38,21 @@ services:
             replicas: 1
             resources:
                 limits:
-                    cpus: '0.75'
-                    memory: 200M
+                    cpus: '0.5'
+                    memory: 100M
         environment:
             - ACCEPT_EULA=Y
+    web:
+        image: ghcr.io/hirbod-codes/bot_client_web:latest
+        restart: always
+        networks:
+            - bot-network
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.5'
+                    memory: 200M
     bot:
         image: ghcr.io/hirbod-codes/bot:latest
         networks:
