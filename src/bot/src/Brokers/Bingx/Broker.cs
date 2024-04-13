@@ -299,7 +299,6 @@ public class Broker : Api, IBroker
                 break;
             }
 
-            byte[] buffer = new byte[1024 * 4];
             _previousCandle = null;
             while (true)
             {
@@ -318,6 +317,7 @@ public class Broker : Api, IBroker
                 if (!_isListeningForCandles)
                     _isListeningForCandles = true;
 
+                byte[] buffer = new byte[1024 * 4];
                 WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                 if (result.MessageType == WebSocketMessageType.Close)
