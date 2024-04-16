@@ -112,7 +112,7 @@ public class Runner : IRunner
                 candle = await _broker.GetCandle();
 
                 await Task.Delay(100);
-                now = now.AddMicroseconds(100);
+                now = now.AddMilliseconds(100);
             } while (now <= limitTime && (candle == null || (candle != null && (now - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds >= 3)));
 
             if (now > limitTime || candle == null)
