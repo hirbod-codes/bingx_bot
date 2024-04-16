@@ -289,7 +289,7 @@ public class Program
         }).RequireAuthorization().RequireCors("General-Cors");
 
         app.MapPost("/start", Start()).RequireAuthorization().RequireCors("General-Cors");
-        Func<Task<IResult>> Start() => async () =>
+        Func<IResult> Start() => () =>
         {
             if (services == null)
                 try { services = CreateServices(options!); }
@@ -298,7 +298,7 @@ public class Program
             if (services!.Runner == null)
                 return Results.BadRequest(new { Message = "You have not set any options yet." });
 
-            await services.Runner!.Continue();
+            _ = services.Runner!.Continue();
             return Results.Ok();
         };
 
