@@ -18,7 +18,6 @@ using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using bot.src.Authentication.ApiKey;
-using System.Net;
 
 namespace bot;
 
