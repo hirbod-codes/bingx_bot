@@ -88,24 +88,23 @@ public class Broker : Api, IBroker
     private async Task StartCandleWebSocket()
     {
         if (!_isListeningForCandles && !_shouldStopListening)
-            if (!_isListeningForCandles && !_shouldStopListening)
-                try { await ListenForCandles(_candlesCount, _timeFrame); }
-                catch (MissingCandlesException ex)
-                {
-                    _logger.Error(ex, "Missing candles detected!");
-                    _areCandlesFetched = false;
-                    RefetchCandles?.Invoke(this, EventArgs.Empty);
+            try { await ListenForCandles(_candlesCount, _timeFrame); }
+            catch (MissingCandlesException ex)
+            {
+                _logger.Error(ex, "Missing candles detected!");
+                _areCandlesFetched = false;
+                RefetchCandles?.Invoke(this, EventArgs.Empty);
 
-                    _isListeningForCandles = false;
-                    RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
-                }
-                catch (System.Exception ex)
-                {
-                    _logger.Error(ex, "The broker's listener has failed, Restarting...");
+                _isListeningForCandles = false;
+                RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.Error(ex, "The broker's listener has failed, Restarting...");
 
-                    _isListeningForCandles = false;
-                    RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
-                }
+                _isListeningForCandles = false;
+                RestartCandleWebSocket?.Invoke(this, EventArgs.Empty);
+            }
     }
 
     public Task InitiateCandleStore(int? candlesCount = null, int? timeFrame = null)
@@ -321,7 +320,25 @@ public class Broker : Api, IBroker
                 WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                 if (result.MessageType == WebSocketMessageType.Close)
-                    break;
+                {
+                    string? m = null;
+                    try
+                    {
+                        byte[] b = await _utilities.DecompressBytes(buffer);
+
+                        m = Encoding.UTF8.GetString(await _utilities.DecompressBytes(buffer), 0, b.Length);
+                    }
+                    catch (System.Exception) { }
+
+                    _logger.Warning("A close message was received by the broker, restarting...");
+
+                    if (m != null)
+                        _logger.Debug("message: {@message}", m);
+
+                    await Task.Delay(10 * 1000);
+
+                    throw new WebSocketClosedByBrokerException();
+                }
 
                 byte[] bytes = await _utilities.DecompressBytes(buffer);
 
@@ -342,7 +359,10 @@ public class Broker : Api, IBroker
                     throw new BingxException("Invalid id provided by the server.");
 
                 if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
+                {
+                    _logger.Warning("No data provided by the broker, skipping...");
                     continue;
+                }
 
                 Candle candle = new()
                 {
