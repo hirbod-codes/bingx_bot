@@ -19,6 +19,8 @@ public class Runner : IRunner
     private readonly RunnerOptions _runnerOptions;
     private System.Timers.Timer? _timer = null;
     private bool _isFirstStart = true;
+    private int _millisecondsOffset = 30000;
+    private bool _isTicking = false;
 
     public RunnerStatus Status { get; set; }
 
@@ -50,14 +52,16 @@ public class Runner : IRunner
         }
 
         Status = RunnerStatus.RUNNING;
-        _broker.StartListening();
+        if (_runnerOptions.TimeFrame <= 60)
+            _broker.StartListening();
         await SetTimer();
     }
 
     public Task Stop()
     {
         Status = RunnerStatus.STOPPED;
-        _broker.StopListening();
+        if (_runnerOptions.TimeFrame <= 60)
+            _broker.StopListening();
         _timer?.Stop();
 
         return Task.CompletedTask;
@@ -66,7 +70,6 @@ public class Runner : IRunner
     public Task Suspend()
     {
         Status = RunnerStatus.SUSPENDED;
-        _timer?.Stop();
 
         return Task.CompletedTask;
     }
@@ -80,7 +83,7 @@ public class Runner : IRunner
         }
 
         _logger.Information("Runner started at: {dateTime}", _time.GetUtcNow().ToString());
-        Task notifierTask = _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
+        _ = _notifier.SendMessage($"Runner started at: {_time.GetUtcNow()}");
 
         await _broker.InitiateCandleStore(_runnerOptions.HistoricalCandlesCount);
         await SetTimer();
@@ -89,7 +92,10 @@ public class Runner : IRunner
     private async Task SetTimer()
     {
         _timer?.Stop();
-        _timer = await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) => await Tick());
+        if (_runnerOptions.TimeFrame <= 60)
+            _timer = await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) => await Tick());
+        else
+            _timer = await _time.StartTimer(_runnerOptions.TimeFrame, async (o, args) => await Tick(), _millisecondsOffset);
     }
 
     private async Task Tick()
@@ -102,10 +108,15 @@ public class Runner : IRunner
 
         try
         {
+            if (_isTicking)
+                return;
+            else
+                _isTicking = true;
+
             _logger.Information("Runner's ticking...");
 
             DateTime now = _time.GetUtcNow();
-            DateTime limitTime = now.AddSeconds(6);
+            DateTime limitTime = now.AddSeconds((double)(6 + (_millisecondsOffset / 1000m)));
             Candle? candle;
             do
             {
@@ -122,6 +133,12 @@ public class Runner : IRunner
             }
 
             _logger.Information("Candle: {@candle}", candle);
+
+            if (Status == RunnerStatus.SUSPENDED)
+            {
+                _logger.Information("Runner is Suspended, Skipping...");
+                return;
+            }
 
             await _strategy.PrepareIndicators();
 
@@ -141,5 +158,6 @@ public class Runner : IRunner
             try { Task notifierTask = _notifier.SendMessage($"A system exception is thrown. Exception message: {ex.Message}"); }
             catch (Exception ex1) { _logger.Error(ex1, "System failed to notify."); }
         }
+        finally { _isTicking = false; }
     }
 }
