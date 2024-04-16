@@ -259,12 +259,16 @@ public class Program
                 if (options.BrokerOptions.Equals(input))
                     return Results.Ok(options.BrokerOptions);
 
+                string previousStatus = services?.Runner!.Status.ToString() ?? RunnerStatus.STOPPED.ToString();
                 Stop();
                 options.BrokerOptions = input;
                 try
                 {
                     services = CreateServices(options!);
-                    Start();
+                    if (previousStatus == RunnerStatus.RUNNING.ToString())
+                        Start();
+                    if (previousStatus == RunnerStatus.SUSPENDED.ToString())
+                        Suspend();
                 }
                 catch (Exception)
                 {
