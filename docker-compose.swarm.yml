@@ -27,36 +27,10 @@ services:
             resources:
                 limits:
                     cpus: '0.5'
-                    memory: 100M
+                    memory: 200M
         secrets:
           - caCrt
           - caKey
-    seq:
-        image: datalust/seq:latest
-        restart: always
-        networks:
-            - bot-network
-        deploy:
-            replicas: 1
-            resources:
-                limits:
-                    cpus: '0.5'
-                    memory: 100M
-        environment:
-            - ACCEPT_EULA=Y
-        volumes:
-            - seq:/data
-    web:
-        image: ghcr.io/hirbod-codes/bot_client_web:latest
-        restart: always
-        networks:
-            - bot-network
-        deploy:
-            replicas: 1
-            resources:
-                limits:
-                    cpus: '0.5'
-                    memory: 200M
     bot:
         image: ghcr.io/hirbod-codes/bot:latest
         networks:
@@ -86,3 +60,29 @@ services:
             BOT_MessageRepositoryName: InMemory
         secrets:
             - BOT_ApiKey
+    seq:
+        image: datalust/seq:latest
+        restart: always
+        networks:
+            - bot-network
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.25'
+                    memory: 100M
+        environment:
+            - ACCEPT_EULA=Y
+        volumes:
+            - seq:/data
+    web:
+        image: ghcr.io/hirbod-codes/bot_client_web:latest
+        restart: always
+        networks:
+            - bot-network
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.25'
+                    memory: 100M
