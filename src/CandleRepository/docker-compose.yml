@@ -1,0 +1,70 @@
+version: "3.8"
+networks:
+  backend:
+    name: backend
+    driver: bridge
+
+services:
+    nginx:
+        container_name: nginx
+        image: nginx:1
+        restart: unless-stopped
+        ports:
+          - 8080:80
+        networks:
+            - backend
+        depends_on:
+            - bot
+            - seq
+        volumes:
+          - ./src/CandleRepository/src/nginx/development/nginx.conf:/etc/nginx/nginx.conf:rw
+          - ./src/CandleRepository/src/nginx/development/api_gateway.conf:/etc/nginx/api_gateway.conf:rw
+          - ./src/CandleRepository/src/nginx/development/api_conf.d/:/etc/nginx/api_conf.d/:rw
+    seq:
+        container_name: seq
+        image: datalust/seq:latest
+        networks:
+            - backend
+        restart: always
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
+        environment:
+            - ACCEPT_EULA=Y
+    bot:
+        container_name: bot
+        build:
+            context: ./
+            dockerfile: ./src/CandleRepository/Dockerfile
+            target: dev
+        networks:
+            - backend
+        depends_on:
+            - seq
+        restart: always
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
+        environment:
+            ASPNETCORE_ENVIRONMENT: Development
+            ENVIRONMENT: Development
+            BOT_ApiKey: abcdefg
+            BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            BOT_MessageStoreName: InMemory
+            BOT_BrokerName: Bingx
+            BOT_RiskManagementName: SuperTrendV1
+            BOT_IndicatorOptionsName: SuperTrendV1
+            BOT_StrategyName: SuperTrendV1
+            BOT_StrategyOptions__SuperTrendV1__ProviderName: SuperTrendV1
+            BOT_BotName: SuperTrendV1
+            BOT_RunnerName: SuperTrendV1
+            BOT_NotifierName: NTFY
+            BOT_PositionRepositoryName: InMemory
+            BOT_CandleRepositoryName: InMemory
+            BOT_MessageRepositoryName: InMemory

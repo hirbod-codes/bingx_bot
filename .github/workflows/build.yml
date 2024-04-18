@@ -36,16 +36,18 @@ jobs:
           default_prerelease_bump: false
           dry_run: true
 
-      - uses: docker/metadata-action@v5
+      - name: bot image meta data
+        uses: docker/metadata-action@v5
         id: bot_image_meta
         with:
-          images: ghcr.io/${{github.repository_owner}}/bot
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/bot
           flavor: |
             latest=true
           tags: |
             type=semver,pattern={{version}},value=${{ steps.tag_version.outputs.new_tag }}
 
-      - uses: docker/build-push-action@v5
+      - name: bot image build and push
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: ./
@@ -57,22 +59,67 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm
 
-      - uses: docker/metadata-action@v5
-        id: nginx_image_meta
+      - name: bot's nginx image meta data
+        uses: docker/metadata-action@v5
+        id: bot_nginx_image_meta
         with:
-          images: ghcr.io/${{github.repository_owner}}/nginx
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/bot_nginx
           flavor: |
             latest=true
           tags: |
             type=semver,pattern={{version}},value=${{ steps.tag_version.outputs.new_tag }}
 
-      - uses: docker/build-push-action@v5
+      - name: bot's nginx image build and push
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: ./
-          file: ./nginx/production/Dockerfile
-          tags: ${{ steps.nginx_image_meta.outputs.tags }}
-          labels: ${{ steps.nginx_image_meta.outputs.labels }}
+          file: ./src/bot/src/nginx/production/Dockerfile
+          tags: ${{ steps.bot_nginx_image_meta.outputs.tags }}
+          labels: ${{ steps.bot_nginx_image_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: CandleRepository image meta data
+        uses: docker/metadata-action@v5
+        id: candle_repository_image_meta
+        with:
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/candle_repository
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.tag_version.outputs.new_tag }}
+
+      - name: CandleRepository image build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: ./
+          file: ./src/CandleRepository/Dockerfile
+          target: publish
+          tags: ${{ steps.candle_repository_image_meta.outputs.tags }}
+          labels: ${{ steps.candle_repository_image_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: CandleRepository's nginx image meta data
+        uses: docker/metadata-action@v5
+        id: candle_repository_nginx_image_meta
+        with:
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/candle_repository_nginx
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.tag_version.outputs.new_tag }}
+
+      - name: CandleRepository's nginx image build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: ./
+          file: ./src/CandleRepository/src/nginx/production/Dockerfile
+          tags: ${{ steps.candle_repository_nginx_image_meta.outputs.tags }}
+          labels: ${{ steps.candle_repository_nginx_image_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

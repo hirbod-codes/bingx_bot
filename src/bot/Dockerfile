@@ -15,9 +15,10 @@ RUN echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGET
 WORKDIR /app
 
 COPY ./trading_bot.sln ./
+COPY ./src/lib/ ./src/lib/
 COPY ./src/bot/bot.csproj ./src/bot/
+COPY ./src/CandleRepository/CandleRepository.csproj ./src/CandleRepository/
 COPY ./src/StrategyTester/StrategyTester.csproj ./src/StrategyTester/
-COPY ./Tests/unit_tests/unit_tests.csproj ./Tests/unit_tests/
 
 FROM base AS dev
 

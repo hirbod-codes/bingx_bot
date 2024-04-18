@@ -1,0 +1,78 @@
+version: "3.8"
+networks:
+    candle_repository_network:
+        driver: overlay
+secrets:
+    BOT_ApiKey:
+        external: true
+    caCrt:
+        external: true
+    caKey:
+        external: true
+volumes:
+    seq: {}
+
+services:
+    nginx:
+        image: ghcr.io/hirbod-codes/bingx_bot/candle_repository_nginx:latest
+        restart: always
+        ports:
+          - 443:443
+        networks:
+            - candle_repository_network
+        depends_on:
+            - candle_repository
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.5'
+                    memory: 200M
+        secrets:
+          - caCrt
+          - caKey
+    candle_repository:
+        image: ghcr.io/hirbod-codes/bingx_bot/candle_repository:latest
+        networks:
+            - candle_repository_network
+        restart: always
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: 200M
+        environment:
+            ASPNETCORE_ENVIRONMENT: Production
+            ENVIRONMENT: Production
+            SECRETS_PREFIX: BOT_
+            BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            BOT_MessageStoreName: InMemory
+            BOT_BrokerName: Bingx
+            BOT_RiskManagementName: SuperTrendV1
+            BOT_IndicatorOptionsName: SuperTrendV1
+            BOT_StrategyName: SuperTrendV1
+            BOT_StrategyOptions__SuperTrendV1__ProviderName: SuperTrendV1
+            BOT_BotName: SuperTrendV1
+            BOT_RunnerName: SuperTrendV1
+            BOT_NotifierName: NTFY
+            BOT_PositionRepositoryName: InMemory
+            BOT_CandleRepositoryName: InMemory
+            BOT_MessageRepositoryName: InMemory
+        secrets:
+            - BOT_ApiKey
+    seq:
+        image: datalust/seq:latest
+        restart: always
+        networks:
+            - candle_repository_network
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    cpus: '0.25'
+                    memory: 100M
+        environment:
+            - ACCEPT_EULA=Y
+        volumes:
+            - seq:/data

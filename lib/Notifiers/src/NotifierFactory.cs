@@ -8,10 +8,10 @@ namespace Notifiers.src;
 
 public static class NotifierFactory
 {
-    public static INotifier CreateNotifier(string notifierName, IMessageRepository messageRepository, ILogger logger, INotifierOptions notifierOptions) => notifierName switch
+    public static INotifier CreateNotifier(string notifierName, IMessageRepository? messageRepository, ILogger logger, INotifierOptions notifierOptions) => notifierName switch
     {
         NotifierNames.NTFY => new NtfyNotifier(notifierOptions, logger),
-        NotifierNames.IN_MEMORY => new InMemoryNotifier(messageRepository, logger),
+        NotifierNames.IN_MEMORY => new InMemoryNotifier(messageRepository!, logger),
         _ => throw new Exception()
     };
 
