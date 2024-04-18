@@ -1,26 +1,27 @@
-using bot.src.Bots;
-using bot.src.Data.Models;
-using bot.src.Strategies;
+using Abstractions.src.Bots;
+using Abstractions.src.Brokers;
+using Abstractions.src.Models;
+using Abstractions.src.Strategies;
+using Abstractions.src.Utilities;
 using ILogger = Serilog.ILogger;
-using StrategyTester.src.Utils;
 
 namespace StrategyTester.src.Testers.General;
 
 public class GeneralTester : ITester
 {
     private readonly TesterOptions _testerOptions;
-    private readonly ITime _time;
+    private readonly ITimeSimulator _time;
     private readonly IStrategy _strategy;
-    private readonly Brokers.IBroker _broker;
+    private readonly IBrokerSimulator _broker;
     private readonly IBot _bot;
     private readonly ILogger _logger;
 
-    public GeneralTester(ITesterOptions testerOptions, ITime time, IStrategy strategy, Brokers.IBroker broker, IBot bot, ILogger logger)
+    public GeneralTester(ITesterOptions testerOptions, ITime time, IStrategy strategy, IBroker broker, IBot bot, ILogger logger)
     {
         _testerOptions = (testerOptions as TesterOptions)!;
-        _time = time;
+        _time = (time as ITimeSimulator)!;
         _strategy = strategy;
-        _broker = broker;
+        _broker = (broker as IBrokerSimulator)!;
         _bot = bot;
         _logger = logger.ForContext<GeneralTester>();
     }

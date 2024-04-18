@@ -20,10 +20,23 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Google.Apis.Gmail.v1" Version="1.64.0.3231" />
-        <PackageReference Include="Skender.Stock.Indicators" Version="2.5.0" />
-        <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+        <!-- <PackageReference Include="System.IO.Compression" Version="4.3.0" />
         <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
-        <PackageReference Include="Bogus" Version="34.0.2" />
+        <PackageReference Include="Bogus" Version="34.0.2" /> -->
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\lib\Bots\Bots.csproj" />
+        <ProjectReference Include="..\..\lib\Brokers\Brokers.csproj" />
+        <ProjectReference Include="..\..\lib\Runners\Runners.csproj" />
+        <ProjectReference Include="..\..\lib\Indicators\Indicators.csproj" />
+        <ProjectReference Include="..\..\lib\Notifiers\Notifiers.csproj" />
+        <ProjectReference Include="..\..\lib\RiskManamgent\RiskManagement.csproj" />
+        <ProjectReference Include="..\..\lib\Strategies\Strategies.csproj" />
+        <ProjectReference Include="..\..\lib\Utilities\Utilities.csproj" />
+        <ProjectReference Include="..\..\lib\Abstractions\Abstractions.csproj" />
+        <ProjectReference Include="..\..\lib\MessageStore\MessageStore.csproj" />
+        <ProjectReference Include="..\..\lib\Repositories\Repositories.csproj" />
+        <ProjectReference Include="..\..\lib\PnLAnalysis\PnLAnalysis.csproj" />
     </ItemGroup>
 </Project>

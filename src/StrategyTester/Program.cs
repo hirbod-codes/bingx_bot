@@ -1,26 +1,30 @@
 ﻿using bot;
-using bot.src.Bots;
-using bot.src.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
-using bot.src.Strategies;
 using StrategyTester.src.Testers;
-using StrategyTester.src.Utils;
-using bot.src.MessageStores;
-using bot.src.Notifiers;
-using bot.src.Indicators;
-using bot.src.RiskManagement;
-using bot.src.PnLAnalysis;
-using bot.src.PnLAnalysis.Models;
 using System.Text.Json;
-using bot.src.Brokers;
-using BrokerOptionsFactory = StrategyTester.src.Brokers.BrokerOptionsFactory;
-using BrokerFactory = StrategyTester.src.Brokers.BrokerFactory;
 using Serilog.Core;
 using StrategyTester.Dtos;
 using Serilog;
+using Abstractions.src.Brokers;
+using Notifiers.src;
+using RiskManagement.src;
+using Strategies.src;
+using Bots.src;
+using Abstractions.src.Bots;
+using Abstractions.src.Strategies;
+using Abstractions.src.RiskManagements;
+using Abstractions.src.Notifiers;
+using Abstractions.src.MessageStore;
+using MessageStores.src;
+using Repositories.src;
+using Abstractions.src.Repository;
+using Indicators.src;
+using PnLAnalysis.src.Models;
+using Abstractions.src.Utilities;
+using Util.src;
+using Brokers.src;
 
 namespace StrategyTester;
 
@@ -134,6 +138,9 @@ public class Program
 
     private static async Task RunScenario(List<Result> results)
     {
+        var notifierOptions = NotifierOptionsFactory.CreateNotifierOptions(_configuration[ConfigurationKeys.NOTIFIER_NAME]!);
+        _configuration.Bind($"{ConfigurationKeys.NOTIFIER_OPTIONS}", notifierOptions);
+
         var messageStoreOptions = MessageStoreOptionsFactory.CreateMessageStoreOptions(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!);
         _configuration.Bind($"{ConfigurationKeys.MESSAGE_STORE_OPTIONS}", messageStoreOptions);
 
@@ -155,20 +162,21 @@ public class Program
         var testerOptions = TesterOptionsFactory.CreateTesterOptions(_configuration[ConfigurationKeys.TESTER_NAME]!);
         _configuration.Bind($"{ConfigurationKeys.TESTER_OPTIONS}", testerOptions);
 
+        ICandleRepository candleRepository = CandleRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.CANDLE_REPOSITORY_NAME]!);
         IPositionRepository positionRepository = PositionRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME]!);
         IMessageRepository messageRepository = MessageRepositoryFactory.CreateRepository(_configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME]!);
 
         IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
 
-        ITime time = new Time();
+        ITime time = new TimeSimulator() as ITime;
 
-        src.Brokers.IBroker broker = BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, time, _logger);
+        IBrokerSimulator broker = (BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger, time, candleRepository, positionRepository) as IBrokerSimulator)!;
 
-        INotifier notifier = NotifierFactory.CreateNotifier(_configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, _logger);
+        INotifier notifier = NotifierFactory.CreateNotifier(_configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, _logger, notifierOptions);
 
         IRiskManagement riskManagement = RiskManagementFactory.CreateRiskManager(_configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME]!, riskManagementOptions, broker, time, _logger);
 
-        IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, riskManagement, broker, notifier, messageRepository, _logger);
+        IStrategy strategy = StrategyFactory.CreateStrategy(_configuration[ConfigurationKeys.STRATEGY_NAME]!, strategyOptions, indicatorsOptions, broker, notifier, messageRepository, _logger);
 
         IBot bot = BotFactory.CreateBot(_configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, _logger);
 
@@ -176,7 +184,7 @@ public class Program
 
         await tester.Test();
 
-        AnalysisSummary analysisSummary = await PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement, broker);
+        AnalysisSummary analysisSummary = await PnLAnalysis.src.PnLAnalysis.RunAnalysis(positionRepository, messageRepository, strategy.GetIndicators(), riskManagement, broker);
 
         results.Add(new Result
         {

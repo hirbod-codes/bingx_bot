@@ -1,23 +1,30 @@
-﻿using bot.src.Bots;
-using bot.src.Brokers;
-using bot.src.Data;
-using bot.src.Indicators;
-using bot.src.MessageStores;
-using bot.src.Notifiers;
-using bot.src.RiskManagement;
-using bot.src.Runners;
-using bot.src.Strategies;
-using bot.src.Util;
+﻿using Runners.src;
 using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
 using Serilog;
 using bot.src.Configuration.Providers.DockerSecrets;
-using bot.src.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using bot.src.Authentication.ApiKey;
+using Abstractions.src.Models;
+using Abstractions.src.Bots;
+using Abstractions.src.Runners;
+using Abstractions.src.Strategies;
+using Abstractions.src.Indicators;
+using Abstractions.src.RiskManagements;
+using Abstractions.src.Brokers;
+using Abstractions.src.Notifiers;
+using Repositories.src;
+using Notifiers.src;
+using Util.src;
+using Brokers.src;
+using MessageStores.src;
+using RiskManagement.src;
+using Strategies.src;
+using Bots.src;
+using Indicators.src;
 
 namespace bot;
 
@@ -94,31 +101,25 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
 
-        OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
-        OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
-        OptionsMetaData.NotifierName = _configuration[ConfigurationKeys.NOTIFIER_NAME];
-        OptionsMetaData.MessageStoreName = _configuration[ConfigurationKeys.MESSAGE_STORE_NAME];
-        OptionsMetaData.BrokerName = _configuration[ConfigurationKeys.BROKER_NAME];
-        OptionsMetaData.RiskManagementName = _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME];
-        OptionsMetaData.StrategyName = _configuration[ConfigurationKeys.STRATEGY_NAME];
-        OptionsMetaData.IndicatorOptionsName = _configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME];
-        OptionsMetaData.BotName = _configuration[ConfigurationKeys.BOT_NAME];
-        OptionsMetaData.RunnerName = _configuration[ConfigurationKeys.RUNNER_NAME];
+        OptionsMetaData optionsMetaData = new(
+            candleRepositoryName: _configuration[ConfigurationKeys.CANDLE_REPOSITORY_NAME],
+            positionRepositoryName: _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME],
+            messageRepositoryName: _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME],
+            notifierName: _configuration[ConfigurationKeys.NOTIFIER_NAME],
+            messageStoreName: _configuration[ConfigurationKeys.MESSAGE_STORE_NAME],
+            brokerName: _configuration[ConfigurationKeys.BROKER_NAME],
+            riskManagementName: _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME],
+            strategyName: _configuration[ConfigurationKeys.STRATEGY_NAME],
+            indicatorOptionsName: _configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME],
+            botName: _configuration[ConfigurationKeys.BOT_NAME],
+            runnerName: _configuration[ConfigurationKeys.RUNNER_NAME]
+        );
 
         _logger.Debug("ASPNETCORE_ENVIRONMENT: {ASPNETCORE_ENVIRONMENT}", _configuration["ASPNETCORE_ENVIRONMENT"]);
         _logger.Debug("ENVIRONMENT: {ENVIRONMENT}", _configuration["ENVIRONMENT"]);
         _logger.Debug("SECRETS_PREFIX: {SECRETS_PREFIX}", _configuration["SECRETS_PREFIX"]);
         _logger.Debug("Serilog:WriteTo:1:Args:serverUrl: {Serilog:WriteTo:1:Args:serverUrl}", _configuration["Serilog:WriteTo:1:Args:serverUrl"]);
-        _logger.Debug("PositionRepositoryName: {PositionRepositoryName}", OptionsMetaData.PositionRepositoryName);
-        _logger.Debug("MessageRepositoryName: {MessageRepositoryName}", OptionsMetaData.MessageRepositoryName);
-        _logger.Debug("NotifierName: {NotifierName}", OptionsMetaData.NotifierName);
-        _logger.Debug("MessageStoreName: {MessageStoreName}", OptionsMetaData.MessageStoreName);
-        _logger.Debug("BrokerName: {BrokerName}", OptionsMetaData.BrokerName);
-        _logger.Debug("RiskManagementName: {RiskManagementName}", OptionsMetaData.RiskManagementName);
-        _logger.Debug("StrategyName: {StrategyName}", OptionsMetaData.StrategyName);
-        _logger.Debug("IndicatorOptionsName: {IndicatorOptionsName}", OptionsMetaData.IndicatorOptionsName);
-        _logger.Debug("BotName: {BotName}", OptionsMetaData.BotName);
-        _logger.Debug("RunnerName: {RunnerName}", OptionsMetaData.RunnerName);
+        _logger.Debug("optionsMetaData: {@optionsMetaData}", optionsMetaData);
 
         if (app.Environment.IsDevelopment())
         {
@@ -135,31 +136,35 @@ public class Program
         Options? options = new();
         Services? services = null;
 
-        if (app.Environment.IsDevelopment())
-            options = Options.ApplyDefaults();
+        ConfigureEndPoints(app, optionsMetaData, options, services);
 
-        async Task WaitForRunnerToTick()
+        app.Run();
+    }
+
+    private static async Task WaitForRunnerToTick(Options? options)
+    {
+        long timeFrame = options?.TimeFrame ?? 60;
+        DateTime dt = DateTime.UtcNow;
+        do
         {
-            long timeFrame = options.TimeFrame ?? 60;
-            DateTime dt = DateTime.UtcNow;
-            do
-            {
-                await Task.Delay(1000);
-                dt = dt.AddSeconds(1);
-            } while (DateTimeOffset.Parse(dt.ToString()).ToUnixTimeSeconds() % timeFrame < 7);
-        }
+            await Task.Delay(1000);
+            dt = dt.AddSeconds(1);
+        } while (DateTimeOffset.Parse(dt.ToString()).ToUnixTimeSeconds() % timeFrame < 7);
+    }
 
+    private static void ConfigureEndPoints(WebApplication app, OptionsMetaData optionsMetaData, Options options, Services? services)
+    {
         // ------------------------------------------------------------------------------------------------ Options
 
         app.MapGet("/options", () => Results.Ok(
             new
             {
-                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, OptionsMetaData.BotOptionsType!), OptionsMetaData.BotOptionsType!),
-                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, OptionsMetaData.RunnerOptionsType!), OptionsMetaData.RunnerOptionsType!),
-                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, OptionsMetaData.StrategyOptionsType!), OptionsMetaData.StrategyOptionsType!),
-                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, OptionsMetaData.IndicatorOptionsType!), OptionsMetaData.IndicatorOptionsType!),
-                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, OptionsMetaData.RiskManagementOptionsType!), OptionsMetaData.RiskManagementOptionsType!),
-                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, OptionsMetaData.BrokerOptionsType!), OptionsMetaData.BrokerOptionsType!)
+                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(optionsMetaData.BotName)!), BotOptionsFactory.GetInstanceType(optionsMetaData.BotName)!),
+                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(optionsMetaData.RunnerName)!), RunnerOptionsFactory.GetInstanceType(optionsMetaData.RunnerName)!),
+                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(optionsMetaData.StrategyName)!), StrategyOptionsFactory.GetInstanceType(optionsMetaData.StrategyName)!),
+                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(optionsMetaData.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(optionsMetaData.IndicatorOptionsName)!),
+                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(optionsMetaData.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(optionsMetaData.RiskManagementName)!),
+                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(optionsMetaData.BrokerName)!), BrokerOptionsFactory.GetInstanceType(optionsMetaData.BrokerName)!)
             }
         )).RequireAuthorization().RequireCors("General-Cors");
 
@@ -167,10 +172,10 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 string json = JsonSerializer.Serialize(opt);
-                options.BotOptions = (IBotOptions)opt.Deserialize(OptionsMetaData.BotOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.BotOptions = (IBotOptions)opt.Deserialize(BotOptionsFactory.GetInstanceType(optionsMetaData.BotName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.BotOptions);
             }
@@ -181,10 +186,10 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(OptionsMetaData.RunnerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(RunnerOptionsFactory.GetInstanceType(optionsMetaData.RunnerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RunnerOptions);
             }
@@ -195,10 +200,10 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 string json = JsonSerializer.Serialize(opt);
-                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(OptionsMetaData.StrategyOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(StrategyOptionsFactory.GetInstanceType(optionsMetaData.StrategyName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.StrategyOptions);
             }
@@ -209,10 +214,10 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 string json = JsonSerializer.Serialize(opt);
-                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(OptionsMetaData.IndicatorOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(IndicatorOptionsFactory.GetInstanceType(optionsMetaData.IndicatorOptionsName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.IndicatorOptions);
             }
@@ -223,10 +228,10 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(OptionsMetaData.RiskManagementOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(RiskManagementOptionsFactory.GetInstanceType(optionsMetaData.RiskManagementName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RiskManagementOptions);
             }
@@ -237,12 +242,12 @@ public class Program
         {
             try
             {
-                await WaitForRunnerToTick();
+                await WaitForRunnerToTick(options);
 
                 IBrokerOptions? oldOptionsBrokerOptions = options.BrokerOptions;
 
                 string json = JsonSerializer.Serialize(opt);
-                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(OptionsMetaData.BrokerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(BrokerOptionsFactory.GetInstanceType(optionsMetaData.BrokerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 if (options.BrokerOptions == null)
                 {
@@ -264,7 +269,7 @@ public class Program
                 options.BrokerOptions = input;
                 try
                 {
-                    services = CreateServices(options!);
+                    services = CreateServices(options!, optionsMetaData);
                     if (previousStatus == RunnerStatus.RUNNING.ToString())
                         Start();
                     if (previousStatus == RunnerStatus.SUSPENDED.ToString())
@@ -281,6 +286,20 @@ public class Program
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         }).RequireAuthorization().RequireCors("General-Cors");
 
+        app.MapPatch("/notifier-options", async (JsonNode opt) =>
+        {
+            try
+            {
+                await WaitForRunnerToTick(options);
+
+                string json = JsonSerializer.Serialize(opt);
+                options.NotifierOptions = (INotifierOptions)opt.Deserialize(NotifierOptionsFactory.GetInstanceType(optionsMetaData.NotifierName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+
+                return Results.Ok(options.NotifierOptions);
+            }
+            catch (Exception) { return Results.Problem("Server failed to process your request."); }
+        }).RequireAuthorization().RequireCors("General-Cors");
+
         // ------------------------------------------------------------------------------------------------ Status
 
         app.MapGet("/status", () =>
@@ -292,7 +311,7 @@ public class Program
         Func<IResult> Start() => () =>
         {
             if (services == null)
-                try { services = CreateServices(options!); }
+                try { services = CreateServices(options!, optionsMetaData); }
                 catch (Exception) { return Results.BadRequest(new { Message = "We failed to create the bot, invalid options provided." }); }
 
             if (services!.Runner == null)
@@ -321,33 +340,33 @@ public class Program
             await services.Runner!.Stop();
             return Results.Ok();
         };
-
-        app.Run();
     }
 
-    private static Services? CreateServices(Options options)
+    private static Services? CreateServices(Options options, OptionsMetaData optionsMetaData)
     {
         Services services = new();
 
-        services.PositionRepository = PositionRepositoryFactory.CreateRepository(OptionsMetaData.PositionRepositoryName!);
+        services.CandlesRepository = CandleRepositoryFactory.CreateRepository(optionsMetaData.CandleRepositoryName!);
 
-        services.MessageRepository = MessageRepositoryFactory.CreateRepository(OptionsMetaData.MessageRepositoryName!);
+        services.PositionRepository = PositionRepositoryFactory.CreateRepository(optionsMetaData.PositionRepositoryName!);
 
-        services.Notifier = NotifierFactory.CreateNotifier(OptionsMetaData.NotifierName!, services.MessageRepository, _logger);
+        services.MessageRepository = MessageRepositoryFactory.CreateRepository(optionsMetaData.MessageRepositoryName!);
+
+        services.Notifier = NotifierFactory.CreateNotifier(optionsMetaData.NotifierName!, services.MessageRepository, _logger, options.NotifierOptions!);
 
         services.Time = new Time();
 
-        services.Broker = BrokerFactory.CreateBroker(OptionsMetaData.BrokerName!, options.BrokerOptions!, _logger, services.Time);
+        services.Broker = BrokerFactory.CreateBroker(optionsMetaData.BrokerName!, options.BrokerOptions!, _logger, services.Time, services.CandlesRepository, services.PositionRepository);
 
-        services.MessageStore = MessageStoreFactory.CreateMessageStore(OptionsMetaData.MessageStoreName!, options.MessageStoreOptions!, services.MessageRepository, _logger);
+        services.MessageStore = MessageStoreFactory.CreateMessageStore(optionsMetaData.MessageStoreName!, options.MessageStoreOptions!, services.MessageRepository, _logger);
 
-        services.RiskManagement = RiskManagementFactory.CreateRiskManager(OptionsMetaData.RiskManagementName!, options.RiskManagementOptions!, services.Broker, services.Time, _logger);
+        services.RiskManagement = RiskManagementFactory.CreateRiskManager(optionsMetaData.RiskManagementName!, options.RiskManagementOptions!, services.Broker, services.Time, _logger);
 
-        services.Strategy = StrategyFactory.CreateStrategy(OptionsMetaData.StrategyName!, options.StrategyOptions!, options.IndicatorOptions!, services.RiskManagement, services.Broker, services.Notifier!, services.MessageRepository!, _logger);
+        services.Strategy = StrategyFactory.CreateStrategy(optionsMetaData.StrategyName!, options.StrategyOptions!, options.IndicatorOptions!, services.Broker, services.Notifier!, services.MessageRepository!, _logger);
 
-        services.Bot = BotFactory.CreateBot(OptionsMetaData.BotName!, services.Broker, options.BotOptions!, services.MessageStore, services.RiskManagement, services.Time, services.Notifier!, _logger);
+        services.Bot = BotFactory.CreateBot(optionsMetaData.BotName!, services.Broker, options.BotOptions!, services.MessageStore, services.RiskManagement, services.Time, services.Notifier!, _logger);
 
-        services.Runner = RunnerFactory.CreateRunner(OptionsMetaData.RunnerName!, options.RunnerOptions!, services.Bot, services.Broker, services.Strategy, services.Time, services.Notifier!, _logger);
+        services.Runner = RunnerFactory.CreateRunner(optionsMetaData.RunnerName!, options.RunnerOptions!, null, services.Bot, services.Broker, services.Strategy, services.Time, services.Notifier!, _logger);
 
         return services;
     }
