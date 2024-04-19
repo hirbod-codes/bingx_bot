@@ -23,6 +23,7 @@ public class Broker : Api, IBroker
     private int _timeFrame;
     private bool _shouldStopListening = false;
     private Candle? _previousCandle;
+    private bool _isFetching = false;
 
     public event EventHandler? RestartCandlesWebSocket;
     public event EventHandler? RefetchCandles;
@@ -58,9 +59,36 @@ public class Broker : Api, IBroker
         _ => throw new BingxException("Invalid TimeFrame!")
     };
 
+    private async Task<Candle?> StartCandleWebSocket()
+    {
+        if (!_isListeningForCandles && !_shouldStopListening)
+            try { return await ListenForCandle(_candlesCount, _timeFrame); }
+            catch (MissingCandlesException ex)
+            {
+                _logger.Error(ex, "Missing candles detected!");
+
+                await FetchCandles();
+
+                return null;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.Error(ex, "The broker's listener has failed, Restarting...");
+
+                return await StartCandleWebSocket();
+            }
+
+        return null;
+    }
+
     private async Task FetchCandles()
     {
         _areCandlesFetched = false;
+
+        if (_isFetching)
+            return;
+        else
+            _isFetching = true;
 
         try
         {
@@ -83,30 +111,7 @@ public class Broker : Api, IBroker
             _areCandlesFetched = false;
             RefetchCandles?.Invoke(this, EventArgs.Empty);
         }
-    }
-
-    private async Task<Candle?> StartCandleWebSocket()
-    {
-        if (!_isListeningForCandles && !_shouldStopListening)
-            try { return await ListenForCandle(_candlesCount, _timeFrame); }
-            catch (MissingCandlesException ex)
-            {
-                _logger.Error(ex, "Missing candles detected!");
-                _areCandlesFetched = false;
-                RefetchCandles?.Invoke(this, EventArgs.Empty);
-
-                _isListeningForCandles = false;
-                return await StartCandleWebSocket();
-            }
-            catch (System.Exception ex)
-            {
-                _logger.Error(ex, "The broker's listener has failed, Restarting...");
-
-                _isListeningForCandles = false;
-                return await StartCandleWebSocket();
-            }
-
-        return null;
+        finally { _isFetching = false; }
     }
 
     private async Task StartCandlesWebSocket()
@@ -534,7 +539,11 @@ public class Broker : Api, IBroker
                 BingxWsResponse? wsResponse = JsonSerializer.Deserialize<BingxWsResponse>(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
                 if (wsResponse != null && wsResponse.Id != null && wsResponse.Id != id)
-                    throw new BingxException("Invalid id provided by the server.");
+                {
+                    BingxException bingxException = new BingxException("Invalid id provided by the server.");
+                    _logger.Error(bingxException, "No data provided by the broker, skipping...");
+                    throw bingxException;
+                }
 
                 if (wsResponse == null || wsResponse.Data == null || !wsResponse.Data.Any())
                 {
@@ -552,14 +561,16 @@ public class Broker : Api, IBroker
                     Volume = decimal.Parse(wsResponse.Data!.First().v)
                 };
 
-                if (!_areCandlesFetched)
+                if (_previousCandle == null)
                 {
+                    _logger.Verbose("Previous candle is null");
                     _previousCandle = candle;
                     continue;
                 }
 
-                if (_previousCandle == null || _previousCandle.Date == candle.Date)
+                if (_previousCandle.Date == candle.Date)
                 {
+                    _logger.Verbose("Candle is not closed yet");
                     _previousCandle = candle;
                     continue;
                 }
@@ -571,7 +582,9 @@ public class Broker : Api, IBroker
 
                     _areCandlesFetched = false;
 
-                    throw new MissingCandlesException();
+                    MissingCandlesException missingCandlesException = new MissingCandlesException();
+                    _logger.Error(missingCandlesException, "Missing candles detected.");
+                    throw missingCandlesException;
                 }
 
                 if (_previousCandle.Date != _candles.Last().Date)
@@ -819,10 +832,13 @@ public class Broker : Api, IBroker
 
         decimal quantity = margin * leverage / entryPrice;
 
+        long ticks = _time.GetUtcNow().Ticks;
+        _logger.Debug("Open market position ticks: {ticks}", ticks);
         HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/trade/order", "POST", ApiKey, ApiSecret, new
         {
             symbol = Symbol,
             type = "MARKET",
+            clientOrderID = ticks,
             side = direction == PositionDirection.LONG ? "BUY" : "SELL",
             positionSide = direction == PositionDirection.LONG ? "LONG" : "SHORT",
             quantity,

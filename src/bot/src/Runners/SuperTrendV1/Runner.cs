@@ -117,16 +117,28 @@ public class Runner : IRunner
 
             DateTime now = _time.GetUtcNow();
             DateTime limitTime = now.AddSeconds((double)(6 + (_millisecondsOffset / 1000m)));
-            Candle? candle;
+            Candle? candle = null;
+            Task<Candle?>? candleTask = null;
             do
             {
-                candle = await _broker.GetCandle();
+                candleTask ??= _broker.GetCandle();
 
                 await Task.Delay(100);
                 now = now.AddMilliseconds(100);
-            } while (now <= limitTime && (candle == null || (candle != null && (now - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds >= 3)));
 
-            if (now > limitTime || candle == null)
+                if (candleTask.IsCompleted || candleTask.IsCanceled || candleTask.IsFaulted)
+                    if (candleTask.IsCompletedSuccessfully && candleTask.Result != null)
+                    {
+                        candle = candleTask.Result;
+                        break;
+                    }
+                    else
+                        candleTask = null;
+            } while (now <= limitTime);
+
+            _broker.StopListening();
+
+            if (now > limitTime || candle == null || (_time.GetUtcNow() - candle.Date.AddSeconds(_runnerOptions.TimeFrame)).TotalSeconds >= 6)
             {
                 _logger.Warning("Broker failed to provide latest candle on time!, skipping...");
                 return;
