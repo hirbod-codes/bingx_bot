@@ -1,18 +1,24 @@
-﻿using bot.src.Bots;
-using bot.src.Brokers;
-using bot.src.Data;
-using bot.src.Indicators;
-using bot.src.MessageStores;
-using bot.src.Notifiers;
-using bot.src.RiskManagement;
-using bot.src.Runners;
-using bot.src.Strategies;
-using bot.src.Util;
+﻿using Abstractions.src.Models;
+using Abstractions.src.Bots;
+using Abstractions.src.Brokers;
+using Abstractions.src.Indicators;
+using Abstractions.src.RiskManagement;
+using Abstractions.src.Runners;
+using Abstractions.src.Strategies;
+using Bots.src;
+using Brokers.src;
+using Data.src;
+using Indicators.src;
+using MessageStores.src;
+using Notifiers.src;
+using RiskManagement.src;
+using Runners.src;
+using Strategies.src;
+using Utilities.src;
 using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
 using Serilog;
 using bot.src.Configuration.Providers.DockerSecrets;
-using bot.src.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
@@ -136,9 +142,6 @@ public class Program
         Options? options = new();
         Services? services = null;
 
-        if (app.Environment.IsDevelopment())
-            options = Options.ApplyDefaults();
-
         async Task WaitForRunnerToTick()
         {
             long timeFrame = options.TimeFrame ?? 60;
@@ -155,12 +158,12 @@ public class Program
         app.MapGet("/options", () => Results.Ok(
             new
             {
-                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, OptionsMetaData.BotOptionsType!), OptionsMetaData.BotOptionsType!),
-                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, OptionsMetaData.RunnerOptionsType!), OptionsMetaData.RunnerOptionsType!),
-                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, OptionsMetaData.StrategyOptionsType!), OptionsMetaData.StrategyOptionsType!),
-                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, OptionsMetaData.IndicatorOptionsType!), OptionsMetaData.IndicatorOptionsType!),
-                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, OptionsMetaData.RiskManagementOptionsType!), OptionsMetaData.RiskManagementOptionsType!),
-                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, OptionsMetaData.BrokerOptionsType!), OptionsMetaData.BrokerOptionsType!)
+                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!),
+                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!),
+                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!),
+                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!),
+                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!),
+                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!)
             }
         )).RequireAuthorization().RequireCors("General-Cors");
 
@@ -171,7 +174,7 @@ public class Program
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.BotOptions = (IBotOptions)opt.Deserialize(OptionsMetaData.BotOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.BotOptions = (IBotOptions)opt.Deserialize(BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.BotOptions);
             }
@@ -185,7 +188,7 @@ public class Program
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(OptionsMetaData.RunnerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RunnerOptions);
             }
@@ -199,7 +202,7 @@ public class Program
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(OptionsMetaData.StrategyOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.StrategyOptions);
             }
@@ -213,7 +216,7 @@ public class Program
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(OptionsMetaData.IndicatorOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.IndicatorOptions);
             }
@@ -227,7 +230,7 @@ public class Program
                 await WaitForRunnerToTick();
 
                 string json = JsonSerializer.Serialize(opt);
-                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(OptionsMetaData.RiskManagementOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 return Results.Ok(options.RiskManagementOptions);
             }
@@ -243,7 +246,7 @@ public class Program
                 IBrokerOptions? oldOptionsBrokerOptions = options.BrokerOptions;
 
                 string json = JsonSerializer.Serialize(opt);
-                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(OptionsMetaData.BrokerOptionsType!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
                 if (options.BrokerOptions == null)
                 {
@@ -358,7 +361,7 @@ public class Program
 
         services.Time = new Time();
 
-        services.Broker = BrokerFactory.CreateBroker(OptionsMetaData.BrokerName!, options.BrokerOptions!, _logger, services.Time);
+        services.Broker = BrokerFactory.CreateBroker(OptionsMetaData.BrokerName!, options.BrokerOptions!, _logger, services.Time, services.PositionRepository);
 
         services.MessageStore = MessageStoreFactory.CreateMessageStore(OptionsMetaData.MessageStoreName!, options.MessageStoreOptions!, services.MessageRepository, _logger);
 

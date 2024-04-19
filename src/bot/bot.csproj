@@ -26,4 +26,17 @@
         <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
         <PackageReference Include="Bogus" Version="34.0.2" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\..\lib\Abstractions\Abstractions.csproj" />
+      <ProjectReference Include="..\..\lib\Bots\Bots.csproj" />
+      <ProjectReference Include="..\..\lib\Brokers\Brokers.csproj" />
+      <ProjectReference Include="..\..\lib\Indicators\Indicators.csproj" />
+      <ProjectReference Include="..\..\lib\MessageStores\MessageStores.csproj" />
+      <ProjectReference Include="..\..\lib\Notifiers\Notifiers.csproj" />
+      <ProjectReference Include="..\..\lib\Repositories\Repositories.csproj" />
+      <ProjectReference Include="..\..\lib\RiskManagement\RiskManagement.csproj" />
+      <ProjectReference Include="..\..\lib\Runners\Runners.csproj" />
+      <ProjectReference Include="..\..\lib\Strategies\Strategies.csproj" />
+      <ProjectReference Include="..\..\lib\Utilities\Utilities.csproj" />
+    </ItemGroup>
 </Project>

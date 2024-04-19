@@ -1,26 +1,31 @@
 ﻿using bot;
-using bot.src.Bots;
-using bot.src.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ILogger = Serilog.ILogger;
 using Serilog.Settings.Configuration;
-using bot.src.Strategies;
 using StrategyTester.src.Testers;
-using StrategyTester.src.Utils;
-using bot.src.MessageStores;
-using bot.src.Notifiers;
-using bot.src.Indicators;
-using bot.src.RiskManagement;
-using bot.src.PnLAnalysis;
-using bot.src.PnLAnalysis.Models;
 using System.Text.Json;
-using bot.src.Brokers;
-using BrokerOptionsFactory = StrategyTester.src.Brokers.BrokerOptionsFactory;
-using BrokerFactory = StrategyTester.src.Brokers.BrokerFactory;
 using Serilog.Core;
-using StrategyTester.Dtos;
 using Serilog;
+using MessageStores.src;
+using Brokers.src;
+using Bots.src;
+using RiskManagement.src;
+using Indicators.src;
+using Strategies.src;
+using Abstractions.src.Data;
+using Data.src;
+using Abstractions.src.MessageStores;
+using Abstractions.src.Utilities;
+using Abstractions.src.Brokers;
+using Abstractions.src.Notifiers;
+using Abstractions.src.RiskManagement;
+using Abstractions.src.Strategies;
+using Abstractions.src.Bots;
+using Notifiers.src;
+using Abstractions.src.PnLAnalysis.Models;
+using Abstractions.src.PnLAnalysis;
+using Utilities.src;
+using StrategyTester.src.Dtos;
 
 namespace StrategyTester;
 
@@ -160,9 +165,9 @@ public class Program
 
         IMessageStore messageStore = MessageStoreFactory.CreateMessageStore(_configuration[ConfigurationKeys.MESSAGE_STORE_NAME]!, messageStoreOptions, messageRepository, _logger);
 
-        ITime time = new Time();
+        ITime time = new TimeSimulator();
 
-        src.Brokers.IBroker broker = BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, positionRepository, time, _logger);
+        IBroker broker = BrokerFactory.CreateBroker(_configuration[ConfigurationKeys.BROKER_NAME]!, brokerOptions, _logger, time, positionRepository);
 
         INotifier notifier = NotifierFactory.CreateNotifier(_configuration[ConfigurationKeys.NOTIFIER_NAME]!, messageRepository, _logger);
 
@@ -172,7 +177,7 @@ public class Program
 
         IBot bot = BotFactory.CreateBot(_configuration[ConfigurationKeys.BOT_NAME]!, broker, botOptions, messageStore, riskManagement, time, notifier, _logger);
 
-        ITester tester = TesterFactory.CreateTester(_configuration[ConfigurationKeys.TESTER_NAME]!, testerOptions, time, strategy, broker, bot, _logger);
+        ITester tester = TesterFactory.CreateTester(_configuration[ConfigurationKeys.TESTER_NAME]!, testerOptions, (time as ITimeSimulator)!, strategy, (broker as IBrokerSimulator)!, bot, _logger);
 
         await tester.Test();
 
