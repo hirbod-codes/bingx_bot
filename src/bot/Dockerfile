@@ -15,7 +15,17 @@ RUN echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGET
 WORKDIR /app
 
 COPY ./trading_bot.sln ./
-COPY ./lib/*/*.csproj ./lib/
+COPY ./lib/Abstractions/*.csproj ./lib/Abstractions/
+COPY ./lib/Bots/*.csproj ./lib/Bots/
+COPY ./lib/Brokers/*.csproj ./lib/Brokers/
+COPY ./lib/Indicators/*.csproj ./lib/Indicators/
+COPY ./lib/MessageStores/*.csproj ./lib/MessageStores/
+COPY ./lib/Notifiers/*.csproj ./lib/Notifiers/
+COPY ./lib/Repositories/*.csproj ./lib/Repositories/
+COPY ./lib/RiskManagement/*.csproj ./lib/RiskManagement/
+COPY ./lib/Runners/*.csproj ./lib/Runners/
+COPY ./lib/Strategies/*.csproj ./lib/Strategies/
+COPY ./lib/Utilities/*.csproj ./lib/Utilities/
 COPY ./src/bot/bot.csproj ./src/bot/
 COPY ./src/StrategyTester/StrategyTester.csproj ./src/StrategyTester/
 
