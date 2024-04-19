@@ -27,7 +27,7 @@ services:
             resources:
                 limits:
                     cpus: '0.5'
-                    memory: 200M
+                    memory: 100M
         secrets:
           - caCrt
           - caKey
@@ -70,19 +70,8 @@ services:
             resources:
                 limits:
                     cpus: '0.25'
-                    memory: 100M
+                    memory: 200M
         environment:
             - ACCEPT_EULA=Y
         volumes:
             - seq:/data
-    web:
-        image: ghcr.io/hirbod-codes/bot_client_web:latest
-        restart: always
-        networks:
-            - bot-network
-        deploy:
-            replicas: 1
-            resources:
-                limits:
-                    cpus: '0.25'
-                    memory: 100M

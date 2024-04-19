@@ -39,7 +39,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: bot_image_meta
         with:
-          images: ghcr.io/${{github.repository_owner}}/bot
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/bot
           flavor: |
             latest=true
           tags: |
@@ -58,9 +58,9 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm,darwin/amd64,darwin/arm64,darwin/arm,windows/amd64,windows/arm64,windows/arm
 
       - uses: docker/metadata-action@v5
-        id: nginx_image_meta
+        id: bot_nginx_image_meta
         with:
-          images: ghcr.io/${{github.repository_owner}}/nginx
+          images: ghcr.io/${{github.repository_owner}}/${{github.repository_name}}/bot_nginx
           flavor: |
             latest=true
           tags: |
@@ -70,9 +70,9 @@ jobs:
         with:
           push: true
           context: ./
-          file: ./nginx/production/Dockerfile
-          tags: ${{ steps.nginx_image_meta.outputs.tags }}
-          labels: ${{ steps.nginx_image_meta.outputs.labels }}
+          file: ./src/bot/src/nginx/production/Dockerfile
+          tags: ${{ steps.bot_nginx_image_meta.outputs.tags }}
+          labels: ${{ steps.bot_nginx_image_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
