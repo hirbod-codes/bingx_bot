@@ -12,7 +12,7 @@ public interface IPositionRepository
     public Task<Position?> GetPendingPosition(string id);
     public Task<Position?> GetCancelledPosition(string id);
     public Task<IEnumerable<Position?>> GetOpenedPositions(DateTime startTime, DateTime? endTime = null);
-    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime startTime, DateTime? endTime = null);
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime? startTime = null, DateTime? endTime = null);
     public Task<IEnumerable<Position?>> GetPendingPositions(DateTime startTime, DateTime? endTime = null);
     public Task<IEnumerable<Position?>> GetCancelledPositions(DateTime startTime, DateTime? endTime = null);
     public Task<IEnumerable<Position?>> GetOpenedPositions();

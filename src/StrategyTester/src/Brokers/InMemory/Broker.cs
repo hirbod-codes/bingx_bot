@@ -215,7 +215,7 @@ public class Broker : IBroker
 
     public async Task<IEnumerable<Position?>> GetOpenPositions() => await _positionRepository.GetOpenedPositions();
 
-    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null) => _positionRepository.GetClosedPositions(start, end);
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime? start = null, DateTime? end = null) => _positionRepository.GetClosedPositions(start, end);
 
     public async Task<IEnumerable<Position?>> GetPendingPositions() => await _positionRepository.GetPendingPositions();
 

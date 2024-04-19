@@ -32,8 +32,8 @@ public class Position
         get { return _positionDirection!; }
         set
         {
-            if (value == Models.PositionDirection.LONG || value == Models.PositionDirection.SHORT)
-                _positionDirection = value;
+            if (value.ToLowerInvariant() == Models.PositionDirection.LONG || value.ToLowerInvariant() == Models.PositionDirection.SHORT)
+                _positionDirection = value.ToLowerInvariant();
             else
                 throw new ArgumentException("Invalid value provided", paramName: nameof(PositionDirection));
         }

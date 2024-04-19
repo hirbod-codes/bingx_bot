@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
 using bot.src.Brokers.Bingx.DTOs;
@@ -742,29 +743,108 @@ public class Broker : Api, IBroker
         return bingxResponse.Data;
     }
 
-    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null)
+    public async Task<IEnumerable<Position?>> GetClosedPositions(DateTime? start = null, DateTime? end = null)
     {
-        throw new NotImplementedException();
-    }
+        _logger.Information("Getting closed positions...");
 
-    public async Task<int> GetOpenPositionsCount()
-    {
-        _logger.Information("Getting all the open positions...");
+        object payload = new { };
+        if (start != null && end != null)
+            payload = new
+            {
+                symbol = Symbol,
+                // limit = 30,
+                startTime = start == null ? 0 : DateTimeOffset.Parse(start.ToString()!).ToUnixTimeMilliseconds(),
+                endTime = end == null ? 0 : DateTimeOffset.Parse(end.ToString()!).ToUnixTimeMilliseconds()
+            };
+        else if (start == null && end == null)
+            payload = new { symbol = Symbol };
+        else if (start != null)
+            payload = new { symbol = Symbol, startTime = start == null ? 0 : DateTimeOffset.Parse(start.ToString()!).ToUnixTimeMilliseconds() };
+        else if (end != null)
+            payload = new { symbol = Symbol, endTime = end == null ? 0 : DateTimeOffset.Parse(end.ToString()!).ToUnixTimeMilliseconds() };
 
-        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/positions", "GET", ApiKey, ApiSecret, new
-        {
-            symbol = Symbol
-        });
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v1/trade/fullOrder", "GET", ApiKey, ApiSecret, payload);
 
         if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
             throw new CloseAllPositionsException();
 
         string json = await httpResponseMessage.Content.ReadAsStringAsync();
-        BingxResponse<IEnumerable<BingxPositionDto>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPositionDto>>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new CloseAllPositionsException();
+        BingxResponse<BingxOrdersDto> bingxResponse = JsonSerializer.Deserialize<BingxResponse<BingxOrdersDto>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true, }) ?? throw new CloseAllPositionsException();
 
-        _logger.Information("Finished getting all the open positions...");
-        return bingxResponse.Data!.Count();
+        List<BingxOrderDto> orders = bingxResponse.Data?.Orders.Reverse().ToList() ?? new List<BingxOrderDto>();
+
+        _logger.Information("Finished getting closed positions...");
+
+        IEnumerable<Position> positions = new List<Position>();
+        Position position = new()
+        {
+            Commission = 0,
+            Profit = 0,
+            ProfitWithCommission = 0,
+            CommissionRatio = _brokerOptions.BrokerCommission,
+            PositionStatus = PositionStatus.OPENED
+        };
+
+        for (int i = 0; i < orders.Count; i++)
+        {
+            BingxOrderDto order = orders[i];
+
+            position.Commission += Math.Abs(decimal.Parse(order.Commission));
+
+            if (new string[] { "TAKE_PROFIT", "TAKE_PROFIT_MARKET" }.Contains(order.Type))
+                position.TPPrice = decimal.Parse(order.StopPrice);
+
+            if (new string[] { "STOP", "STOP_MARKET" }.Contains(order.Type))
+                position.SLPrice = decimal.Parse(order.StopPrice);
+
+            if (new string[] { "TAKE_PROFIT", "TAKE_PROFIT_MARKET", "STOP", "STOP_MARKET" }.Contains(order.Type) && order.Status.ToLowerInvariant() == "filled")
+            {
+                position.Profit += decimal.Parse(order.Profit);
+                position.ClosedPrice = decimal.Parse(order.AvgPrice);
+                position.ClosedAt = DateTimeOffset.FromUnixTimeMilliseconds(order.UpdateTime).DateTime;
+                position.PositionStatus = PositionStatus.CLOSED;
+            }
+
+            if (!new string[] { "TAKE_PROFIT", "TAKE_PROFIT_MARKET", "STOP", "STOP_MARKET" }.Contains(order.Type))
+            {
+                position.Profit += decimal.Parse(order.Profit);
+
+                if (position.ClosedAt == null)
+                {
+                    position.Profit += decimal.Parse(order.Profit);
+                    position.ClosedPrice = decimal.Parse(order.AvgPrice);
+                    position.ClosedAt = DateTimeOffset.FromUnixTimeMilliseconds(order.UpdateTime).DateTime;
+                    position.PositionStatus = PositionStatus.CLOSED;
+                }
+
+                position.Id = order.OrderId.ToString();
+                position.Symbol = order.Symbol;
+                position.CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(order.Time).DateTime;
+                position.OpenedAt = DateTimeOffset.FromUnixTimeMilliseconds(order.UpdateTime).DateTime;
+                position.OpenedPrice = decimal.Parse(order.AvgPrice);
+                position.Leverage = decimal.Parse(order.Leverage.Replace("X", ""));
+                position.PositionDirection = order.PositionSide;
+                position.Margin = decimal.Parse(order.OrigQty) * decimal.Parse(order.AvgPrice) / decimal.Parse(order.Leverage.Replace("X", ""));
+                position.ProfitWithCommission = position.Profit - position.Commission;
+
+                if (position.Profit != 0 || position.Commission != 0)
+                    positions = positions.Append(position);
+
+                position = new()
+                {
+                    Commission = 0,
+                    Profit = 0,
+                    ProfitWithCommission = 0,
+                    CommissionRatio = _brokerOptions.BrokerCommission,
+                    PositionStatus = PositionStatus.OPENED
+                };
+            }
+        }
+
+        return positions;
     }
+
+    public async Task<int> GetOpenPositionsCount() => (await GetOpenPositions()).Where(p => p != null).Count();
 
     public async Task<IEnumerable<Position?>> GetOpenPositions()
     {
@@ -788,7 +868,12 @@ public class Broker : Api, IBroker
             Symbol = bp.Symbol,
             PositionDirection = PositionDirection.Parse(bp.PositionSide),
             OpenedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime,
-            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime
+            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(bp.UpdateTime).DateTime,
+            Profit = bp.UnrealizedProfit,
+            Leverage = bp.Leverage,
+            Margin = bp.PositionAmt * bp.AvgPrice / bp.Leverage,
+            Commission = bp.PositionAmt * bp.AvgPrice * _brokerOptions.BrokerCommission,
+            OpenedPrice = bp.AvgPrice,
         });
     }
 
@@ -938,4 +1023,24 @@ public class Broker : Api, IBroker
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice) => throw new NotImplementedException();
 
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice) => throw new NotImplementedException();
+}
+
+[Serializable]
+internal class InvalidOrderTypeException : Exception
+{
+    public InvalidOrderTypeException()
+    {
+    }
+
+    public InvalidOrderTypeException(string? message) : base(message)
+    {
+    }
+
+    public InvalidOrderTypeException(string? message, Exception? innerException) : base(message, innerException)
+    {
+    }
+
+    protected InvalidOrderTypeException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
 }

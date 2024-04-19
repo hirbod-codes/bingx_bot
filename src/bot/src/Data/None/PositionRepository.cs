@@ -22,15 +22,19 @@ public class PositionRepository : IPositionRepository
 
     public Task<Position?> GetCancelledPosition(string id) => throw new NotImplementedException();
 
-    public Task<IEnumerable<Position?>> GetCancelledPositions(DateTime startTime, DateTime? endTime = null) => throw new NotImplementedException();
+    public Task<IEnumerable<Position?>> GetCancelledPositions(DateTime? startTime = null, DateTime? endTime = null) => throw new NotImplementedException();
 
     public Task<IEnumerable<Position?>> GetCancelledPositions() => throw new NotImplementedException();
+
+    public Task<IEnumerable<Position?>> GetCancelledPositions(DateTime startTime, DateTime? endTime = null) => throw new NotImplementedException();
 
     public Task<Position?> GetClosedPosition(string id) => throw new NotImplementedException();
 
     public Task<IEnumerable<Position?>> GetClosedPositions(DateTime startTime, DateTime? endTime = null) => throw new NotImplementedException();
 
     public Task<IEnumerable<Position?>> GetClosedPositions() => throw new NotImplementedException();
+
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime? startTime = null, DateTime? endTime = null) => throw new NotImplementedException();
 
     public Task<Position?> GetOpenedPosition(string id) => throw new NotImplementedException();
 

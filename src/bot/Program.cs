@@ -18,6 +18,7 @@ using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using bot.src.Authentication.ApiKey;
+using Microsoft.AspNetCore.Mvc;
 
 namespace bot;
 
@@ -321,6 +322,26 @@ public class Program
             await services.Runner!.Stop();
             return Results.Ok();
         };
+
+        // ------------------------------------------------------------------------------------------------ Position
+
+        app.MapGet("/closed-positions", async ([FromQuery] string? startTs, [FromQuery] string? endTs) =>
+        {
+            IBroker? broker = services?.Broker;
+            if (broker == null)
+                return Results.BadRequest(new { Message = "Invalid options provided." });
+            else
+                return Results.Ok(startTs != null && endTs != null
+                    ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime(), end: DateTime.Parse(endTs!).ToUniversalTime())
+                    : (startTs != null
+                        ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime())
+                        : (endTs != null
+                            ? await broker!.GetClosedPositions(end: DateTime.Parse(endTs!).ToUniversalTime())
+                            : await broker!.GetClosedPositions()
+                        )
+                    )
+                );
+        }).RequireAuthorization().RequireCors("General-Cors");
 
         app.Run();
     }

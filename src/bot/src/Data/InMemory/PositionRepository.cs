@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Runtime.Serialization;
 using bot.src.Brokers.InMemory.Exceptions;
 using bot.src.Data.Models;
 
@@ -77,7 +76,7 @@ public class PositionRepository : IPositionRepository
 
     public Task<Position?> GetClosedPosition(string id) => Task.FromResult(_closedPositions[int.Parse(id)])!;
 
-    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime start, DateTime? end = null) => Task.FromResult(_closedPositions.Where(o =>
+    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime? start = null, DateTime? end = null) => Task.FromResult(_closedPositions.Where(o =>
         o == null
         ||
         (o.OpenedAt >= start
@@ -184,25 +183,5 @@ public class PositionRepository : IPositionRepository
 
         if (!_pendingPositions.Where(o => o != null).Any())
             _anyPendingPosition = false;
-    }
-}
-
-[Serializable]
-internal class PositionCreationException : Exception
-{
-    public PositionCreationException()
-    {
-    }
-
-    public PositionCreationException(string? message) : base(message)
-    {
-    }
-
-    public PositionCreationException(string? message, Exception? innerException) : base(message, innerException)
-    {
-    }
-
-    protected PositionCreationException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
     }
 }
