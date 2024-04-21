@@ -6,6 +6,7 @@ using Abstractions.src.Brokers;
 using Abstractions.src.Data;
 using Abstractions.src.Utilities;
 using Abstractions.src.Data.Models;
+using Abstractions.src.PnLAnalysis.Models;
 
 namespace Brokers.src.InMemory;
 
@@ -330,7 +331,17 @@ public class Broker : IBrokerSimulator
         throw new NotImplementedException();
     }
 
-    public decimal GetBalance()
+    public Task<decimal> GetBalance()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IEnumerable<PnlFundFlow>> GetPnlFundFlow()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Asset> GetAssets()
     {
         throw new NotImplementedException();
     }

@@ -20,11 +20,12 @@ using Serilog.Settings.Configuration;
 using Serilog;
 using bot.src.Configuration.Providers.DockerSecrets;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using bot.src.Authentication.ApiKey;
 using Microsoft.AspNetCore.Mvc;
+using Abstractions.src.MessageStores;
+using bot.src.Dtos;
 
 namespace bot;
 
@@ -92,6 +93,21 @@ public class Program
             .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationSchemeHandler>("ApiKey", (opt) => opt.ApiKey = _configuration[ConfigurationKeys.API_KEY]!);
         builder.Services.AddAuthorization();
 
+        JsonSerializerOptions jsonSerializerOptions = new()
+        {
+            AllowTrailingCommas = true,
+            PropertyNameCaseInsensitive = true,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString | System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals | System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
+            WriteIndented = true,
+        };
+        builder.Services.ConfigureHttpJsonOptions(o =>
+        {
+            o.SerializerOptions.AllowTrailingCommas = jsonSerializerOptions.AllowTrailingCommas;
+            o.SerializerOptions.PropertyNameCaseInsensitive = jsonSerializerOptions.PropertyNameCaseInsensitive;
+            o.SerializerOptions.NumberHandling = jsonSerializerOptions.NumberHandling;
+            o.SerializerOptions.WriteIndented = jsonSerializerOptions.WriteIndented;
+        });
+
         var app = builder.Build();
 
         app.UseRateLimiter();
@@ -142,145 +158,62 @@ public class Program
         Options? options = new();
         Services? services = null;
 
-        async Task WaitForRunnerToTick()
-        {
-            long timeFrame = options.TimeFrame ?? 60;
-            DateTime dt = DateTime.UtcNow;
-            do
-            {
-                await Task.Delay(1000);
-                dt = dt.AddSeconds(1);
-            } while (DateTimeOffset.Parse(dt.ToString()).ToUnixTimeSeconds() % timeFrame < 7);
-        }
+        ConfigureEndPoints(app, options, services, jsonSerializerOptions);
 
+        app.Run();
+    }
+
+    private static void ConfigureEndPoints(WebApplication app, Options options, Services? services, JsonSerializerOptions jsonSerializerOptions)
+    {
         // ------------------------------------------------------------------------------------------------ Options
 
         app.MapGet("/options", () => Results.Ok(
             new
             {
-                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!),
-                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!),
-                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!),
-                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!),
-                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!),
-                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!)
+                MessageStoreOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.MessageStoreOptions, MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions),
+                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions),
+                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions),
+                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions),
+                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions),
+                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions),
+                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions)
             }
         )).RequireAuthorization().RequireCors("General-Cors");
 
-        app.MapPatch("/bot-options", async (JsonNode opt) =>
+        app.MapPatch("/options", (OptionsDto dto) =>
         {
             try
             {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.BotOptions = (IBotOptions)opt.Deserialize(BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                return Results.Ok(options.BotOptions);
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        }).RequireAuthorization().RequireCors("General-Cors");
-
-        app.MapPatch("/runner-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.RunnerOptions = (IRunnerOptions)opt.Deserialize(RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                return Results.Ok(options.RunnerOptions);
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        }).RequireAuthorization().RequireCors("General-Cors");
-
-        app.MapPatch("/strategy-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.StrategyOptions = (IStrategyOptions)opt.Deserialize(StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                return Results.Ok(options.StrategyOptions);
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        }).RequireAuthorization().RequireCors("General-Cors");
-
-        app.MapPatch("/indicator-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.IndicatorOptions = (IIndicatorOptions)opt.Deserialize(IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                return Results.Ok(options.IndicatorOptions);
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        }).RequireAuthorization().RequireCors("General-Cors");
-
-        app.MapPatch("/risk-management-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                string json = JsonSerializer.Serialize(opt);
-                options.RiskManagementOptions = (IRiskManagementOptions)opt.Deserialize(RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                return Results.Ok(options.RiskManagementOptions);
-            }
-            catch (Exception) { return Results.Problem("Server failed to process your request."); }
-        }).RequireAuthorization().RequireCors("General-Cors");
-
-        app.MapPatch("/broker-options", async (JsonNode opt) =>
-        {
-            try
-            {
-                await WaitForRunnerToTick();
-
-                IBrokerOptions? oldOptionsBrokerOptions = options.BrokerOptions;
-
-                string json = JsonSerializer.Serialize(opt);
-                IBrokerOptions input = (IBrokerOptions)opt.Deserialize(BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
-
-                if (options.BrokerOptions == null)
-                {
-                    options.BrokerOptions = input;
-                    return Results.Ok(options.BrokerOptions);
-                }
-
-                if (options.BrokerOptions.Equals(input))
-                    return Results.Ok(options.BrokerOptions);
-
-                if (input.TimeFrame != options.BrokerOptions.TimeFrame)
-                    options.BrokerOptions.TimeFrame = input.TimeFrame;
-
-                if (options.BrokerOptions.Equals(input))
-                    return Results.Ok(options.BrokerOptions);
-
-                string previousStatus = services?.Runner!.Status.ToString() ?? RunnerStatus.STOPPED.ToString();
+                RunnerStatus previousStatus = services?.Runner!.Status ?? RunnerStatus.STOPPED;
                 Stop();
-                options.BrokerOptions = input;
-                try
-                {
-                    services = CreateServices(options!);
-                    if (previousStatus == RunnerStatus.RUNNING.ToString())
-                        Start();
-                    if (previousStatus == RunnerStatus.SUSPENDED.ToString())
-                        Suspend();
-                }
-                catch (Exception)
-                {
-                    options.BrokerOptions = oldOptionsBrokerOptions;
-                    return Results.BadRequest(new { Message = $"We failed to update broker options, invalid options provided. Bot Status is: {RunnerStatus.STOPPED}" });
-                }
 
-                return Results.Ok(options.BrokerOptions);
+                options.MessageStoreOptions = (IMessageStoreOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.MessageStoreOptions, jsonSerializerOptions), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions)!;
+                options.BotOptions = (IBotOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BotOptions, jsonSerializerOptions), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions)!;
+                options.RunnerOptions = (IRunnerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RunnerOptions, jsonSerializerOptions), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions)!;
+                options.StrategyOptions = (IStrategyOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.StrategyOptions, jsonSerializerOptions), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions)!;
+                options.IndicatorOptions = (IIndicatorOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.IndicatorOptions, jsonSerializerOptions), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions)!;
+                options.RiskManagementOptions = (IRiskManagementOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RiskManagementOptions, jsonSerializerOptions), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions)!;
+                options.BrokerOptions = (IBrokerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BrokerOptions, jsonSerializerOptions), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions)!;
+
+                services = CreateServices(options);
+
+                if (previousStatus == RunnerStatus.RUNNING)
+                    Start();
+                if (previousStatus == RunnerStatus.SUSPENDED)
+                    Suspend();
+
+                return Results.Ok(
+                    new
+                    {
+                        MessageStoreOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.MessageStoreOptions, MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!),
+                        BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!),
+                        RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!),
+                        StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!),
+                        IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!),
+                        RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!),
+                        BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!)
+                    }
+                );
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         }).RequireAuthorization().RequireCors("General-Cors");
@@ -289,68 +222,60 @@ public class Program
 
         app.MapGet("/status", () =>
         {
-            return Results.Ok(new { Status = services?.Runner!.Status.ToString() ?? RunnerStatus.STOPPED.ToString() });
+            return Results.Ok(new { Status = GetServices(options, ref services)?.Runner?.Status.ToString() ?? throw new BadHttpRequestException("Services are not initialized.") });
         }).RequireAuthorization().RequireCors("General-Cors");
 
         app.MapPost("/start", Start()).RequireAuthorization().RequireCors("General-Cors");
         Func<IResult> Start() => () =>
         {
-            if (services == null)
-                try { services = CreateServices(options!); }
-                catch (Exception) { return Results.BadRequest(new { Message = "We failed to create the bot, invalid options provided." }); }
-
-            if (services!.Runner == null)
-                return Results.BadRequest(new { Message = "You have not set any options yet." });
-
-            _ = services.Runner!.Continue();
+            IRunner runner = GetServices(options, ref services)?.Runner ?? throw new BadHttpRequestException("Services are not initialized.");
+            runner!.Continue();
             return Results.Ok();
         };
 
         app.MapPost("/suspend", Suspend()).RequireAuthorization().RequireCors("General-Cors");
         Func<Task<IResult>> Suspend() => async () =>
         {
-            if (services == null || services.Runner == null)
-                return Results.BadRequest(new { Message = "You have not started any bots yet." });
-
-            await services.Runner!.Suspend();
-            return Results.Ok();
+            IRunner runner = GetServices(options, ref services)?.Runner ?? throw new BadHttpRequestException("Services are not initialized.");
+            await runner.Suspend();
+            return Results.NoContent();
         };
 
         app.MapPost("/stop", Stop()).RequireAuthorization().RequireCors("General-Cors");
         Func<Task<IResult>> Stop() => async () =>
         {
-            if (services == null || services.Runner == null)
-                return Results.BadRequest(new { Message = "You have not started any bots yet." });
-
-            await services.Runner!.Stop();
-            return Results.Ok();
+            IRunner runner = GetServices(options, ref services)?.Runner ?? throw new BadHttpRequestException("Services are not initialized.");
+            await runner.Stop();
+            return Results.NoContent();
         };
 
         // ------------------------------------------------------------------------------------------------ Position
 
         app.MapGet("/closed-positions", async ([FromQuery] string? startTs, [FromQuery] string? endTs) =>
         {
-            IBroker? broker = services?.Broker;
-            if (broker == null)
-                return Results.BadRequest(new { Message = "Invalid options provided." });
-            else
-                return Results.Ok(startTs != null && endTs != null
-                    ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime(), end: DateTime.Parse(endTs!).ToUniversalTime())
-                    : (startTs != null
-                        ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime())
-                        : (endTs != null
-                            ? await broker!.GetClosedPositions(end: DateTime.Parse(endTs!).ToUniversalTime())
-                            : await broker!.GetClosedPositions()
-                        )
+            IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
+
+            return Results.Ok(startTs != null && endTs != null
+                ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime(), end: DateTime.Parse(endTs!).ToUniversalTime())
+                : (startTs != null
+                    ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime())
+                    : (endTs != null
+                        ? await broker!.GetClosedPositions(end: DateTime.Parse(endTs!).ToUniversalTime())
+                        : await broker!.GetClosedPositions()
                     )
-                );
+                )
+            );
         }).RequireAuthorization().RequireCors("General-Cors");
 
-        app.Run();
     }
 
-    private static Services? CreateServices(Options options)
+    private static Services? GetServices(Options? options, ref Services? services) => services ??= CreateServices(options);
+
+    private static Services? CreateServices(Options? options)
     {
+        if (options == null || !IsValid(options))
+            return null;
+
         Services services = new();
 
         services.PositionRepository = PositionRepositoryFactory.CreateRepository(OptionsMetaData.PositionRepositoryName!);
@@ -375,4 +300,6 @@ public class Program
 
         return services;
     }
+
+    private static bool IsValid(Options? options) => options != null && options.RunnerOptions != null && options.BotOptions != null && options.BrokerOptions != null && options.StrategyOptions != null && options.MessageStoreOptions != null && options.RiskManagementOptions != null && options.IndicatorOptions != null;
 }

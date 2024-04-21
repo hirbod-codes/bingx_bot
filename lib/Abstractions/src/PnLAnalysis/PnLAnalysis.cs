@@ -11,7 +11,7 @@ public static class PnLAnalysis
 {
     public static async Task<AnalysisSummary> RunAnalysis(IPositionRepository repo, IMessageRepository messageRepository, Dictionary<string, object> indicators, IRiskManagement riskManagement, IBroker broker)
     {
-        decimal accountBalance = broker.GetBalance();
+        decimal accountBalance = await broker.GetBalance();
 
         IEnumerable<Position> closedPositions = (await repo.GetClosedPositions()).Where(o => o != null)!;
 

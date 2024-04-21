@@ -1,4 +1,3 @@
-
 namespace Abstractions.src.PnLAnalysis.Models;
 
 public class AnalysisSummary

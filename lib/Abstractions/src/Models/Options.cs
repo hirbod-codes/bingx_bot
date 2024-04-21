@@ -10,7 +10,6 @@ namespace Abstractions.src.Models;
 
 public class Options
 {
-    public int? TimeFrame { get; set; }
     public IMessageStoreOptions? MessageStoreOptions { get; set; }
     public IBrokerOptions? BrokerOptions { get; set; }
     public IRiskManagementOptions? RiskManagementOptions { get; set; }

@@ -1,4 +1,5 @@
 using Abstractions.src.Data.Models;
+using Abstractions.src.PnLAnalysis.Models;
 
 namespace Abstractions.src.Brokers;
 
@@ -25,5 +26,7 @@ public interface IBroker
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice);
     public void StopListening();
     public void StartListening();
-    public decimal GetBalance();
+    public Task<decimal> GetBalance();
+    public Task<IEnumerable<PnlFundFlow>> GetPnlFundFlow();
+    public Task<Asset> GetAssets();
 }

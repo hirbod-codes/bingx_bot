@@ -8,6 +8,8 @@ using Abstractions.src.Brokers;
 using Abstractions.src.Utilities;
 using ILogger = Serilog.ILogger;
 using Abstractions.src.Data.Models;
+using System.Net.Http.Json;
+using Abstractions.src.PnLAnalysis.Models;
 
 namespace Brokers.src.Bingx;
 
@@ -1004,11 +1006,11 @@ public class Broker : Api, IBroker
         if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
             throw new CloseAllPositionsException();
 
-        _logger.Information("Finished Closing all the open positions...");
+        _logger.Information("Finished Closing all the open positions.");
         return;
     }
 
-    public decimal GetBalance() => _brokerOptions.AccountOptions.Balance;
+    public Task<decimal> GetBalance() => Task.FromResult(_brokerOptions.AccountOptions.Balance);
 
     public Task ClosePosition(Position position) => throw new NotImplementedException();
 
@@ -1023,4 +1025,68 @@ public class Broker : Api, IBroker
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice) => throw new NotImplementedException();
 
     public Task OpenLimitPosition(decimal entryPrice, decimal margin, decimal leverage, string direction, decimal limit, decimal slPrice, decimal tpPrice) => throw new NotImplementedException();
+
+    public async Task<IEnumerable<PnlFundFlow>> GetPnlFundFlow()
+    {
+        _logger.Information("Getting Pnl Fund Flow...");
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/income", "GET", ApiKey, ApiSecret, new { symbol = Symbol });
+
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
+            throw new CloseAllPositionsException();
+
+        string json = await httpResponseMessage.Content.ReadAsStringAsync();
+        BingxResponse<IEnumerable<BingxPnlFundFlow>> bingxResponse = JsonSerializer.Deserialize<BingxResponse<IEnumerable<BingxPnlFundFlow>>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString | System.Text.Json.Serialization.JsonNumberHandling.WriteAsString | System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+        }) ?? throw new CloseAllPositionsException();
+
+        _logger.Information("Finished getting Pnl Fund Flow.");
+        return bingxResponse.Data?.ToList().ConvertAll(o => new PnlFundFlow()
+        {
+            Symbol = o.Symbol,
+            Asset = o.Asset,
+            Income = o.Income,
+            IncomeType = o.IncomeType,
+            Info = o.Info,
+            Time = o.Time,
+            TradeId = o.TradeId,
+            TranId = o.TranId,
+        }) ?? new List<PnlFundFlow>();
+    }
+
+    public async Task<Asset> GetAssets()
+    {
+        _logger.Information("Getting Assets...");
+
+        HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v2/user/balance", "GET", ApiKey, ApiSecret, new { });
+
+        if (!await _utilities.TryEnsureSuccessfulBingxResponse(httpResponseMessage))
+            throw new CloseAllPositionsException();
+
+        string json = await httpResponseMessage.Content.ReadAsStringAsync();
+        BingxResponse<BingxAsset> bingxResponse = JsonSerializer.Deserialize<BingxResponse<BingxAsset>>(json, new JsonSerializerOptions()
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString | System.Text.Json.Serialization.JsonNumberHandling.WriteAsString | System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+        }) ?? throw new CloseAllPositionsException();
+
+        _logger.Information("Finished getting Assets.");
+        return bingxResponse.Data == null ? new Asset() : new Asset()
+        {
+            UserId = bingxResponse.Data!.Balance.UserId,
+            Name = bingxResponse.Data!.Balance.Asset,
+            Balance = bingxResponse.Data!.Balance.Balance,
+            Equity = bingxResponse.Data!.Balance.Equity,
+            UnrealizedProfit = bingxResponse.Data!.Balance.UnrealizedProfit,
+            RealisedProfit = bingxResponse.Data!.Balance.RealisedProfit,
+            AvailableMargin = bingxResponse.Data!.Balance.AvailableMargin,
+            UsedMargin = bingxResponse.Data!.Balance.UsedMargin,
+            FreezedMargin = bingxResponse.Data!.Balance.FreezedMargin,
+            ShortUid = bingxResponse.Data!.Balance.ShortUid,
+        };
+    }
 }

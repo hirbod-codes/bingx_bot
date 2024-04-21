@@ -12,4 +12,12 @@ public static class MessageStoreOptionsFactory
         MessageStoreNames.IN_MEMORY => new InMemoryMessageStoreOptions(),
         _ => throw new Exception()
     };
+
+    public static Type? GetInstanceType(string? name) => name switch
+    {
+        null => null,
+        MessageStoreNames.GMAIL => typeof(GmailMessageStoreOptions),
+        MessageStoreNames.IN_MEMORY => typeof(InMemoryMessageStoreOptions),
+        _ => throw new Exception()
+    };
 }
