@@ -267,6 +267,19 @@ public class Program
             );
         }).RequireAuthorization().RequireCors("General-Cors");
 
+        app.MapGet("/assets", async () =>
+        {
+            IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
+
+            return Results.Ok(await broker!.GetAssets());
+        });
+
+        app.MapGet("/pnl", async () =>
+        {
+            IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
+
+            return Results.Ok(await broker!.GetPnlFundFlow());
+        });
     }
 
     private static Services? GetServices(Options? options, ref Services? services) => services ??= CreateServices(options);
