@@ -1051,7 +1051,7 @@ public class Broker : Api, IBroker
             Income = o.Income,
             IncomeType = o.IncomeType,
             Info = o.Info,
-            Time = o.Time,
+            Time = DateTimeOffset.FromUnixTimeMilliseconds(o.Time).DateTime,
             TradeId = o.TradeId,
             TranId = o.TranId,
         }) ?? new List<PnlFundFlow>();
