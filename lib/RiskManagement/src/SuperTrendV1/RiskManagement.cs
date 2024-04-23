@@ -73,8 +73,8 @@ public class RiskManagement : IRiskManagement
         if (_riskManagementOptions.GrossLossLimit < grossLossPerPosition)
             throw new InvalidRiskManagementException();
 
-        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
-        Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions(_time.GetUtcNow().Date);
+        Task<IEnumerable<Position?>> closedPositionsForLossTask = _broker.GetClosedPositions();
+        Task<IEnumerable<Position?>> closedPositionsForProfitTask = _broker.GetClosedPositions();
         Task<IEnumerable<Position?>> openedPositionsTask = _broker.GetOpenPositions();
         await Task.WhenAll(closedPositionsForLossTask, closedPositionsForProfitTask, openedPositionsTask);
         IEnumerable<Position> closedPositionsForLoss = closedPositionsForLossTask.Result.Where(o => o != null)!;

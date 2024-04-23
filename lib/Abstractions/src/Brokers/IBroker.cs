@@ -11,7 +11,7 @@ public interface IBroker
     public Task<Candle?> GetCandle(int indexFromEnd = 0);
     public Task<Candles?> GetCandles(int? timeFrameSeconds = null);
     public Task<IEnumerable<Position?>> GetOpenPositions();
-    public Task<IEnumerable<Position?>> GetClosedPositions(DateTime? start = null, DateTime? end = null);
+    public Task<IEnumerable<Position?>> GetClosedPositions(int? limit = null, DateTime? start = null, DateTime? end = null);
     public Task<int?> GetLastCandleIndex();
     public Task<IEnumerable<Position?>> GetPendingPositions();
     public Task CloseAllPositions();

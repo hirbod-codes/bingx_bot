@@ -745,7 +745,7 @@ public class Broker : Api, IBroker
         return bingxResponse.Data;
     }
 
-    public async Task<IEnumerable<Position?>> GetClosedPositions(DateTime? start = null, DateTime? end = null)
+    public async Task<IEnumerable<Position?>> GetClosedPositions(int? limit = null, DateTime? start = null, DateTime? end = null)
     {
         _logger.Information("Getting closed positions...");
 
@@ -754,16 +754,16 @@ public class Broker : Api, IBroker
             payload = new
             {
                 symbol = Symbol,
-                // limit = 30,
+                limit,
                 startTime = start == null ? 0 : DateTimeOffset.Parse(start.ToString()!).ToUnixTimeMilliseconds(),
                 endTime = end == null ? 0 : DateTimeOffset.Parse(end.ToString()!).ToUnixTimeMilliseconds()
             };
         else if (start == null && end == null)
-            payload = new { symbol = Symbol };
+            payload = new { symbol = Symbol, limit };
         else if (start != null)
-            payload = new { symbol = Symbol, startTime = start == null ? 0 : DateTimeOffset.Parse(start.ToString()!).ToUnixTimeMilliseconds() };
+            payload = new { symbol = Symbol, limit, startTime = start == null ? 0 : DateTimeOffset.Parse(start.ToString()!).ToUnixTimeMilliseconds() };
         else if (end != null)
-            payload = new { symbol = Symbol, endTime = end == null ? 0 : DateTimeOffset.Parse(end.ToString()!).ToUnixTimeMilliseconds() };
+            payload = new { symbol = Symbol, limit, endTime = end == null ? 0 : DateTimeOffset.Parse(end.ToString()!).ToUnixTimeMilliseconds() };
 
         HttpResponseMessage httpResponseMessage = await _utilities.HandleBingxRequest("https", Base_Url, "/openApi/swap/v1/trade/fullOrder", "GET", ApiKey, ApiSecret, payload);
 

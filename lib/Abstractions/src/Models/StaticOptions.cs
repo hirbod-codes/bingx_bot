@@ -1,14 +1,6 @@
-using Abstractions.src.RiskManagement;
-using Abstractions.src.Brokers;
-using Abstractions.src.Bots;
-using Abstractions.src.Runners;
-using Abstractions.src.Indicators;
-using Abstractions.src.Strategies;
-using Abstractions.src.MessageStores;
-
 namespace Abstractions.src.Models;
 
-public static class OptionsMetaData
+public static class StaticOptions
 {
     public static string? PositionRepositoryName { get; set; }
     public static string? MessageRepositoryName { get; set; }
@@ -20,4 +12,5 @@ public static class OptionsMetaData
     public static string? StrategyName { get; set; }
     public static string? BotName { get; set; }
     public static string? RunnerName { get; set; }
+    public static string? FullName { get; set; }
 }

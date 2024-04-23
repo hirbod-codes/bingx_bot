@@ -117,31 +117,32 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
 
-        OptionsMetaData.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
-        OptionsMetaData.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
-        OptionsMetaData.NotifierName = _configuration[ConfigurationKeys.NOTIFIER_NAME];
-        OptionsMetaData.MessageStoreName = _configuration[ConfigurationKeys.MESSAGE_STORE_NAME];
-        OptionsMetaData.BrokerName = _configuration[ConfigurationKeys.BROKER_NAME];
-        OptionsMetaData.RiskManagementName = _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME];
-        OptionsMetaData.StrategyName = _configuration[ConfigurationKeys.STRATEGY_NAME];
-        OptionsMetaData.IndicatorOptionsName = _configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME];
-        OptionsMetaData.BotName = _configuration[ConfigurationKeys.BOT_NAME];
-        OptionsMetaData.RunnerName = _configuration[ConfigurationKeys.RUNNER_NAME];
+        StaticOptions.FullName = _configuration[ConfigurationKeys.FULL_NAME];
+        StaticOptions.PositionRepositoryName = _configuration[ConfigurationKeys.POSITION_REPOSITORY_NAME];
+        StaticOptions.MessageRepositoryName = _configuration[ConfigurationKeys.MESSAGE_REPOSITORY_NAME];
+        StaticOptions.NotifierName = _configuration[ConfigurationKeys.NOTIFIER_NAME];
+        StaticOptions.MessageStoreName = _configuration[ConfigurationKeys.MESSAGE_STORE_NAME];
+        StaticOptions.BrokerName = _configuration[ConfigurationKeys.BROKER_NAME];
+        StaticOptions.RiskManagementName = _configuration[ConfigurationKeys.RISK_MANAGEMENT_NAME];
+        StaticOptions.StrategyName = _configuration[ConfigurationKeys.STRATEGY_NAME];
+        StaticOptions.IndicatorOptionsName = _configuration[ConfigurationKeys.INDICATOR_OPTIONS_NAME];
+        StaticOptions.BotName = _configuration[ConfigurationKeys.BOT_NAME];
+        StaticOptions.RunnerName = _configuration[ConfigurationKeys.RUNNER_NAME];
 
         _logger.Debug("ASPNETCORE_ENVIRONMENT: {ASPNETCORE_ENVIRONMENT}", _configuration["ASPNETCORE_ENVIRONMENT"]);
         _logger.Debug("ENVIRONMENT: {ENVIRONMENT}", _configuration["ENVIRONMENT"]);
         _logger.Debug("SECRETS_PREFIX: {SECRETS_PREFIX}", _configuration["SECRETS_PREFIX"]);
         _logger.Debug("Serilog:WriteTo:1:Args:serverUrl: {Serilog:WriteTo:1:Args:serverUrl}", _configuration["Serilog:WriteTo:1:Args:serverUrl"]);
-        _logger.Debug("PositionRepositoryName: {PositionRepositoryName}", OptionsMetaData.PositionRepositoryName);
-        _logger.Debug("MessageRepositoryName: {MessageRepositoryName}", OptionsMetaData.MessageRepositoryName);
-        _logger.Debug("NotifierName: {NotifierName}", OptionsMetaData.NotifierName);
-        _logger.Debug("MessageStoreName: {MessageStoreName}", OptionsMetaData.MessageStoreName);
-        _logger.Debug("BrokerName: {BrokerName}", OptionsMetaData.BrokerName);
-        _logger.Debug("RiskManagementName: {RiskManagementName}", OptionsMetaData.RiskManagementName);
-        _logger.Debug("StrategyName: {StrategyName}", OptionsMetaData.StrategyName);
-        _logger.Debug("IndicatorOptionsName: {IndicatorOptionsName}", OptionsMetaData.IndicatorOptionsName);
-        _logger.Debug("BotName: {BotName}", OptionsMetaData.BotName);
-        _logger.Debug("RunnerName: {RunnerName}", OptionsMetaData.RunnerName);
+        _logger.Debug("PositionRepositoryName: {PositionRepositoryName}", StaticOptions.PositionRepositoryName);
+        _logger.Debug("MessageRepositoryName: {MessageRepositoryName}", StaticOptions.MessageRepositoryName);
+        _logger.Debug("NotifierName: {NotifierName}", StaticOptions.NotifierName);
+        _logger.Debug("MessageStoreName: {MessageStoreName}", StaticOptions.MessageStoreName);
+        _logger.Debug("BrokerName: {BrokerName}", StaticOptions.BrokerName);
+        _logger.Debug("RiskManagementName: {RiskManagementName}", StaticOptions.RiskManagementName);
+        _logger.Debug("StrategyName: {StrategyName}", StaticOptions.StrategyName);
+        _logger.Debug("IndicatorOptionsName: {IndicatorOptionsName}", StaticOptions.IndicatorOptionsName);
+        _logger.Debug("BotName: {BotName}", StaticOptions.BotName);
+        _logger.Debug("RunnerName: {RunnerName}", StaticOptions.RunnerName);
 
         if (app.Environment.IsDevelopment())
         {
@@ -167,18 +168,7 @@ public class Program
     {
         // ------------------------------------------------------------------------------------------------ Options
 
-        app.MapGet("/options", () => Results.Ok(
-            new
-            {
-                MessageStoreOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.MessageStoreOptions, MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions),
-                BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions),
-                RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions),
-                StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions),
-                IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions),
-                RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions),
-                BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions)
-            }
-        )).RequireAuthorization().RequireCors("General-Cors");
+        app.MapGet("/options", () => Results.Ok(GetOptions(options))).RequireAuthorization().RequireCors("General-Cors");
 
         app.MapPatch("/options", async (OptionsDto dto) =>
         {
@@ -195,19 +185,19 @@ public class Program
                 Stop();
 
                 if (dto.MessageStoreOptions != null)
-                    options.MessageStoreOptions = (IMessageStoreOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.MessageStoreOptions, jsonSerializerOptions), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!, jsonSerializerOptions)!;
+                    options.MessageStoreOptions = (IMessageStoreOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.MessageStoreOptions, jsonSerializerOptions), MessageStoreOptionsFactory.GetInstanceType(StaticOptions.MessageStoreName)!, jsonSerializerOptions)!;
                 if (dto.BotOptions != null)
-                    options.BotOptions = (IBotOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BotOptions, jsonSerializerOptions), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!, jsonSerializerOptions)!;
+                    options.BotOptions = (IBotOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BotOptions, jsonSerializerOptions), BotOptionsFactory.GetInstanceType(StaticOptions.BotName)!, jsonSerializerOptions)!;
                 if (dto.RunnerOptions != null)
-                    options.RunnerOptions = (IRunnerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RunnerOptions, jsonSerializerOptions), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!, jsonSerializerOptions)!;
+                    options.RunnerOptions = (IRunnerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RunnerOptions, jsonSerializerOptions), RunnerOptionsFactory.GetInstanceType(StaticOptions.RunnerName)!, jsonSerializerOptions)!;
                 if (dto.StrategyOptions != null)
-                    options.StrategyOptions = (IStrategyOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.StrategyOptions, jsonSerializerOptions), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!, jsonSerializerOptions)!;
+                    options.StrategyOptions = (IStrategyOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.StrategyOptions, jsonSerializerOptions), StrategyOptionsFactory.GetInstanceType(StaticOptions.StrategyName)!, jsonSerializerOptions)!;
                 if (dto.IndicatorOptions != null)
-                    options.IndicatorOptions = (IIndicatorOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.IndicatorOptions, jsonSerializerOptions), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!, jsonSerializerOptions)!;
+                    options.IndicatorOptions = (IIndicatorOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.IndicatorOptions, jsonSerializerOptions), IndicatorOptionsFactory.GetInstanceType(StaticOptions.IndicatorOptionsName)!, jsonSerializerOptions)!;
                 if (dto.RiskManagementOptions != null)
-                    options.RiskManagementOptions = (IRiskManagementOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RiskManagementOptions, jsonSerializerOptions), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!, jsonSerializerOptions)!;
+                    options.RiskManagementOptions = (IRiskManagementOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.RiskManagementOptions, jsonSerializerOptions), RiskManagementOptionsFactory.GetInstanceType(StaticOptions.RiskManagementName)!, jsonSerializerOptions)!;
                 if (dto.BrokerOptions != null)
-                    options.BrokerOptions = (IBrokerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BrokerOptions, jsonSerializerOptions), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!, jsonSerializerOptions)!;
+                    options.BrokerOptions = (IBrokerOptions)JsonSerializer.Deserialize(JsonSerializer.Serialize(dto.BrokerOptions, jsonSerializerOptions), BrokerOptionsFactory.GetInstanceType(StaticOptions.BrokerName)!, jsonSerializerOptions)!;
 
                 services = CreateServices(options);
 
@@ -216,18 +206,7 @@ public class Program
                 if (previousStatus == RunnerStatus.SUSPENDED)
                     Suspend();
 
-                return Results.Ok(
-                    new
-                    {
-                        MessageStoreOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.MessageStoreOptions, MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!), MessageStoreOptionsFactory.GetInstanceType(OptionsMetaData.MessageStoreName)!),
-                        BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!), BotOptionsFactory.GetInstanceType(OptionsMetaData.BotName)!),
-                        RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!), RunnerOptionsFactory.GetInstanceType(OptionsMetaData.RunnerName)!),
-                        StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!), StrategyOptionsFactory.GetInstanceType(OptionsMetaData.StrategyName)!),
-                        IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(OptionsMetaData.IndicatorOptionsName)!),
-                        RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(OptionsMetaData.RiskManagementName)!),
-                        BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!), BrokerOptionsFactory.GetInstanceType(OptionsMetaData.BrokerName)!)
-                    }
-                );
+                return Results.Ok(GetOptions(options));
             }
             catch (Exception) { return Results.Problem("Server failed to process your request."); }
         }).RequireAuthorization().RequireCors("General-Cors");
@@ -265,20 +244,18 @@ public class Program
 
         // ------------------------------------------------------------------------------------------------ Position
 
-        app.MapGet("/closed-positions", async ([FromQuery] string? startTs, [FromQuery] string? endTs) =>
+        app.MapGet("/closed-positions", async ([FromQuery] int? limit, [FromQuery] string? startTs, [FromQuery] string? endTs) =>
         {
             IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
 
-            return Results.Ok(startTs != null && endTs != null
-                ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime(), end: DateTime.Parse(endTs!).ToUniversalTime())
-                : (startTs != null
-                    ? await broker!.GetClosedPositions(start: DateTime.Parse(startTs!).ToUniversalTime())
-                    : (endTs != null
-                        ? await broker!.GetClosedPositions(end: DateTime.Parse(endTs!).ToUniversalTime())
-                        : await broker!.GetClosedPositions()
-                    )
-                )
-            );
+            return Results.Ok(await broker!.GetClosedPositions(start: startTs == null ? null : DateTime.Parse(startTs!).ToUniversalTime(), end: endTs == null ? null : DateTime.Parse(endTs!).ToUniversalTime(), limit: limit));
+        }).RequireAuthorization().RequireCors("General-Cors");
+
+        app.MapGet("/open-positions", async () =>
+        {
+            IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
+
+            return Results.Ok(await broker!.GetOpenPositions());
         }).RequireAuthorization().RequireCors("General-Cors");
 
         app.MapGet("/assets", async () =>
@@ -295,17 +272,31 @@ public class Program
             return Results.Ok(await broker!.GetPnlFundFlow());
         });
 
-        app.MapGet("/general-info", async () =>
+        app.MapGet("/general-info", () =>
         {
             IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
 
             return Results.Ok(new
             {
-                fullName = app.Configuration[ConfigurationKeys.FULL_NAME] ?? "FirstName-LastName",
-                brokerName = app.Configuration[ConfigurationKeys.BROKER_NAME] ?? "BrokerName",
+                fullName = StaticOptions.FullName ?? "FirstName-LastName",
+                brokerName = StaticOptions.BrokerName ?? "BrokerName",
             });
         });
     }
+
+    private static object? GetOptions(Options options) =>
+        new
+        {
+            StaticOptions.FullName,
+            StaticOptions.BrokerName,
+            MessageStoreOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.MessageStoreOptions, MessageStoreOptionsFactory.GetInstanceType(StaticOptions.MessageStoreName)!), MessageStoreOptionsFactory.GetInstanceType(StaticOptions.MessageStoreName)!),
+            BotOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BotOptions, BotOptionsFactory.GetInstanceType(StaticOptions.BotName)!), BotOptionsFactory.GetInstanceType(StaticOptions.BotName)!),
+            RunnerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RunnerOptions, RunnerOptionsFactory.GetInstanceType(StaticOptions.RunnerName)!), RunnerOptionsFactory.GetInstanceType(StaticOptions.RunnerName)!),
+            StrategyOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.StrategyOptions, StrategyOptionsFactory.GetInstanceType(StaticOptions.StrategyName)!), StrategyOptionsFactory.GetInstanceType(StaticOptions.StrategyName)!),
+            IndicatorOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.IndicatorOptions, IndicatorOptionsFactory.GetInstanceType(StaticOptions.IndicatorOptionsName)!), IndicatorOptionsFactory.GetInstanceType(StaticOptions.IndicatorOptionsName)!),
+            RiskManagementOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.RiskManagementOptions, RiskManagementOptionsFactory.GetInstanceType(StaticOptions.RiskManagementName)!), RiskManagementOptionsFactory.GetInstanceType(StaticOptions.RiskManagementName)!),
+            BrokerOptions = JsonSerializer.Deserialize(JsonSerializer.Serialize(options.BrokerOptions, BrokerOptionsFactory.GetInstanceType(StaticOptions.BrokerName)!), BrokerOptionsFactory.GetInstanceType(StaticOptions.BrokerName)!)
+        };
 
     private static Services? GetServices(Options? options, ref Services? services) => services ??= CreateServices(options);
 
@@ -316,25 +307,25 @@ public class Program
 
         Services services = new();
 
-        services.PositionRepository = PositionRepositoryFactory.CreateRepository(OptionsMetaData.PositionRepositoryName!);
+        services.PositionRepository = PositionRepositoryFactory.CreateRepository(StaticOptions.PositionRepositoryName!);
 
-        services.MessageRepository = MessageRepositoryFactory.CreateRepository(OptionsMetaData.MessageRepositoryName!);
+        services.MessageRepository = MessageRepositoryFactory.CreateRepository(StaticOptions.MessageRepositoryName!);
 
-        services.Notifier = NotifierFactory.CreateNotifier(OptionsMetaData.NotifierName!, services.MessageRepository, _logger);
+        services.Notifier = NotifierFactory.CreateNotifier(StaticOptions.NotifierName!, services.MessageRepository, _logger);
 
         services.Time = new Time();
 
-        services.Broker = BrokerFactory.CreateBroker(OptionsMetaData.BrokerName!, options.BrokerOptions!, _logger, services.Time, services.PositionRepository);
+        services.Broker = BrokerFactory.CreateBroker(StaticOptions.BrokerName!, options.BrokerOptions!, _logger, services.Time, services.PositionRepository);
 
-        services.MessageStore = MessageStoreFactory.CreateMessageStore(OptionsMetaData.MessageStoreName!, options.MessageStoreOptions!, services.MessageRepository, _logger);
+        services.MessageStore = MessageStoreFactory.CreateMessageStore(StaticOptions.MessageStoreName!, options.MessageStoreOptions!, services.MessageRepository, _logger);
 
-        services.RiskManagement = RiskManagementFactory.CreateRiskManager(OptionsMetaData.RiskManagementName!, options.RiskManagementOptions!, services.Broker, services.Time, _logger);
+        services.RiskManagement = RiskManagementFactory.CreateRiskManager(StaticOptions.RiskManagementName!, options.RiskManagementOptions!, services.Broker, services.Time, _logger);
 
-        services.Strategy = StrategyFactory.CreateStrategy(OptionsMetaData.StrategyName!, options.StrategyOptions!, options.IndicatorOptions!, services.RiskManagement, services.Broker, services.Notifier!, services.MessageRepository!, _logger);
+        services.Strategy = StrategyFactory.CreateStrategy(StaticOptions.StrategyName!, options.StrategyOptions!, options.IndicatorOptions!, services.RiskManagement, services.Broker, services.Notifier!, services.MessageRepository!, _logger);
 
-        services.Bot = BotFactory.CreateBot(OptionsMetaData.BotName!, services.Broker, options.BotOptions!, services.MessageStore, services.RiskManagement, services.Time, services.Notifier!, _logger);
+        services.Bot = BotFactory.CreateBot(StaticOptions.BotName!, services.Broker, options.BotOptions!, services.MessageStore, services.RiskManagement, services.Time, services.Notifier!, _logger);
 
-        services.Runner = RunnerFactory.CreateRunner(OptionsMetaData.RunnerName!, options.RunnerOptions!, services.Bot, services.Broker, services.Strategy, services.Time, services.Notifier!, _logger);
+        services.Runner = RunnerFactory.CreateRunner(StaticOptions.RunnerName!, options.RunnerOptions!, services.Bot, services.Broker, services.Strategy, services.Time, services.Notifier!, _logger);
 
         return services;
     }
