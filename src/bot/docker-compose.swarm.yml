@@ -14,7 +14,7 @@ volumes:
 
 services:
     nginx:
-        image: ghcr.io/hirbod-codes/bingx_bot/nginx:latest
+        image: ghcr.io/hirbod-codes/bingx_bot/bot_nginx:latest
         restart: always
         ports:
           - 443:443
