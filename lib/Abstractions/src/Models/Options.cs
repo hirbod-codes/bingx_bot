@@ -17,4 +17,6 @@ public class Options
     public IStrategyOptions? StrategyOptions { get; set; }
     public IBotOptions? BotOptions { get; set; }
     public IRunnerOptions? RunnerOptions { get; set; }
+    public string? FullName { get; set; }
+    public string? BrokerName { get; set; }
 }

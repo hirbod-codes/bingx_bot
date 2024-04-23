@@ -24,5 +24,6 @@ public static class ConfigurationKeys
     public const string TESTER_NAME = "TesterName";
     public const string TESTER_OPTIONS = "TesterOptions";
 
+    public const string FULL_NAME = "FullName";
     public const string API_KEY = "ApiKey";
 }

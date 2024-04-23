@@ -47,6 +47,7 @@ services:
             ENVIRONMENT: Production
             SECRETS_PREFIX: BOT_
             BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
+            BOT_FullName: hirbod
             BOT_MessageStoreName: InMemory
             BOT_BrokerName: Bingx
             BOT_RiskManagementName: SuperTrendV1

@@ -42,6 +42,7 @@ services:
         environment:
             ASPNETCORE_ENVIRONMENT: Development
             ENVIRONMENT: Development
+            BOT_FullName: hirbod
             BOT_ApiKey: abcdefg
             BOT_Serilog__WriteTo__1__Args__serverUrl: http://seq:80
             BOT_MessageStoreName: InMemory

@@ -6,19 +6,53 @@ namespace Utilities.src;
 
 public class Time : ITime
 {
-    private DateTime _dateTime;
+    public DateTime GetUtcNow() => DateTime.UtcNow;
 
-    public void SetUtcNow(DateTime dateTime) => _dateTime = dateTime;
-
-    public DateTime GetUtcNow() => _dateTime;
-
-    public Task Sleep(int milliseconds)
-    {
-        throw new NotImplementedException();
-    }
+    public async Task Sleep(int milliseconds) => await Task.Delay(milliseconds);
 
     public Task<Timer> StartTimer(int secondsInterval, ElapsedEventHandler elapsedEventHandler, int millisecondsOffset = 0)
     {
-        throw new NotImplementedException();
+        if (secondsInterval * 1000 <= millisecondsOffset)
+            throw new ArgumentException(message: $"{nameof(millisecondsOffset)} must be lower then {nameof(secondsInterval)}", nameof(millisecondsOffset));
+
+        Timer timer = new()
+        {
+            Enabled = true,
+            AutoReset = false,
+            Interval = GetInterval(secondsInterval, millisecondsOffset)
+        };
+
+        timer.Elapsed += elapsedEventHandler;
+
+        timer.Elapsed += new ElapsedEventHandler(async (o, args) =>
+        {
+            await Task.Delay(1000);
+            timer.Interval = GetInterval(secondsInterval, millisecondsOffset);
+            timer.Start();
+        });
+
+        timer.Start();
+
+        return Task.FromResult(timer);
+    }
+
+    private static double GetInterval(int secondsInterval, int millisecondsOffset)
+    {
+        DateTime now = DateTime.UtcNow;
+        DateTime tempNow = new(now.Ticks, DateTimeKind.Utc);
+
+        while (DateTimeOffset.Parse(tempNow.ToString()).ToUnixTimeSeconds() % secondsInterval != 0)
+            tempNow = tempNow.AddSeconds(1);
+
+        tempNow = tempNow.AddMilliseconds(-1 * tempNow.Millisecond);
+
+        double totalMilliseconds = (tempNow - now).TotalMilliseconds;
+
+        if (totalMilliseconds <= 0)
+            return (secondsInterval * 1000) - now.Millisecond - millisecondsOffset;
+        else if (totalMilliseconds > millisecondsOffset)
+            return totalMilliseconds - millisecondsOffset;
+        else
+            return (secondsInterval * 1000) - now.Millisecond - millisecondsOffset + totalMilliseconds;
     }
 }
