@@ -14,7 +14,7 @@ volumes:
 
 services:
     nginx:
-        image: ghcr.io/hirbod-codes/nginx:latest
+        image: ghcr.io/hirbod-codes/bingx_bot/nginx:latest
         restart: always
         ports:
           - 443:443
@@ -32,7 +32,7 @@ services:
           - caCrt
           - caKey
     bot:
-        image: ghcr.io/hirbod-codes/bot:latest
+        image: ghcr.io/hirbod-codes/bingx_bot/bot:latest
         networks:
             - bot-network
         restart: always
