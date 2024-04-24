@@ -12,7 +12,7 @@ public class Time : ITime
 
     public Task<Timer> StartTimer(int secondsInterval, ElapsedEventHandler elapsedEventHandler, int millisecondsOffset = 0)
     {
-        if (secondsInterval * 1000 <= millisecondsOffset)
+        if (secondsInterval < 2 || secondsInterval * 1000 <= millisecondsOffset)
             throw new ArgumentException(message: $"{nameof(millisecondsOffset)} must be lower then {nameof(secondsInterval)}", nameof(millisecondsOffset));
 
         Timer timer = new()

@@ -333,6 +333,9 @@ public class Broker : Api, IBroker
 
             _logger.Information("Listening for candles...");
 
+            if (_isListeningForCandles)
+                return;
+
             _previousCandle = null;
             while (true)
             {
@@ -456,7 +459,7 @@ public class Broker : Api, IBroker
         }
     }
 
-    public async Task<Candle> ListenForCandle(int candlesCount, int timeFrame)
+    public async Task<Candle?> ListenForCandle(int candlesCount, int timeFrame)
     {
         try
         {
@@ -483,6 +486,9 @@ public class Broker : Api, IBroker
             }
 
             _logger.Information("Listening for candles...");
+
+            if (_isListeningForCandles)
+                return null;
 
             _previousCandle = null;
             while (true)

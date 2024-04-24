@@ -26,6 +26,7 @@ using bot.src.Authentication.ApiKey;
 using Microsoft.AspNetCore.Mvc;
 using Abstractions.src.MessageStores;
 using bot.src.Dtos;
+using Brokers.src.Bingx;
 
 namespace bot;
 
@@ -272,16 +273,11 @@ public class Program
             return Results.Ok(await broker!.GetPnlFundFlow());
         });
 
-        app.MapGet("/general-info", () =>
+        app.MapGet("/general-info", () => Results.Ok(new
         {
-            IBroker broker = GetServices(options, ref services)?.Broker ?? throw new BadHttpRequestException("Services are not initialized.");
-
-            return Results.Ok(new
-            {
-                fullName = StaticOptions.FullName ?? "FirstName-LastName",
-                brokerName = StaticOptions.BrokerName ?? "BrokerName",
-            });
-        });
+            fullName = StaticOptions.FullName ?? "FirstName-LastName",
+            brokerName = StaticOptions.BrokerName ?? "BrokerName",
+        }));
     }
 
     private static object? GetOptions(Options options) =>
